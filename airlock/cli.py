@@ -29,7 +29,7 @@ from .callhash import call_bytes, call_hash, same_account
 from .chain_profile import Chain, ChainUnreachable, ProfileMismatch, UnknownChain, connect
 from .keys import KeyRefused, load_key
 from .ops import (NotConfirmed, Refused, Sender, TxFailed, announce, blocks_for, create_vault, deposits, execute,
-                  panic, pending_for, profile_tag, transfer, veto)
+                  panic, pending_for, transfer, veto)
 
 PROG = "airlock"
 
@@ -59,7 +59,10 @@ class Out:
 
 
 def address(value: str, what: str) -> str:
+    """An SS58 address (any prefix). A 0x public key is refused: ss58_decode passes any hex through unchecked."""
     try:
+        if value.startswith("0x"):
+            raise ValueError("hex")
         ss58_decode(value)
     except (ValueError, TypeError) as e:
         raise Refused(f"{what} {value!r} is not an SS58 address") from e
@@ -76,9 +79,8 @@ def seconds(blocks: int, chain: Chain) -> str:
 def hot_address(spec: str, chain: Chain) -> str:
     """create's --hot: the hot key's address, or a key spec whose address is used (nothing is signed with it)."""
     try:
-        ss58_decode(spec)
-        return spec
-    except (ValueError, TypeError):
+        return address(spec, "--hot")
+    except Refused:
         return load_key(spec, chain.profile, "hot").ss58_address
 
 

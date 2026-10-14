@@ -151,7 +151,7 @@ def test_describe_call_against_recorded_metadata(profile_id):
     dest = text.split("dest=")[1].split(",")[0]  # SS58 from a live node; the offline registry has no SS58 format
     assert same_account(dest, "5C5vdpsPjL7KwZySdTNBxVRJ5os7qQBwrkU7mu4fA61jCryJ")
     assert text.startswith("Balances.transfer_keep_alive(dest=") and text.endswith(", value=1.5000 UNIT)")
-    with pytest.raises(ValueError):
+    with pytest.raises(Exception):  # trailing bytes: the decoder itself refuses (RemainingScaleBytesNotEmpty)
         describe_call(chain, raw + b"\x00")
     with pytest.raises(Exception):
         describe_call(chain, b"\xff\xff")

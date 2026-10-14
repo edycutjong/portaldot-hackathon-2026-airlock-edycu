@@ -48,3 +48,20 @@ proxy deposit stay: a keep-alive transfer cannot take them).
 | announce → veto in blocks | 1 block | 1 block | 1–1 block |
 
 **Ablation (`--ablate`, one control drain):** the same thief script with `--direct` against a control vault whose hot key has delay 0 moved 100.0000 POT (10000000000000000 planck) of the control vault's 102.9800 POT in 1 extrinsic (`9397-1`, outcome ok), 1 block after the head it was sent at. The rest stays because a keep-alive transfer cannot take it: the existential deposit and the reserved proxy deposit.
+
+### bench — 2026-10-14T16:45:09Z — interim — not V3 (upstream polkadot-sdk substrate-node dev chain)
+
+`evidence/bench-interim-sdk-2026-10-14T164509Z.json` · code `ea49971` · genesis `0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2` · block time 3000 ms · D = 20 blocks (60 s) · vault `5H2DZ46VA4vHDitBoDosw1HRxCTFEQZpt5cUQPtkU54t1eFd`
+
+**20 thief drains** (scripts/thief.py, no Airlock code): 20/20 alerted NOT YOURS, 20/20 vetoed and then failed `Proxy.Unannounced` when executed after the delay; moved to the thief: 0 planck; vault total 1000000000000000 planck before, 1000000000000000 after. Fewest blocks to spare before a drain could have executed: 19 of 20.
+
+| metric (nearest-rank) | p50 | p95 | range |
+|---|---|---|---|
+| alert latency: announce block timestamp → alert written (incl. block import + delivery, one machine) | 0.023 s | 0.03 s | 0.013–0.032 s |
+| alert latency in blocks (head at alert − announce block) | 0 blocks | 0 blocks | 0–0 blocks |
+| veto inclusion: veto signed → seen in a block (automated, no human) | 2.116 s | 2.171 s | 1.92–2.178 s |
+| veto inclusion in blocks (veto block − head just before signing) | 1 block | 1 block | 1–1 block |
+| announce → veto, on-chain timestamps | 2.999 s | 3.01 s | 2.945–3.01 s |
+| announce → veto in blocks | 1 block | 1 block | 1–1 block |
+
+**Ablation (`--ablate`, one control drain):** the same thief script with `--direct` against a control vault whose hot key has delay 0 moved 100.0000 UNIT (100000000000000 planck) of the control vault's 398.0000 UNIT in 1 extrinsic (`18734-2`, outcome ok), 1 block after the head it was sent at. The rest stays because a keep-alive transfer cannot take it: the existential deposit and the reserved proxy deposit.

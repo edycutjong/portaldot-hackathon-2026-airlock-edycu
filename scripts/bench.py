@@ -138,7 +138,8 @@ def run(args) -> int:
     d = deposits(chain)
     ed = chain.existential_deposit
     fee = int(chain.substrate.get_payment_info(transfer(chain, who["hot"].ss58_address, ed), funder)["partialFee"])
-    vault_fund, control_fund = chain.units(VAULT_FUND), chain.units(CONTROL_FUND)
+    # the control vault reserves the delay-0 hot key's deposit and keeps the existential deposit on top of what can move
+    vault_fund, control_fund = chain.units(VAULT_FUND), chain.units(CONTROL_FUND) + d["ProxyDepositFactor"] + ed
     fund(tx, funder, who, {
         "cold": 2 * (d["ProxyDepositBase"] + d["ProxyDepositFactor"]) + vault_fund + control_fund + 4 * ed
         + (10 + 5 * args.n) * fee,
@@ -259,7 +260,8 @@ def markdown(r: dict, out: Path) -> str:
 
     def row(name: str, key: str, unit: str) -> str:
         v = s[key]
-        return f"| {name} | {v['p50']} {unit} | {v['p95']} {unit} | {v['min']}–{v['max']} {unit} |"
+        unit_ = unit if unit != "blocks" else "block" if v["p50"] == v["p95"] == v["max"] == 1 else unit
+        return f"| {name} | {v['p50']} {unit_} | {v['p95']} {unit_} | {v['min']}–{v['max']} {unit_} |"
 
     lines = [f"### bench — {r['started']} — {r['label']}", "",
              f"`{out.relative_to(ROOT)}` · code `{r['code']}` · genesis `{r['genesis_hash']}` · block time "

@@ -1,7 +1,8 @@
 """airlock — the vault owner's command line: create a vault, announce and execute spends, veto, panic.
 
   airlock create   --cold KEY --hot ADDRESS (--delay BLOCKS | --delay-s SECONDS) [--fund AMOUNT] [--index N]
-  airlock announce --hot KEY --vault VAULT --to ADDRESS --amount AMOUNT
+  airlock enroll   --cold KEY --vault VAULT [--api URL] [--token-file PATH]
+  airlock announce --hot KEY --vault VAULT --to ADDRESS --amount AMOUNT [--api URL] [--token SPEC | --no-intent]
   airlock execute  --hot KEY --vault VAULT (--to ADDRESS --amount AMOUNT | --call 0x…) [--no-wait]
   airlock veto     --cold KEY --vault VAULT --delegate HOT --hash 0x…
   airlock panic    --cold KEY --vault VAULT --delegate HOT
@@ -10,6 +11,12 @@
 KEY is file:<path>, env:<VAR>, or a //dev URI on an interim dev chain (see airlock/keys.py); --cold/--hot default to
 $AIRLOCK_COLD_KEY/$AIRLOCK_HOT_KEY, so the veto command an alert prints runs as pasted. The chain is $AIRLOCK_PROFILE /
 $AIRLOCK_WSS (or --profile/--url); an unknown chain is refused before anything is signed.
+
+Owner intents (airlock/intents.py): `enroll` gives the vault an owner token, signed by the cold key, kept in
+~/.config/airlock/owner-tokens/<vault>.token. `announce` first registers the call with the intent registry
+($AIRLOCK_API, default http://127.0.0.1:8787) using that token, and signs proxy.announce only after the registry's 200 —
+if the registry is down or refuses, nothing is announced. The watcher then shows the spend as YOURS; anything announced
+without a registered intent (a thief's announcement, or --no-intent) is NOT YOURS.
 
 Exit status: 0 done and confirmed by a read-back; 1 an extrinsic failed or its effect is not visible; 2 refused
 before signing (bad key spec, unknown chain, nothing pending, delay not passed with --no-wait …).
@@ -21,17 +28,20 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 from substrateinterface.utils.ss58 import ss58_decode
 
 from .callhash import call_bytes, call_hash, same_account
 from .chain_profile import Chain, ChainUnreachable, ProfileMismatch, UnknownChain, _is_connection_error, connect
+from .intents import DEFAULT_API, RegistryError, enroll, load_token, new_token, register_intent, save_token, token_path
 from .keys import KeyRefused, load_key
-from .ops import (NotConfirmed, Refused, Sender, SubmitRejected, TxFailed, VaultIncomplete, announce, blocks_for, create_vault, deposits, execute,
-                  panic, pending_for, transfer, veto)
+from .ops import (NotConfirmed, Refused, Sender, SubmitRejected, TxFailed, VaultIncomplete, announce, blocks_for,
+                  create_vault, delay_of, deposits, execute, panic, pending_for, transfer, veto)
 
 PROG = "airlock"
+REGISTER_TIMEOUT_S = 10  # no answer from the intent registry in this time: not registered, so not announced
 
 
 class Out:
@@ -121,9 +131,29 @@ def cmd_create(chain: Chain, tx: Sender, out: Out, args) -> int:
             f"{chain.fmt(d['AnnouncementDepositFactor'])} reserved from the hot key (max {d['MaxPending']} pending)")
     vault = create_vault(tx, cold, hot, delay, args.index, fund)
     out.say(f"vault {vault}: cold {cold.ss58_address} delay 0 (veto/panic), hot {hot} delay {delay}")
+    out.say(f"enrol it:  airlock enroll --vault {vault}   (owner token: your announcements show as YOURS)")
     out.say(f"watch it:  python -m airlock.watcher --vault {vault}")
     out.result(command="create", vault=vault, cold=cold.ss58_address, hot=hot, delay=delay,
                profile=chain.profile.id, rows=tx.rows)
+    return 0
+
+
+def cmd_enroll(chain: Chain, tx: Sender, out: Out, args) -> int:
+    cold = load_key(args.cold, chain.profile, "cold")
+    vault = address(args.vault, "--vault")
+    if delay_of(tx.delegates(vault), cold.ss58_address) != 0:
+        raise Refused(f"{cold.ss58_address} is not a delay-0 (cold) delegate of {vault}: the registry would refuse it")
+    path = Path(args.token_file).expanduser() if args.token_file else token_path(vault)
+    token = new_token()
+    try:
+        reply = enroll(args.api, cold, vault, chain.genesis_hash, token)
+    except RegistryError as e:
+        raise Refused(f"enrolment refused, no token saved: {e}") from None
+    save_token(path, token)  # only once the registry holds its digest; an old token stops working now
+    out.say(f"enrolled: owner token for {vault} saved to {path} (mode 600); the registry at {args.api} keeps only its "
+            f"sha256. `airlock announce` reads it from there.")
+    out.result(command="enroll", vault=vault, cold=cold.ss58_address, token_file=str(path), api=args.api,
+               issued_at=reply.get("issued_at"), profile=chain.profile.id)
     return 0
 
 
@@ -131,20 +161,38 @@ def cmd_announce(chain: Chain, tx: Sender, out: Out, args) -> int:
     hot = load_key(args.hot, chain.profile, "hot")
     vault = address(args.vault, "--vault")
     call = spend_call(chain, args)
-    p = announce(tx, hot, vault, call)
+    register, registered = None, {}
+    if not args.no_intent:
+        try:
+            token = load_token(args.token, vault)
+        except RegistryError as e:
+            raise Refused(f"{e} — or pass --no-intent to announce unregistered (the watcher will say NOT YOURS)") \
+                from None
+
+        def register(raw: bytes, h: str) -> None:
+            try:
+                registered.update(register_intent(args.api, token, vault, raw, timeout_s=REGISTER_TIMEOUT_S))
+            except RegistryError as e:
+                raise Refused(f"intent not registered, so not announcing (it would alert NOT YOURS): {e}") from None
+            out.say(f"intent registered at {args.api}: {h} (#{registered.get('registered_head')}, intent "
+                    f"{registered.get('intent_id')})")
+    p = announce(tx, hot, vault, call, register=register)
     left = p.release_block - p.height
     encoded = "0x" + call_bytes(call).hex()
     out.say(f"announced {p.call_hash} at #{p.height}: executable from #{p.release_block} ({left} blocks"
             f"{seconds(left, chain)})")
-    out.say("the watcher marks this NOT YOURS: the owner intent registry that marks your own spends YOURS is not "
-            "built yet")
+    if registered:
+        out.say("registered before announcing: the watcher shows it as YOURS")
+    else:
+        out.say("announced WITHOUT a registered intent (--no-intent): the watcher shows it as NOT YOURS")
     if args.to and args.amount:
         out.say(f"execute:  airlock execute --vault {vault} --to {args.to} --amount {args.amount}")
     else:
         out.say(f"execute:  airlock execute --vault {vault} --call {encoded}")
     out.say(f"cancel:   airlock veto --vault {vault} --delegate {hot.ss58_address} --hash {p.call_hash}")
     out.result(command="announce", vault=vault, delegate=hot.ss58_address, call_hash=p.call_hash, call=encoded,
-               announced_block=p.height, release_block=p.release_block, profile=chain.profile.id, rows=tx.rows)
+               announced_block=p.height, release_block=p.release_block, profile=chain.profile.id,
+               intent_id=registered.get("intent_id"), rows=tx.rows)
     return 0
 
 
@@ -216,7 +264,7 @@ def cmd_status(chain: Chain, tx: Sender, out: Out, args) -> int:
     return 0
 
 
-COMMANDS = {"create": cmd_create, "announce": cmd_announce, "execute": cmd_execute, "veto": cmd_veto,
+COMMANDS = {"create": cmd_create, "enroll": cmd_enroll, "announce": cmd_announce, "execute": cmd_execute, "veto": cmd_veto,
             "panic": cmd_panic, "status": cmd_status}
 
 
@@ -239,6 +287,14 @@ def parser() -> argparse.ArgumentParser:
     c.add_argument("--fund", default=None, help="tokens the cold key sends to the new vault")
     c.add_argument("--index", type=int, default=0, help="create_pure disambiguation index (default 0)")
 
+    api_default = os.environ.get("AIRLOCK_API") or DEFAULT_API
+    e = sub.add_parser("enroll", help="give the vault an owner token (cold-key signed) so your announcements are YOURS")
+    e.add_argument("--cold", default=cold_default, help="cold key spec (signs the enrolment; nothing is sent on chain)")
+    e.add_argument("--vault", required=True)
+    e.add_argument("--api", default=api_default, help="intent registry (default $AIRLOCK_API, else %(default)s)")
+    e.add_argument("--token-file", default=None, help="where to save the token (default "
+                   "~/.config/airlock/owner-tokens/<vault>.token)")
+
     for name, help_ in (("announce", "hot key announces a transfer from the vault"),
                         ("execute", "hot key executes an announced transfer after the delay")):
         a = sub.add_parser(name, help=help_)
@@ -246,6 +302,15 @@ def parser() -> argparse.ArgumentParser:
         a.add_argument("--vault", required=True)
         a.add_argument("--to", default=None, help="payee address")
         a.add_argument("--amount", default=None, help="tokens (exact; no sub-planck amounts)")
+        if name == "announce":
+            a.add_argument("--api", default=api_default, help="intent registry to register with first "
+                           "(default $AIRLOCK_API, else %(default)s)")
+            t = a.add_mutually_exclusive_group()
+            t.add_argument("--token", default=os.environ.get("AIRLOCK_OWNER_TOKEN"),
+                           help="owner token: file:<path> or env:<VAR> (default $AIRLOCK_OWNER_TOKEN, else "
+                                "~/.config/airlock/owner-tokens/<vault>.token)")
+            t.add_argument("--no-intent", action="store_true",
+                           help="announce without registering an intent (the watcher will say NOT YOURS)")
         if name == "execute":
             a.add_argument("--call", default=None, help="the announced call as 0x-encoded bytes (instead of --to/--amount)")
             a.add_argument("--no-wait", action="store_true", help="refuse instead of waiting when the delay has not passed")

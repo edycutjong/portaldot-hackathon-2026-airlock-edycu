@@ -28,7 +28,7 @@ from typing import Any, Callable
 
 from substrateinterface import Keypair
 
-from .callhash import Announcement, call_hash, pending, same_account
+from .callhash import Announcement, call_bytes, call_hash, pending, same_account
 from .chain_profile import Chain, at_risk, pure_address
 from .dispatch import OK, error_namer, find_event, outcome
 
@@ -314,8 +314,12 @@ def keep_alive_limit(chain: Chain, address: str) -> int:
     return at_risk(account["data"], chain.existential_deposit, must_stay_alive=True).transferable
 
 
-def announce(tx: Sender, hot: Keypair, vault: str, call: Any, step: str = "announce") -> Pending:
-    """hot announces `call` for the vault. Refused if hot is not a delayed delegate of the vault."""
+def announce(tx: Sender, hot: Keypair, vault: str, call: Any, step: str = "announce",
+             register: Callable[[bytes, str], Any] | None = None) -> Pending:
+    """hot announces `call` for the vault. Refused if hot is not a delayed delegate of the vault.
+
+    `register(call_bytes, call_hash)`: register-before-announce — called after the pre-checks and BEFORE anything is
+    signed; if it raises, nothing is sent (an owner spend the registry does not know would alert NOT YOURS)."""
     delay = delay_of(tx.delegates(vault), hot.ss58_address)
     if delay is None:
         raise Refused(f"{hot.ss58_address} is not a delegate of {vault}: the announcement would fail Proxy.NotProxy")
@@ -323,6 +327,8 @@ def announce(tx: Sender, hot: Keypair, vault: str, call: Any, step: str = "annou
     if matching(pending(tx.s, hot.ss58_address), vault, h):
         raise Refused(f"an identical call ({h}) is already pending on {vault}: one execution clears every mature copy, "
                       f"so a second identical spend would be lost — execute the first (or veto it), or change the amount")
+    if register is not None:
+        register(call_bytes(call), h)
     r = tx.send(step, "hot", hot, tx.s.compose_call("Proxy", "announce", {"real": vault, "call_hash": h}),
                 note=f"call hash {h}")
     included = tx.s.get_block_number(r.block_hash)

@@ -22,5 +22,5 @@ include = ["airlock*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
-  "chain: needs a running node at AIRLOCK_WS (skipped otherwise)",
+  "chain: needs a running node at AIRLOCK_WSS (skipped otherwise)",
 ]

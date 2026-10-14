@@ -8,7 +8,8 @@ creator is `//Alice` unless COLD names another dev key.
   python scripts/raw_announce.py setup    <ws-url> <index> [delay]   # new pure vault, //Charlie as a delayed delegate
   python scripts/raw_announce.py announce <ws-url> <vault> <tokens>  # //Charlie announces transfer_keep_alive(//Eve, …)
 
-Each step prints one JSON line (vault / extrinsic id / block hash / tx hash / call hash).
+Each step prints one JSON line (vault / extrinsic id / block hash / tx hash / call hash / genesis); a file of these
+lines can be checked with `scripts/refetch.py <file>.jsonl`.
 """
 import hashlib
 import json
@@ -63,7 +64,7 @@ def main(argv):
         send(cold, s.compose_call("Balances", "transfer_keep_alive", {"dest": vault, "value": 500 * 10**decimals}))
         add = s.compose_call("Proxy", "add_proxy", {"delegate": hot.ss58_address, "proxy_type": "Any", "delay": delay})
         send(cold, s.compose_call("Proxy", "proxy", {"real": vault, "force_proxy_type": None, "call": add}))
-        out(step="setup", vault=vault, hot=hot.ss58_address, delay=delay)
+        out(step="setup", vault=vault, hot=hot.ss58_address, delay=delay, cold=cold_uri, genesis_hash=genesis)
     else:
         vault, tokens = argv[3], int(argv[4])
         theft = s.compose_call("Balances", "transfer_keep_alive",
@@ -72,8 +73,8 @@ def main(argv):
         receipt = send(hot, s.compose_call("Proxy", "announce", {"real": vault, "call_hash": call_hash}))
         out(step="announce", script="scripts/raw_announce.py (no airlock imports)", vault=vault,
             delegate=hot.ss58_address, call_hash=call_hash, extrinsic_id=receipt.get_extrinsic_identifier(),
-            block_hash=receipt.block_hash, extrinsic_hash=receipt.extrinsic_hash,
-            block=s.get_block_number(receipt.block_hash))
+            block_hash=receipt.block_hash, extrinsic_hash=receipt.extrinsic_hash, outcome="ok",
+            block=s.get_block_number(receipt.block_hash), genesis_hash=genesis)
 
 
 if __name__ == "__main__":

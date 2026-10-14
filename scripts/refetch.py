@@ -6,7 +6,8 @@ Point it at a spike evidence file and, ideally, at a different connection than t
 looked up by its `block-index` id alone; block hash, transaction hash and outcome must all match what was recorded.
 
 usage: python scripts/refetch.py evidence/spike-proxy-….json [--url http://127.0.0.1:29944] [--proof docs/PROOF.md]
-       python scripts/refetch.py --id 85-2 --id 86-2 [--url …]
+       python scripts/refetch.py evidence/raw-announce-….jsonl [--url …]   # the watcher-evidence announces
+       python scripts/refetch.py --id 85-2 --id 86-2 [--url …]              # found by id, compared with nothing
 """
 
 from __future__ import annotations
@@ -37,6 +38,19 @@ def shown(path: Path) -> str:
         return str(path)
 
 
+def load(path: Path) -> dict:
+    """A spike evidence JSON, or a raw-announce JSON-lines file (its announce lines become the rows)."""
+    if path.suffix != ".jsonl":
+        return json.loads(path.read_text())
+    lines = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    rows = [r for r in lines if "extrinsic_id" in r]
+    geneses = {r["genesis_hash"] for r in lines if r.get("genesis_hash")}
+    if len(geneses) > 1:
+        raise SystemExit(f"{path}: rows from more than one chain")
+    return {"status": "passed", "rows": rows, "genesis_hash": next(iter(geneses), None), "profile": None,
+            "started": path.stem, "endpoint": "ws://"}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("evidence", nargs="?", type=Path, help="spike evidence JSON whose rows to re-fetch")
@@ -46,7 +60,7 @@ def main(argv=None) -> int:
     ap.add_argument("--proof", type=Path, default=None, help="append a re-fetch table to this PROOF.md (all-match only)")
     args = ap.parse_args(argv)
 
-    recorded = json.loads(args.evidence.read_text()) if args.evidence else None
+    recorded = load(args.evidence) if args.evidence else None
     if recorded is None and not args.id:
         ap.error("give an evidence file or at least one --id")
     if recorded is not None and args.id:
@@ -63,7 +77,7 @@ def main(argv=None) -> int:
     except (UnknownChain, ProfileMismatch) as e:
         print(f"REFETCH FAILED: {type(e).__name__}: {e}", file=sys.stderr)
         return 1
-    if recorded and chain.genesis_hash != recorded["genesis_hash"]:
+    if recorded and recorded.get("genesis_hash") and chain.genesis_hash != recorded["genesis_hash"]:
         print(f"REFETCH FAILED: genesis {chain.genesis_hash} is not the recorded {recorded['genesis_hash']}",
               file=sys.stderr)
         chain.substrate.close()

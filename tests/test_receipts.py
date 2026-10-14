@@ -54,3 +54,25 @@ def test_call_name_plain_and_unknown():
     plain = SimpleNamespace(value={"call": {"call_module": "Proxy", "call_function": "announce", "call_args": []}})
     assert _call_name(plain) == "Proxy.announce"
     assert _call_name(SimpleNamespace(value=None)) == "?.?"
+
+
+def test_refetch_reads_raw_announce_jsonl(tmp_path):
+    import importlib.util
+    import json
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location("refetch", Path(__file__).parent.parent / "scripts" / "refetch.py")
+    refetch_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(refetch_mod)
+    f = tmp_path / "raw-announce-x.jsonl"
+    f.write_text("\n".join(json.dumps(r) for r in (
+        {"step": "setup", "vault": "v", "genesis_hash": "0xg"},
+        {"step": "announce", "extrinsic_id": "7-1", "block_hash": "0xb", "extrinsic_hash": "0xt", "outcome": "ok",
+         "genesis_hash": "0xg"})) + "\n")
+    got = refetch_mod.load(f)
+    assert got["status"] == "passed" and got["genesis_hash"] == "0xg"
+    assert [r["extrinsic_id"] for r in got["rows"]] == ["7-1"]
+    f.write_text(json.dumps({"extrinsic_id": "7-1", "genesis_hash": "0xa"}) + "\n"
+                 + json.dumps({"extrinsic_id": "8-1", "genesis_hash": "0xb"}) + "\n")
+    with pytest.raises(SystemExit):
+        refetch_mod.load(f)

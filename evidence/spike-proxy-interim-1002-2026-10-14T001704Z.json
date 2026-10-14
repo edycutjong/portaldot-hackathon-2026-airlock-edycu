@@ -1,0 +1,97 @@
+{
+  "started": "2026-10-14T00:17:04Z",
+  "profile": "interim-1002",
+  "label": "interim \u2014 not V3 (Portaldot dev node, runtime spec 1002)",
+  "endpoint": "ws://127.0.0.1:19944",
+  "genesis_hash": "0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22",
+  "code_hash": "0x8c0d4d9d638ad05e7d214e1496321cea00274698e4bcf5b2006c3eaf86b7fa80",
+  "runtime": "portaldot/1002",
+  "delay_blocks": 5,
+  "vault": "5FQ9Ld4TshxD5PvecCpVQfcRS9KWsqcLdjyqK1VeePDKu2gf",
+  "rows": [
+    {
+      "step": "create vault",
+      "call": "Proxy.anonymous",
+      "signer": "cold",
+      "expected": "ok",
+      "outcome": "ok",
+      "extrinsic_id": "84-1",
+      "block_hash": "0xe9d55067701cc2217d03ec7ad294ad8e084502509f65ee36bfd2f376af7b8b0a",
+      "extrinsic_hash": "0xc33d04702f4cdbd3769aaa4b25838894815dc17b070bfbe29aea9f142866c083",
+      "profile": "interim-1002",
+      "note": ""
+    },
+    {
+      "step": "fund vault",
+      "call": "Balances.transfer_keep_alive",
+      "signer": "cold",
+      "expected": "ok",
+      "outcome": "ok",
+      "extrinsic_id": "85-1",
+      "block_hash": "0xd870b79c81de840aa000f00ea6e12f2bb914abc350a43dbba7f128f2f3477296",
+      "extrinsic_hash": "0xd4ed44f1554b87efad38393986733f51da56429ee0480d45a0885aae5e48f3c3",
+      "profile": "interim-1002",
+      "note": ""
+    },
+    {
+      "step": "add delayed hot key",
+      "call": "Proxy.proxy(Proxy.add_proxy)",
+      "signer": "cold",
+      "expected": "ok",
+      "outcome": "ok",
+      "extrinsic_id": "86-1",
+      "block_hash": "0xce2dea92b9d2b8b777eca46e3bb6d20bab2f967d6c7536c63b859b4966a3dbd2",
+      "extrinsic_hash": "0x3bbe79c325871dc4514a8e4117737d2ed5170bd12ebd1f0377b32bc8878e1966",
+      "profile": "interim-1002",
+      "note": "delay 5 blocks"
+    },
+    {
+      "step": "hot spends unannounced",
+      "call": "Proxy.proxy(Balances.transfer_keep_alive)",
+      "signer": "hot",
+      "expected": "Proxy.Unannounced",
+      "outcome": "Proxy.Unannounced",
+      "extrinsic_id": "87-1",
+      "block_hash": "0x26e40b7d11907b33576167903e1173dc98825bc65745b6ce836e1b8527409253",
+      "extrinsic_hash": "0x3d5275fe57d458a6be583c77b10f1b5d24d8cb918d33a4326d58506c35652e65",
+      "profile": "interim-1002",
+      "note": "I1"
+    },
+    {
+      "step": "hot announces",
+      "call": "Proxy.announce",
+      "signer": "hot",
+      "expected": "ok",
+      "outcome": "ok",
+      "extrinsic_id": "88-1",
+      "block_hash": "0xe88c380a38811c1368967f1f5926a2f6a3b7508570bcbcbedb1a3a1eca87a8e9",
+      "extrinsic_hash": "0xc0197d05c2fbc4e1797362127e58ce6b5e8a42788530493c7edd37691255bdd0",
+      "profile": "interim-1002",
+      "note": "call hash 0x5b11231612a3699c8009e8abb7b35314a73a8f28088221aa1a5d1a92bd2222fa"
+    },
+    {
+      "step": "cold vetoes",
+      "call": "Proxy.proxy(Proxy.reject_announcement)",
+      "signer": "cold",
+      "expected": "ok",
+      "outcome": "ok",
+      "extrinsic_id": "89-1",
+      "block_hash": "0xbeaf6838bf218ab1ec8bbf9889ff50bf5c8fded692f2fceb32e7479895b2433d",
+      "extrinsic_hash": "0xd12db51a02a58a216dcd2581b34d49fbf20dfe9ee2171d7577168cafa420ec82",
+      "profile": "interim-1002",
+      "note": ""
+    },
+    {
+      "step": "hot executes after delay",
+      "call": "Proxy.proxy_announced(Balances.transfer_keep_alive)",
+      "signer": "hot",
+      "expected": "Proxy.Unannounced",
+      "outcome": "Proxy.Unannounced",
+      "extrinsic_id": "95-1",
+      "block_hash": "0xc47cdc1425d73299f2b80a697e67f00c8189d977adf55b80fcaec5fa0d9b2a4c",
+      "extrinsic_hash": "0x11919371b91239576cd1e9a2a997629cf23752c3147f7d23287e0857d13dc74f",
+      "profile": "interim-1002",
+      "note": "I2"
+    }
+  ]
+}

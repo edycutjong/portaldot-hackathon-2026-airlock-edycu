@@ -33,10 +33,11 @@ from a watched vault. It never signs anything.
 7. **SQLite** (`airlock/store.py`): the chain's genesis hash, the block cursor and recent block hashes, watched vaults,
    and one row per announcement. Re-scanning a block does not alert again; each channel's delivery is recorded the
    moment it succeeds, so a crash can repeat at most the one channel that was mid-send (at-least-once). A channel that
-   failed is retried after each pass's new blocks (new retries stop being started after 5 s, so a pass runs at most
-   one send timeout longer and new blocks come first), with the countdown and pending state recomputed, for 30
-   minutes; after one last attempt the watcher logs `GAVE UP … never reached <channel>` instead of dropping it
-   silently.
+   failed is retried after each pass's new blocks, least recently attempted first (at least one retry per pass; after
+   5 s no new one is started, so a pass runs at most one send timeout longer and new blocks come first), with the
+   countdown and pending state recomputed, for 30 minutes; after one last attempt the watcher logs
+   `GAVE UP … never reached <channel>` instead of dropping it silently. The JSON-lines log is evidence, not an owner
+   channel: a failed write is logged once and not retried.
 8. **Notifiers:** stdout, a JSON-lines log (`--jsonl`), and Telegram `sendMessage` (plain text, no image). The text
    carries the copy-paste veto command; a URL button is added only when `AIRLOCK_VETO_URL_BASE` (an `https://` URL) is
    set — no web veto page exists yet. A Telegram failure is reported and retried, never raised into the block loop, and
@@ -46,9 +47,14 @@ from a watched vault. It never signs anything.
    subscription (node pings would keep a plain socket timeout from firing); a dropped connection or a read unanswered
    for 30 s, a graceful close, or a refused request does the same. It then reconnects with backoff (reset only once a
    header is processed again), re-checks the genesis hash, re-scans from the cursor and sweeps pending announcements.
-   A block whose events cannot be read or decoded is logged as a `GAP` and covered by the sweep, never retried forever. A different genesis, or a chain on which none of the processed blocks
+   A block whose events cannot be read or decoded is logged as a `GAP` and covered by the sweep, never retried forever.
+   If one figure of an alert cannot be read (a storage or account layout the decoder does not know — the V3 layouts are
+   unverified), the alert still goes out: at risk becomes "the whole balance (unreadable)", an unreadable delay becomes
+   "veto now", and the log names the figure. A different genesis, or a chain on which none of the processed blocks
    exists any more (a dev chain restarted from genesis has the same genesis hash), stops the watcher with exit code 3.
-   A vault address that does not decode is refused (exit 2); a vault with no delegates is watched with a warning.
+   A vault address that does not decode is refused (exit 2); a vault with no delegates is watched with a warning. A
+   node that is unreachable at start, or a chain whose runtime changed (new code hash) when the watcher reconnects,
+   stops it with exit code 1 (`WATCHER FAILED`): the profile's facts may no longer hold, so it does not guess.
 
 The `airlock veto` command in the alert is the CLI's syntax; the CLI itself is the next build step, and the alert says
 so. Until then the alert also gives the same veto as a polkadot.js Apps extrinsic signed by the cold key:
@@ -71,27 +77,31 @@ finalized heads instead of the best head. The database defaults to `~/.local/sha
 stdout (and the JSON-lines log) only. The Telegram sender is unit-tested against a local mock of the Bot API
 (`tests/test_alerts.py`); **no alert has been sent to a real phone yet** — no bot token is configured.
 
-## Evidence (2026-10-14, interim chains — not V3, code `c1bdca9`)
+## Evidence (2026-10-14, interim chains — not V3, code `5ea95f2`)
 
 Each alert below was triggered by a `Proxy.announce` from [`scripts/raw_announce.py`](../scripts/raw_announce.py),
 which imports nothing from Airlock, signed by the dev key `//Charlie` after it was added as a delayed delegate of a
-fresh vault (500 tokens funded). Telegram was not configured, so alerts went to stdout and the JSON-lines log. On
+fresh vault (500 tokens funded; one vault per chain, created by `//Alice` on interim-sdk and `//Dave` on interim-1002 —
+the four interim-sdk cases share it). Telegram was not configured, so alerts went to stdout and the JSON-lines log. On
 `interim-sdk` the alert shows 202 UNIT at risk and 100 UNIT that cannot move: the vault holds proxy deposits, so it
-keeps the 100 UNIT existential deposit. Lines starting `[driver]` in the logs were written by the script that stopped,
-froze and restarted the node, so the logs show when each happened.
+keeps the 100 UNIT existential deposit. Lines starting `[driver]` in the logs were written by
+[`scripts/watcher_evidence.sh`](../scripts/watcher_evidence.sh), which ran all five cases, stopped, froze and restarted
+the node, and re-fetched the announces; the logs show when each happened (a driver line can land just after the
+watcher's own line for the same moment).
 
 | Case | Chain | Announce (extrinsic id) | What the watcher did | Log |
 |---|---|---|---|---|
-| live | interim-sdk | `14406-2` | NOT YOURS at the announcement's block; veto must land by #14425, 19 blocks (≈ 57 s) | `evidence/watcher-interim-sdk-2026-10-14T130641Z.log` |
-| announced while the watcher was stopped | interim-sdk | `14408-2` | on restart caught up #14407..#14412, alerted "Seen 4 blocks late", 15 blocks left to veto | `evidence/watcher-interim-sdk-2026-10-14T130641Z-restart.log` |
-| node stopped (SIGTERM) mid-watch, then restarted | interim-sdk | `14419-2` | logged the lost connection, reconnected after the restart (same genesis), resumed after #14415, alerted | `evidence/watcher-interim-sdk-2026-10-14T130641Z-reconnect.log` |
-| node frozen mid-watch (`SIGSTOP`: socket open, no headers), then resumed | interim-sdk | `14427-2` | "connection lost (no new header for 30 s)", reconnected after `SIGCONT`, resumed after #14422, alerted | `evidence/watcher-interim-sdk-2026-10-14T130641Z-stall.log` |
-| live, legacy decoding | interim-1002 | `7246-1` | NOT YOURS, 9 blocks (≈ 54 s) left to veto | `evidence/watcher-interim-1002-2026-10-14T130847Z.log` |
+| live | interim-sdk | `16255-2` | NOT YOURS at the announcement's block; veto must land by #16274, 19 blocks (≈ 57 s) | `evidence/watcher-interim-sdk-2026-10-14T143952Z.log` |
+| announced while the watcher was stopped | interim-sdk | `16257-2` | on restart caught up #16256..#16261, alerted "Seen 4 blocks late", 15 blocks (≈ 45 s) left to veto | `evidence/watcher-interim-sdk-2026-10-14T143952Z-restart.log` |
+| node stopped (SIGTERM) mid-watch, then restarted | interim-sdk | `16269-2` | logged the lost connection and each refused reconnect (backoff 1, 2, 4, 8 s), reconnected after the restart (same genesis), resumed after #16264, alerted | `evidence/watcher-interim-sdk-2026-10-14T143952Z-reconnect.log` |
+| node frozen mid-watch (`SIGSTOP`: socket open, no headers), then resumed | interim-sdk | `16276-2` | "connection lost (no new header for 30 s)", reconnected after `SIGCONT`, resumed after #16272, alerted | `evidence/watcher-interim-sdk-2026-10-14T143952Z-stall.log` |
+| live, legacy decoding | interim-1002 | `8177-1` | NOT YOURS, 9 blocks (≈ 54 s) left to veto, 498.0200 POT at risk | `evidence/watcher-interim-1002-2026-10-14T144153Z.log` |
 
-The restart case resumed after the last processed block, so the earlier announcement (`14406-2`) was not re-scanned.
-Not alerting twice on a re-scanned block, the pending sweep, NO LONGER PENDING alerts, retries and give-up, reorg
-re-scan, reset-chain stop and the pruned-state gap are covered by unit tests (`tests/test_watcher.py`), not by these
-runs. The announce transactions are in `evidence/raw-announce-*.jsonl`; each was found again by extrinsic id over HTTP
-from a fresh process with the same block hash and tx hash (`evidence/refetch-interim-sdk-2026-10-14T130915Z.json`,
-`evidence/refetch-interim-1002-2026-10-14T130916Z.json`). The alerts as JSON, with the head at alert time, are in
+The restart case resumed after the last processed block, so the earlier announcement (`16255-2`) was not re-scanned.
+Not alerting twice on a re-scanned block, the pending sweep, NO LONGER PENDING alerts, retries (rotation) and give-up,
+reorg re-scan, reset-chain stop, the pruned-state and undecodable-event gaps and the unreadable-figure fallbacks are
+covered by unit tests (`tests/test_watcher.py`), not by these
+runs. The announce transactions are in `evidence/raw-announce-*.jsonl`; each was re-read by extrinsic id over HTTP
+from a fresh process and compared with the recorded block hash, tx hash and outcome — 4/4 and 1/1 matched
+(`evidence/refetch-interim-sdk-2026-10-14T144220Z.json`, `evidence/refetch-interim-1002-2026-10-14T144222Z.json`). The alerts as JSON, with the head at alert time, are in
 `evidence/watcher-*.jsonl`.

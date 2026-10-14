@@ -1,0 +1,24 @@
+{
+  "started": "2026-10-14T14:42:22Z",
+  "endpoint": "http://127.0.0.1:19933",
+  "transport": "http",
+  "profile": "interim-1002",
+  "label": "interim \u2014 not V3 (Portaldot dev node, runtime spec 1002)",
+  "genesis_hash": "0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22",
+  "head_at_refetch": 8177,
+  "source": "evidence/raw-announce-interim-1002-2026-10-14T144153Z.jsonl",
+  "matched": 1,
+  "total": 1,
+  "rows": [
+    {
+      "extrinsic_id": "8177-1",
+      "block_number": 8177,
+      "block_hash": "0x9e9bc2bab63a286db749559b4bf0b62d5e5dd1ffe9b3be25fd680f2bc5c79f28",
+      "extrinsic_hash": "0x239bca023d7b96f650a54910c0fd1f2e03225b6c4d6b0621a426293c654e4f1c",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    }
+  ]
+}

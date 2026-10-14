@@ -1,27 +1,27 @@
-code c1bdca9
+code 5ea95f2
 telegram: not configured (no token) — alerts go to stdout and the JSON-lines log
 watching 1 vault(s) on interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944 · block 3000 ms · notifiers: stdout, jsonl · db .watcher-evidence-sdk.db
 connection lost (WebSocketConnectionClosedException: Connection to remote host was lost.); reconnecting in 1 s
-[driver] node stopped (SIGTERM) at 13:07:27
+[driver] node stopped (SIGTERM) at 14:40:36
 reconnect failed: ChainUnreachable: no node answered at ws://127.0.0.1:29944: ConnectionRefusedError: [Errno 61] Connection refused
 connection lost (ChainUnreachable: no node answered at ws://127.0.0.1:29944: ConnectionRefusedError: [Errno 61] Connection refused); reconnecting in 2 s
 reconnect failed: ChainUnreachable: no node answered at ws://127.0.0.1:29944: ConnectionRefusedError: [Errno 61] Connection refused
 connection lost (ChainUnreachable: no node answered at ws://127.0.0.1:29944: ConnectionRefusedError: [Errno 61] Connection refused); reconnecting in 4 s
-[driver] node restarted at 13:07:32
+[driver] node restarted at 14:40:41
 reconnect failed: ChainUnreachable: no node answered at ws://127.0.0.1:29944: ConnectionRefusedError: [Errno 61] Connection refused
 connection lost (ChainUnreachable: no node answered at ws://127.0.0.1:29944: ConnectionRefusedError: [Errno 61] Connection refused); reconnecting in 8 s
-reconnected to ws://127.0.0.1:29944 (same genesis); resuming after #14415
-catching up 2 blocks: #14416..#14417
+reconnected to ws://127.0.0.1:29944 (same genesis); resuming after #16264
+catching up 3 blocks: #16265..#16267
 ========================================================================
 NOT YOURS — VETO
-Vault 5GUUKcTc7dVkLZ4FpCWoVnJEgNnkVJT4aBqB7yXyfJaj9Fpe
+Vault 5Fzub6s93G7oh5NrVe2stedG8ZwKyaNeKxv9xyQ7S9bSUicV
 Chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain)
 Up to 202.0000 UNIT at risk (100.0000 UNIT of the free balance cannot move: locks, or the existential deposit a vault with deposits keeps)
-Announced by delegate 5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y at block #14419; executable from #14439. Veto must land by #14438: 19 blocks (≈ 57 s) from head #14419
+Announced by delegate 5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y at block #16269; executable from #16289. Veto must land by #16288: 19 blocks (≈ 57 s) from head #16269
 Call hash 0x475267f8a2478cfdc7234fee7a36a244fc5feb146fd31bac2cb56a908b7c9aa5 (an announcement publishes only the hash)
 Veto with the cold key — Airlock CLI (ships with the CLI step):
-airlock veto --vault 5GUUKcTc7dVkLZ4FpCWoVnJEgNnkVJT4aBqB7yXyfJaj9Fpe --delegate 5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y --hash 0x475267f8a2478cfdc7234fee7a36a244fc5feb146fd31bac2cb56a908b7c9aa5
+airlock veto --vault 5Fzub6s93G7oh5NrVe2stedG8ZwKyaNeKxv9xyQ7S9bSUicV --delegate 5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y --hash 0x475267f8a2478cfdc7234fee7a36a244fc5feb146fd31bac2cb56a908b7c9aa5
 or today in polkadot.js Apps > Developer > Extrinsics, signed by the cold key:
-proxy.proxy(real=5GUUKcTc7dVkLZ4FpCWoVnJEgNnkVJT4aBqB7yXyfJaj9Fpe, forceProxyType=None, call=proxy.rejectAnnouncement(delegate=5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y, callHash=0x475267f8a2478cfdc7234fee7a36a244fc5feb146fd31bac2cb56a908b7c9aa5))
+proxy.proxy(real=5Fzub6s93G7oh5NrVe2stedG8ZwKyaNeKxv9xyQ7S9bSUicV, forceProxyType=None, call=proxy.rejectAnnouncement(delegate=5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y, callHash=0x475267f8a2478cfdc7234fee7a36a244fc5feb146fd31bac2cb56a908b7c9aa5))
 ========================================================================
 watcher exit 0

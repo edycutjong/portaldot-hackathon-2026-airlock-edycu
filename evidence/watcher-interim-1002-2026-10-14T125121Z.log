@@ -1,0 +1,16 @@
+code b1a92e6
+telegram: not configured (no token) — alerts go to stdout and the JSON-lines log
+watching 1 vault(s) on interim — not V3 (Portaldot dev node, runtime spec 1002) · genesis 0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22 · ws://127.0.0.1:19944 · block 6000 ms · notifiers: stdout, jsonl · db .watcher-evidence-1002.db
+========================================================================
+NOT YOURS — VETO
+Vault 5Gr3zypYXyFxRHJPUxBwhQcTvk2CzBsLPLX9YR2f6fgedGrS
+Chain: interim — not V3 (Portaldot dev node, runtime spec 1002)
+Up to 498.0200 POT at risk
+Announced by delegate 5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y at block #7071; executable from #7081. Veto must land by #7080: 9 blocks (≈ 54 s) from head #7071
+Call hash 0x5b11231612a3699c8009e8abb7b35314a73a8f28088221aa1a5d1a92bd2222fa (an announcement publishes only the hash)
+Veto with the cold key — Airlock CLI (ships with the CLI step):
+airlock veto --vault 5Gr3zypYXyFxRHJPUxBwhQcTvk2CzBsLPLX9YR2f6fgedGrS --delegate 5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y --hash 0x5b11231612a3699c8009e8abb7b35314a73a8f28088221aa1a5d1a92bd2222fa
+or today in polkadot.js Apps > Developer > Extrinsics, signed by the cold key:
+proxy.proxy(real=5Gr3zypYXyFxRHJPUxBwhQcTvk2CzBsLPLX9YR2f6fgedGrS, forceProxyType=None, call=proxy.rejectAnnouncement(delegate=5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y, callHash=0x5b11231612a3699c8009e8abb7b35314a73a8f28088221aa1a5d1a92bd2222fa))
+========================================================================
+watcher exit 0

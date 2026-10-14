@@ -18,9 +18,11 @@ profile label) in the same shape as the spike's evidence, so a run can be re-fet
 
 from __future__ import annotations
 
+import math
 import subprocess
 import time
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Callable
 
@@ -31,6 +33,7 @@ from .chain_profile import Chain, pure_address
 from .dispatch import OK, error_namer, find_event, outcome
 
 ROOT = Path(__file__).resolve().parent.parent
+MAX_DELAY = 2**32 - 1  # the pallet's BlockNumber is a u32
 
 
 class Refused(RuntimeError):
@@ -47,6 +50,15 @@ class TxFailed(RuntimeError):
 
 class NotConfirmed(RuntimeError):
     """The extrinsic succeeded but the state read afterwards does not show its effect."""
+
+
+class VaultIncomplete(NotConfirmed):
+    """create_pure succeeded (its deposit is spent) but a later setup step did not: the vault exists, unfinished."""
+
+    def __init__(self, vault: str, cause: Exception):
+        super().__init__(f"vault {vault} was created but its setup did not finish ({cause}); it holds whatever was "
+                         f"funded, and `airlock status --vault {vault}` shows its delegates")
+        self.vault = vault
 
 
 @dataclass(frozen=True)
@@ -119,21 +131,37 @@ def definitions(proxies_value: Any) -> list[Delegate]:
 
 
 def delay_of(defs: list[Delegate], account: str) -> int | None:
-    """The delay that gates an announcement by `account`: the shortest of its definitions (as the pallet finds it)."""
-    delays = [d.delay for d in defs if same_account(d.account, account)]
-    return min(delays) if delays else None
+    """The delay the pallet applies to `account`: that of its FIRST definition in storage order (`find_proxy`, and
+    `announce`'s own lookup, take the first match when no proxy type is forced)."""
+    return next((d.delay for d in defs if same_account(d.account, account)), None)
 
 
-def blocks_for(seconds: float, block_time_ms: int | None) -> int:
-    """A delay set in time, in whole blocks of this chain (rounded up, at least 1)."""
+def blocks_for(seconds: float | str, block_time_ms: int | None) -> int:
+    """A delay set in time, in whole blocks of this chain (rounded up exactly, at least 1)."""
     if not block_time_ms:
         raise Refused("this chain's block time is unknown: give the delay in blocks (--delay)")
-    return max(1, -(-int(seconds * 1000) // block_time_ms))
+    try:
+        s = Decimal(str(seconds))
+    except InvalidOperation as e:
+        raise Refused(f"delay {seconds!r} is not a number of seconds") from e
+    if not s.is_finite() or s <= 0:
+        raise Refused(f"delay must be a positive, finite number of seconds, got {seconds!r}")
+    blocks = max(1, math.ceil(s * 1000 / block_time_ms))
+    if blocks > MAX_DELAY:
+        raise Refused(f"{seconds} s is {blocks} blocks, beyond the pallet's u32 block numbers")
+    return blocks
+
+
+def matching(entries: list[Announcement], vault: str, h: str) -> list[Announcement]:
+    """Every pending entry for this call hash on this vault (a delegate may announce the same hash twice)."""
+    h = h.lower()
+    return [a for a in entries if a.call_hash == h and same_account(a.real, vault)]
 
 
 def is_pending(entries: list[Announcement], vault: str, h: str) -> Announcement | None:
-    h = h.lower()
-    return next((a for a in entries if a.call_hash == h and same_account(a.real, vault)), None)
+    """The oldest pending entry for this hash on this vault (the first to mature), or None."""
+    found = matching(entries, vault, h)
+    return min(found, key=lambda a: a.height) if found else None
 
 
 class Sender:
@@ -214,28 +242,53 @@ def deposits(chain: Chain) -> dict[str, int]:
 # operations ---------------------------------------------------------------------------------------------------------
 
 
+def create_minimums(tx: Sender, cold: Keypair, index: int = 0) -> tuple[int, int]:
+    """(least the vault must be funded with, least the cold key must be able to spend) — from chain constants and a
+    fee quote: the vault reserves the hot-key slot and keeps the existential deposit; cold pays the create deposit,
+    the funding and three fees."""
+    chain = tx.chain
+    d = deposits(chain)
+    ed = chain.existential_deposit
+    vault_min = d["ProxyDepositFactor"] + ed
+    create = tx.s.compose_call("Proxy", chain.profile.create_pure_call, {"proxy_type": "Any", "delay": 0, "index": index})
+    fee = int(tx.s.get_payment_info(create, cold)["partialFee"])
+    return vault_min, d["ProxyDepositBase"] + d["ProxyDepositFactor"] + ed + 3 * fee
+
+
 def create_vault(tx: Sender, cold: Keypair, hot: str, delay: int, index: int = 0, fund: int | None = None,
                  label: str = "") -> str:
-    """cold creates a pure vault (cold = its delay-0 delegate) and adds `hot` as an Any delegate with `delay` blocks.
-    `label` prefixes the step names of the rows (e.g. "throwaway: ")."""
+    """cold creates a pure vault (cold = its delay-0 delegate), funds it, and adds `hot` as an Any delegate with
+    `delay` blocks. Refused before anything is sent if the funding or the cold key's balance cannot cover the
+    deposits: an unfunded vault would cost the create deposit and fail at add_proxy. `label` prefixes the step names
+    of the rows (e.g. "throwaway: ")."""
     chain, s, p = tx.chain, tx.s, tx.chain.profile
-    if delay < 1:
-        raise Refused("delay must be at least 1 block: a delay-0 hot key is exactly what Airlock exists to avoid")
+    if not 1 <= delay <= MAX_DELAY:
+        raise Refused(f"delay must be 1..{MAX_DELAY} blocks: a delay-0 hot key is exactly what Airlock exists to avoid")
     if same_account(hot, cold.ss58_address):
         raise Refused("the hot key must not be the cold key")
+    vault_min, cold_extra = create_minimums(tx, cold, index)
+    if fund is None or fund < vault_min:
+        raise Refused(f"fund the vault with at least {chain.fmt(vault_min)} (--fund): it reserves the hot-key deposit "
+                      f"and must keep the existential deposit")
+    spendable = chain.at_risk(cold.ss58_address).transferable
+    if spendable < fund + cold_extra:
+        raise Refused(f"the cold key can spend {chain.fmt(spendable)}; creating and funding this vault needs "
+                      f"{chain.fmt(fund + cold_extra)} (funding + create deposit + fees)")
     r = tx.send(f"{label}create vault", "cold", cold,
                 s.compose_call("Proxy", p.create_pure_call, {"proxy_type": "Any", "delay": 0, "index": index}))
     attrs = find_event(r, "Proxy", p.pure_created_event)
     if attrs is None:
         raise NotConfirmed(f"create vault succeeded but emitted no Proxy.{p.pure_created_event}")
     vault = pure_address(p, attrs)
-    if fund:
+    try:
         tx.send(f"{label}fund vault", "cold", cold, transfer(chain, vault, fund), note=chain.fmt(fund))
-    add = s.compose_call("Proxy", "add_proxy", {"delegate": hot, "proxy_type": "Any", "delay": delay})
-    tx.send(f"{label}add delayed hot key", "cold", cold, as_vault(chain, vault, add), note=f"delay {delay} blocks")
-    defs = tx.delegates(vault)
-    if delay_of(defs, hot) != delay or delay_of(defs, cold.ss58_address) != 0:
-        raise NotConfirmed(f"Proxy.Proxies({vault}) should hold hot with delay {delay} and cold with delay 0: {defs}")
+        add = s.compose_call("Proxy", "add_proxy", {"delegate": hot, "proxy_type": "Any", "delay": delay})
+        tx.send(f"{label}add delayed hot key", "cold", cold, as_vault(chain, vault, add), note=f"delay {delay} blocks")
+        defs = tx.delegates(vault)
+        if delay_of(defs, hot) != delay or delay_of(defs, cold.ss58_address) != 0:
+            raise NotConfirmed(f"Proxy.Proxies should hold hot with delay {delay} and cold with delay 0: {defs}")
+    except (TxFailed, NotConfirmed) as e:
+        raise VaultIncomplete(vault, e) from e
     return vault
 
 
@@ -245,15 +298,16 @@ def announce(tx: Sender, hot: Keypair, vault: str, call: Any, step: str = "annou
     if delay is None:
         raise Refused(f"{hot.ss58_address} is not a delegate of {vault}: the announcement would fail Proxy.NotProxy")
     h = call_hash(call)
+    if matching(pending(tx.s, hot.ss58_address), vault, h):
+        raise Refused(f"an identical call ({h}) is already pending on {vault}: one execution clears every mature copy, "
+                      f"so a second identical spend would be lost — execute or withdraw the first, or change the amount")
     r = tx.send(step, "hot", hot, tx.s.compose_call("Proxy", "announce", {"real": vault, "call_hash": h}),
                 note=f"call hash {h}")
-    entry = is_pending(pending(tx.s, hot.ss58_address), vault, h)
-    if entry is None:
-        raise NotConfirmed(f"I3: {h} is not in Proxy.Announcements({hot.ss58_address}) after the announce")
-    if entry.height != tx.s.get_block_number(r.block_hash):
-        raise NotConfirmed(f"announcement stored at #{entry.height}, extrinsic included at "
-                           f"#{tx.s.get_block_number(r.block_hash)}")
-    return Pending(hot.ss58_address, h, entry.height, delay)
+    included = tx.s.get_block_number(r.block_hash)
+    if not any(a.height == included for a in matching(pending(tx.s, hot.ss58_address), vault, h)):
+        raise NotConfirmed(f"I3: {h} is not in Proxy.Announcements({hot.ss58_address}) at the inclusion block "
+                           f"#{included}")
+    return Pending(hot.ss58_address, h, included, delay)
 
 
 def find_pending(tx: Sender, vault: str, delegate: str, h: str) -> Pending | None:
@@ -275,8 +329,10 @@ def pending_for(tx: Sender, vault: str) -> list[Pending]:
 
 
 def execute(tx: Sender, hot: Keypair, vault: str, call: Any, wait: bool = True,
-            on_tick: Callable[[int], None] | None = None, step: str = "execute") -> Any:
-    """hot executes an announced call once its delay has passed (waits for it unless `wait` is False)."""
+            on_tick: Callable[[int], None] | None = None, step: str = "execute", needs: int | None = None) -> Any:
+    """hot executes an announced call once its delay has passed (waits for it unless `wait` is False). `needs`: the
+    amount the call moves out of the vault, checked first — a call that fails inside proxy_announced still uses up
+    its announcement."""
     h = call_hash(call)
     p = find_pending(tx, vault, hot.ss58_address, h)
     if p is None:
@@ -284,18 +340,26 @@ def execute(tx: Sender, hot: Keypair, vault: str, call: Any, wait: bool = True,
                       f"or vetoed — proxy_announced would fail Proxy.Unannounced")
     if p.delay is None:
         raise Refused(f"{hot.ss58_address} is no longer a delegate of {vault} (panic?): it can never execute")
+    if needs is not None:
+        can = tx.chain.at_risk(vault).transferable
+        if can < needs:
+            raise Refused(f"the vault can move {tx.chain.fmt(can)}, the call moves {tx.chain.fmt(needs)}: it would fail "
+                          f"inside proxy_announced and use up the announcement")
     head = tx.head()
     # the extrinsic lands in a block after the head; waiting for head >= release keeps one block of margin
     if head < p.release_block:
         if not wait:
-            raise Refused(f"announced at #{p.height} with delay {p.delay}: executable from #{p.release_block}, "
-                          f"head is #{head} — proxy_announced now would fail Proxy.Unannounced")
+            raise Refused(f"announced at #{p.height} with delay {p.delay}: executable from #{p.release_block}, head is "
+                          f"#{head} — not sending now (it could land before #{p.release_block} and fail "
+                          f"Proxy.Unannounced)")
         tx.wait_until_block(p.release_block, on_tick)
     executed = tx.s.compose_call("Proxy", "proxy_announced",
                                  {"delegate": hot.ss58_address, "real": vault, "force_proxy_type": None, "call": call})
     r = tx.send(step, "hot", hot, executed, note=f"call hash {h}, announced #{p.height}")
-    if find_pending(tx, vault, hot.ss58_address, h) is not None:
-        raise NotConfirmed(f"{h} is still pending after proxy_announced")
+    # the pallet removes every MATURE copy of the hash; an identical later announcement may legitimately remain
+    at = tx.s.get_block_number(r.block_hash)
+    if any(at - a.height >= p.delay for a in matching(pending(tx.s, hot.ss58_address), vault, h)):
+        raise NotConfirmed(f"{h} is still pending (mature) after proxy_announced")
     return r
 
 

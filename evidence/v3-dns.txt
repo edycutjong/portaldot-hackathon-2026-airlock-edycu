@@ -1,0 +1,3 @@
+# V3 testnet RPC DNS checks: dig +short testnetv3-node.feso-apps.xyz @1.1.1.1 (empty answer = no record)
+# earlier checks this day (01:04 and 11:30 UTC) are in the build log, not recorded here; from now on each check appends a line
+2026-10-14T12:09:48Z answer=[]

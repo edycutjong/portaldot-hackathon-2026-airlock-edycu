@@ -5,7 +5,7 @@
 **A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.**
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Tests: 246 passing](https://img.shields.io/badge/tests-246%20passing-brightgreen)
+![Tests: 337 passing](https://img.shields.io/badge/tests-337%20passing-brightgreen)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)
 ![Chain: interim, not V3](https://img.shields.io/badge/chain-interim%20%E2%80%94%20not%20V3-orange)
 
@@ -55,7 +55,8 @@ from a fresh process over HTTP. `interim-sdk` keeps its state on disk (archive n
 flowchart LR
   subgraph owner["owner side (built)"]
     CLI["airlock CLI<br/>create · announce · execute · veto · panic · status<br/>airlock/cli.py → airlock/ops.py"]
-    W["watcher<br/>airlock/watcher.py<br/>Proxy.Announced → NOT YOURS"]
+    W["watcher<br/>airlock/watcher.py<br/>Proxy.Announced → YOURS / NOT YOURS"]
+    REG["owner intent registry<br/>airlock/api.py · airlock/intents.py"]
     AL["alerts<br/>stdout · JSON lines · Telegram sender"]
   end
   subgraph core["shared (built)"]
@@ -68,7 +69,6 @@ flowchart LR
     TH["thief.py<br/>raw announce, no Airlock code"]
   end
   subgraph planned["planned"]
-    REG["owner intent registry<br/>(YOURS vs NOT YOURS)"]
     REV["Revive.call as a held call"]
   end
   N[("Proxy pallet<br/>interim chain")]
@@ -80,7 +80,8 @@ flowchart LR
   AL -->|"veto command"| CLI
   CLI --- core
   W --- core
-  REG -.-> W
+  CLI -->|"register intent, then announce"| REG
+  REG -->|"same SQLite"| W
   REV -.-> N
 ```
 
@@ -142,7 +143,7 @@ cd portaldot-hackathon-2026-airlock-edycu
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'                 # also installs the `airlock` command
 
-pytest -q                               # 246 passed, 4 skipped: no chain or network needed (the 4 are the live-chain tests)
+pytest -q                               # 337 passed, 4 skipped: no chain or network needed (the 4 are the live-chain tests)
 
 scripts/interim_node.sh interim-sdk     # terminal 1: dev chain on ws://127.0.0.1:29944 (archive state)
 
@@ -185,7 +186,7 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
   vetoed, one executed after its veto and failing, one withdrawn announcement, a panic) — and the end-state checks of
   [fixtures/expected.json](fixtures/expected.json) all hold. Re-fetched 27/27 and 29/29 by extrinsic id.
 - **Proof:** [docs/PROOF.md](docs/PROOF.md) — every row with extrinsic id, block hash, tx hash and the profile label.
-- **Tests:** 246 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
+- **Tests:** 337 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
   I2: a vetoed announcement never executes, also after the delay; the control; panic) that pass on both interim chains
   (`evidence/integration-*.json`, `"status": "passed"`).
 - **Watcher:** [docs/WATCHER.md](docs/WATCHER.md) — also shown live after a watcher restart, a node restart and a node
@@ -209,13 +210,17 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
 - CLI `airlock create / announce / execute / veto / panic / status`: each command reads the chain before signing and
   confirms its effect afterwards; keys only from a file or an environment variable (dev keys on interim chains).
 - `seed.py` + fixtures, `thief.py`, and the thief → alert → veto → `Unannounced` run on both interim chains.
+- Owner intent registry ([docs/REGISTRY.md](docs/REGISTRY.md)): `airlock enroll` (cold-key-signed owner token) and
+  register-before-announce in `airlock announce`; the watcher marks the owner's registered spend YOURS and everything
+  else NOT YOURS; shown live on both interim chains (`scripts/intent_evidence.sh`).
+- `scripts/bench.py` (thief drains, alert and veto latency, a delay-0 control drain; [docs/BENCH.md](docs/BENCH.md)) and
+  `scripts/verify_onchain.py` (every PROOF.md row re-fetched by extrinsic id, label checked against the chain).
 
 **Next**
 
 - Run the same flow on the Portaldot V3 testnet as soon as its RPC is reachable, and label those rows `v3`.
-- The owner intent registry, so the owner's own announcements show as YOURS and everything else stays NOT YOURS.
 - Telegram alerts on a real phone once a bot token is configured.
-- Benchmarks (alert and veto latency), a demo video with live transactions, and the check-in submission (Oct 24).
+- A demo video with live transactions, and the check-in submission (Oct 24).
 - `Revive.call` as a held call type, only if it can be proven through a vault origin on a chain.
 
 ## Team

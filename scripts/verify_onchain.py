@@ -9,8 +9,10 @@ what the row says. Evidence JSON files (a bench, seed or spike run: `{"rows": [.
 their rows are checked the same way.
 
 By default it reads over each local node's HTTP endpoint, not the websocket the runs used. A profile whose node is not
-running is reported UNREACHABLE and fails the run (`--skip-unreachable` reports it and goes on). Exit 0 only if every
-row checked matched.
+running is reported UNREACHABLE and fails the run (`--skip-unreachable` reports it and goes on); an endpoint that
+answers as a different chain than the label is a MISMATCH and always fails. A table line that looks like a proof row
+(a backticked `block-index`) but cannot be read is UNPARSED and fails too, so no row is skipped silently. Exit 0 only
+if every row checked matched and at least one did.
 
 usage: python scripts/verify_onchain.py [docs/PROOF.md] [evidence/bench-….json …] [--url interim-sdk=http://…]
 """
@@ -33,6 +35,7 @@ from airlock.receipts import refetch  # noqa: E402
 
 HTTP = {"interim-sdk": "http://127.0.0.1:29944", "interim-1002": "http://127.0.0.1:19933"}
 ID = re.compile(r"^\d+-\d+$")
+ID_LIKE = re.compile(r"`\d+-\d+`")
 
 
 def cell(value: str) -> str:
@@ -65,6 +68,10 @@ def proof_rows(text: str, source: str = "docs/PROOF.md") -> list[dict]:
         row = dict(zip(header, cells))
         xid = cell(row.get("extrinsic id", ""))
         if not ID.match(xid):
+            if ID_LIKE.search(line):  # it carries an id, but not in a column this reader understands
+                rows.append({"source": f"{source}:{n}", "section": section, "extrinsic_id": None, "profile": None,
+                             "label": "", "block_hash": None, "extrinsic_hash": None, "outcome": None,
+                             "unparsed": line.strip()[:160]})
             continue
         rows.append({"source": f"{source}:{n}", "section": section, "extrinsic_id": xid,
                      "profile": profile_of(row.get("profile", "")), "label": cell(row.get("profile", "")),
@@ -120,13 +127,17 @@ def main(argv=None) -> int:
 
     started = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     chains, cache, results = {}, {}, []
-    unreachable = set()
+    unreachable, mismatched = set(), set()
     for row in rows:
         p = row["profile"]
+        if row.get("unparsed"):
+            results.append({**row, "status": "UNPARSED", "diffs": ["a table row with an extrinsic id this reader "
+                                                                   "cannot place (no 'extrinsic id' column?)"]})
+            continue
         if p is None:
             results.append({**row, "status": "UNLABELLED", "diffs": [f"profile label {row['label']!r} names no profile"]})
             continue
-        if p not in chains and p not in unreachable:
+        if p not in chains and p not in unreachable | mismatched:
             try:
                 c = connect(urls.get(p) or PROFILES[p].default_endpoint, p)
                 chains[p] = (c, error_namer(c.substrate.get_metadata().pallets), c.substrate.get_block_number(None))
@@ -136,10 +147,13 @@ def main(argv=None) -> int:
                 unreachable.add(p)
                 print(f"{p}: UNREACHABLE ({e})")
             except (UnknownChain, ProfileMismatch) as e:  # the label does not match the chain behind the endpoint
-                unreachable.add(p)
+                mismatched.add(p)
                 print(f"{p}: LABEL MISMATCH — {type(e).__name__}: {e}")
         if p in unreachable:
             results.append({**row, "status": "UNREACHABLE", "diffs": []})
+            continue
+        if p in mismatched:
+            results.append({**row, "status": "MISMATCH", "diffs": [f"the {p} endpoint is not a {p} chain"]})
             continue
         chain, namer, _ = chains[p]
         if row.get("genesis_hash") and row["genesis_hash"].lower() != chain.genesis_hash.lower():
@@ -181,9 +195,12 @@ def main(argv=None) -> int:
                                "summary": {p: {"rows": s["rows"], "matched": s["match"], "distinct": len(s["ids"])}
                                            for p, s in by_profile.items()},
                                "results": results}, indent=2, default=str) + "\n")
-    print(f"VERIFY {'PASS' if not bad else 'FAIL'}: {len(results) - len(bad)}/{len(results)} rows -> "
-          f"{out.relative_to(ROOT)}")
-    return 0 if not bad else 1
+    matched = sum(r["status"] == "MATCH" for r in results)
+    ok = not bad and matched > 0
+    print(f"VERIFY {'PASS' if ok else 'FAIL'}: {matched}/{len(results)} rows matched"
+          + (f" ({len(results) - matched} unreachable, skipped)" if ok and matched < len(results) else "")
+          + f" -> {out.relative_to(ROOT)}")
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

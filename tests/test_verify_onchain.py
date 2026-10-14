@@ -58,3 +58,30 @@ def test_evidence_rows_take_the_file_profile_and_genesis(tmp_path):
         {"extrinsic_id": "6-2", "block_hash": "0xb6", "extrinsic_hash": "0xt6", "outcome": "Proxy.Unannounced"}]}))
     rows = v.evidence_rows(f)
     assert [r["profile"] for r in rows] == ["interim-sdk", "interim-sdk"] and rows[1]["genesis_hash"] == "0xg"
+
+
+def test_a_row_with_an_id_in_an_unknown_column_is_reported_not_skipped():
+    text = "### x\n\n| id | call |\n|---|---|\n| `123-2` | Proxy.announce |\n| 2026-10-14 | a date, not an id |\n"
+    rows = v.proof_rows(text)
+    assert len(rows) == 1 and rows[0]["unparsed"] and rows[0]["extrinsic_id"] is None
+
+
+def _run(monkeypatch, tmp_path, connect_error, skip):
+    proof = tmp_path / "PROOF.md"
+    proof.write_text(PROOF)
+
+    def fake_connect(url, profile):
+        raise connect_error
+
+    monkeypatch.setattr(v, "connect", fake_connect)
+    monkeypatch.setattr(v, "ROOT", tmp_path)
+    (tmp_path / "evidence").mkdir()
+    return v.main([str(proof)] + (["--skip-unreachable"] if skip else []))
+
+
+def test_label_mismatch_fails_even_with_skip_unreachable(monkeypatch, tmp_path):
+    assert _run(monkeypatch, tmp_path, v.ProfileMismatch("endpoint is interim-1002"), skip=True) == 1
+
+
+def test_all_unreachable_and_skipped_is_not_a_pass(monkeypatch, tmp_path):
+    assert _run(monkeypatch, tmp_path, v.ChainUnreachable("down"), skip=True) == 1

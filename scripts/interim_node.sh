@@ -7,6 +7,8 @@
 #                Apple Silicon). Point PORTALDOT_DEV at it.
 #
 # Evidence from either chain is labelled "interim — not V3" (see airlock/chain_profile.py).
+# The interim-sdk binary is pinned for macOS arm64 only (the platform this was built on); elsewhere, build
+# substrate-node from the same polkadot-sdk tag or use interim-1002.
 #
 # usage: scripts/interim_node.sh [interim-sdk|interim-1002] [--fresh]
 set -euo pipefail
@@ -41,7 +43,7 @@ case "$PROFILE" in
     [[ "$(uname -s)-$(uname -m)" == "Darwin-arm64" ]] && runner=(arch -x86_64)
     # On this older node --rpc-port is HTTP only; websocket is --ws-port.
     echo "interim-1002: ws://127.0.0.1:19944 (--tmp, state resets on restart)"
-    exec "${runner[@]}" "$bin" --dev --tmp --ws-port 19944 --rpc-port 19933 --port 30433 --no-prometheus --no-telemetry
+    exec ${runner[@]+"${runner[@]}"} "$bin" --dev --tmp --ws-port 19944 --rpc-port 19933 --port 30433 --no-prometheus --no-telemetry
     ;;
   *) echo "unknown profile: $PROFILE (interim-sdk | interim-1002)" >&2; exit 2 ;;
 esac

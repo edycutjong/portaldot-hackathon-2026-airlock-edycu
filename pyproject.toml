@@ -7,6 +7,7 @@ license = { text = "MIT" }
 requires-python = ">=3.10"
 dependencies = [
   "substrate-interface==1.8.1",
+  "scalecodec==1.2.12",
 ]
 
 [project.optional-dependencies]
@@ -21,7 +22,5 @@ include = ["airlock*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# substrate-interface pulls in no async code; keep a globally installed pytest-asyncio from loading
 addopts = "-p no:asyncio"
-markers = [
-  "chain: needs a running node at AIRLOCK_WSS (skipped otherwise)",
-]

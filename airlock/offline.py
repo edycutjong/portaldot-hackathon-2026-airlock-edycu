@@ -1,7 +1,8 @@
 """Encode calls against recorded runtime metadata, with no node running.
 
-Used by the unit tests (and later by scripts/verify_offline.py) so call-hash checks are reproducible from the repo
-alone. Fixtures are written by `scripts/record_metadata.py` from a live chain identified by `chain_profile`.
+Used by the unit tests so call-hash checks are reproducible from the repo alone. Fixtures live in tests/fixtures/
+(a source checkout, not an installed package) and are written by `scripts/record_metadata.py` from a live chain
+identified by `chain_profile`.
 """
 
 from __future__ import annotations

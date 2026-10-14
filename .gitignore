@@ -13,6 +13,12 @@ dist/
 build/
 coverage/
 .DS_Store
+# never public: planning and design notes kept outside the repo
+graphify-out/
+PRODUCT.md
+DESIGN.md
+.impeccable/
+brag-output/
 # local chain data and run logs
 .chain/
 *.log

@@ -18,6 +18,9 @@ import sys
 from substrateinterface import Keypair, SubstrateInterface
 
 DEV_1002_GENESIS = "0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22"  # needs the legacy decoder
+DEV_SDK_GENESIS = "0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2"
+# Dev keys are public: sign only on the two local interim dev chains (copied here so this file imports no airlock code)
+INTERIM_GENESES = (DEV_SDK_GENESIS, DEV_1002_GENESIS)
 DEV_KEYS = ("//Alice", "//Charlie", "//Dave")
 
 
@@ -33,7 +36,10 @@ def main(argv):
     if cold_uri not in DEV_KEYS:
         sys.exit(f"COLD must be one of the dev keys {DEV_KEYS}")
     s = SubstrateInterface(url=url)
-    legacy = s.get_block_hash(0) == DEV_1002_GENESIS
+    genesis = s.get_block_hash(0)
+    if genesis not in INTERIM_GENESES:
+        sys.exit(f"refusing to sign with public dev keys on {url}: genesis {genesis} is not a local interim dev chain")
+    legacy = genesis == DEV_1002_GENESIS
     if legacy:
         s = SubstrateInterface(url=url, type_registry_preset="legacy")
     decimals = (s.properties or {}).get("tokenDecimals") or 14

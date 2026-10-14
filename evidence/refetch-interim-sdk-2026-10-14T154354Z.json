@@ -1,0 +1,24 @@
+{
+  "started": "2026-10-14T15:43:54Z",
+  "endpoint": "http://127.0.0.1:29944",
+  "transport": "http",
+  "profile": "interim-sdk",
+  "label": "interim \u2014 not V3 (upstream polkadot-sdk substrate-node dev chain)",
+  "genesis_hash": "0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2",
+  "head_at_refetch": 17517,
+  "source": null,
+  "matched": 1,
+  "total": 1,
+  "rows": [
+    {
+      "extrinsic_id": "17428-2",
+      "block_number": 17428,
+      "block_hash": "0xa7cfad34ea7e1afe8ff483222b1650429c3f725f150a77f97894e6d250cd8cd3",
+      "extrinsic_hash": "0x49aaa7bf0eaa6db42cfa48273f78f661068d7bc9d7dfa16e4d5ac6a17589ddd7",
+      "call": "Proxy.proxy(Proxy.reject_announcement)",
+      "outcome": "ok",
+      "match": null,
+      "diffs": []
+    }
+  ]
+}

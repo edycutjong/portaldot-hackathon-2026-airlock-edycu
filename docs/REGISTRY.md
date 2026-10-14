@@ -50,8 +50,10 @@ CLI sends the owner token only over `https://`, or plain `http://` to this machi
 spend alerted **YOURS** with the decoded call; the thief's preimage POST answered **401** and its announcement alerted
 **NOT YOURS** and vetoed; the registry frozen mid-request (`SIGSTOP`) and then killed (`SIGKILL`) — `airlock announce`
 exits 2 both times and nothing new is pending; exactly two alerts in total. Each log ends with its checks and
-`INTENTS PASS` or `FAIL`; the extrinsics are re-fetched by id in `evidence/refetch-*`. Passing runs:
-`evidence/intents-interim-sdk-2026-10-14T161239Z.log`, `evidence/intents-interim-1002-2026-10-14T161455Z.log`. The
+`INTENTS PASS` or `FAIL`; the extrinsics are re-fetched by id in `evidence/refetch-*`. Passing runs at the current
+registry code (threaded server, token only over https/loopback): `evidence/intents-interim-sdk-2026-10-14T165014Z.log`,
+`evidence/intents-interim-1002-2026-10-14T165141Z.log`; earlier passing runs: `evidence/intents-interim-sdk-2026-10-14T161239Z.log`,
+`evidence/intents-interim-1002-2026-10-14T161455Z.log`. The
 first attempt, `evidence/intents-interim-sdk-2026-10-14T161108Z.log`, is kept: it stopped at the owner's registration
 (HTTP 400 — the registry could not yet decode a call on a fresh connection); the bug it found was fixed in the next
 commit.

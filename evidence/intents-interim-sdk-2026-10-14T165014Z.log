@@ -1,0 +1,79 @@
+code 697265a · profile interim-sdk · vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG · delay 20 blocks · registry http://127.0.0.1:18787 · payee payee-rent 5C5vdpsPjL7KwZySdTNBxVRJ5os7qQBwrkU7mu4fA61jCryJ · thief payee attacker-2 5ChW5TMWZVzDYDTHVnt59WKv3TQEQmxnLgo1cxnzk284LZ82
+intent registry on http://127.0.0.1:18787 · interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · db <tmp>/shared.db
+telegram: not configured (no token) — alerts go to stdout and the JSON-lines log
+watching 1 vault(s) on interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944 · block 3000 ms · notifiers: stdout, jsonl · db <tmp>/shared.db
+[driver 16:50:18] 1. enrol: the cold key signs the owner token's digest
+127.0.0.1 "POST /api/vaults/5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG/owner HTTP/1.1" 200 -
+chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · node/268 · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944
+enrolled: owner token for 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG saved to <tmp>/owner.token (mode 600); the registry at http://127.0.0.1:18787 keeps only its sha256. `airlock announce` reads it from there.
+[driver 16:50:21] 2. owner announces a spend: register first, then proxy.announce
+chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · node/268 · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944
+127.0.0.1 "POST /api/intents HTTP/1.1" 200 -
+intent registered at http://127.0.0.1:18787: 0x7400a0c5e26224eb5727696b8baf747ae5cc2e1e43d3babca229328cbdc85d49 (#18745, intent 1)
+[interim-sdk — not V3] ok     announce             Proxy.announce                               by hot  #18746 id 18746-2 tx 0x0b14542aa2b6e0724262c4f9c19aa8bd77480c5faa83bcb94e1143bdb62d2740
+announced 0x7400a0c5e26224eb5727696b8baf747ae5cc2e1e43d3babca229328cbdc85d49 at #18746: executable from #18766 (20 blocks (≈ 60 s))
+registered before announcing: the watcher shows it as YOURS
+execute:  airlock execute --vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG --to 5C5vdpsPjL7KwZySdTNBxVRJ5os7qQBwrkU7mu4fA61jCryJ --amount 1.5
+cancel:   airlock veto --vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG --delegate 5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7 --hash 0x7400a0c5e26224eb5727696b8baf747ae5cc2e1e43d3babca229328cbdc85d49
+========================================================================
+YOURS — your registered spend (intent 1, registered at #18745)
+Vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG
+Chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain)
+Call Balances.transfer_keep_alive(dest=5C5vdpsPjL7KwZySdTNBxVRJ5os7qQBwrkU7mu4fA61jCryJ, value=1.5000 UNIT)
+Announced by delegate 5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7 at block #18746; executable from #18766 (20 blocks (≈ 60 s) from head #18746)
+Call hash 0x7400a0c5e26224eb5727696b8baf747ae5cc2e1e43d3babca229328cbdc85d49
+Not yours after all? Cancel it with the cold key:
+airlock veto --vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG --delegate 5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7 --hash 0x7400a0c5e26224eb5727696b8baf747ae5cc2e1e43d3babca229328cbdc85d49
+========================================================================
+[driver 16:50:25] alert 1: YOURS 0x7400a0c5e26224eb5727696b8baf747ae5cc2e1e43d3babca229328cbdc85d49 Balances.transfer_keep_alive(dest=5C5vdpsPjL7KwZySdTNBxVRJ5os7qQBwrkU7mu4fA61jCryJ, value=1.5000 UNIT)
+[driver 16:50:25] 3. thief posts the sweep's preimage without the owner token, then announces it (scripts/thief.py, no airlock code)
+127.0.0.1 "POST /api/intents HTTP/1.1" 401 -
+{"step": "post-intent", "script": "scripts/thief.py (no airlock imports)", "registry": "http://127.0.0.1:18787", "vault": "5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG", "call_hash": "0x4fd5208446d4b1ed37341ab99a3c148c8035cddea76a8f188f5e6d1d96ecb19e", "http_status": 401, "token": "none"}
+{"step": "announce", "script": "scripts/thief.py (no airlock imports)", "vault": "5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG", "delegate": "5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7", "to": "5ChW5TMWZVzDYDTHVnt59WKv3TQEQmxnLgo1cxnzk284LZ82", "planck": "4668650000000000", "call_hash": "0x4fd5208446d4b1ed37341ab99a3c148c8035cddea76a8f188f5e6d1d96ecb19e", "outcome": "ok", "extrinsic_id": "18748-2", "block_hash": "0x68145c5d9ca2f99d485c606193027814934e6da08d22125a0d44a76ba74c6ca3", "extrinsic_hash": "0x0ee3c541c995d00ca2f6653b36ec5b6f97d2f80d88a19e5cb30f7b91520fbfb4", "block": 18748, "genesis_hash": "0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2"}
+========================================================================
+NOT YOURS — VETO
+Vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG
+Chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain)
+Up to 4,668.6500 UNIT at risk (100.0000 UNIT of the free balance cannot move: locks, or the existential deposit a vault with deposits keeps)
+Announced by delegate 5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7 at block #18748; executable from #18768. Veto must land by #18767: 19 blocks (≈ 57 s) from head #18748
+Call hash 0x4fd5208446d4b1ed37341ab99a3c148c8035cddea76a8f188f5e6d1d96ecb19e (an announcement publishes only the hash)
+Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY, e.g. file:~/.config/airlock/cold.seed):
+airlock veto --vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG --delegate 5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7 --hash 0x4fd5208446d4b1ed37341ab99a3c148c8035cddea76a8f188f5e6d1d96ecb19e
+or in polkadot.js Apps > Developer > Extrinsics, signed by the cold key:
+proxy.proxy(real=5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG, forceProxyType=None, call=proxy.rejectAnnouncement(delegate=5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7, callHash=0x4fd5208446d4b1ed37341ab99a3c148c8035cddea76a8f188f5e6d1d96ecb19e))
+========================================================================
+[driver 16:50:31] alert 2: NOT YOURS 0x4fd5208446d4b1ed37341ab99a3c148c8035cddea76a8f188f5e6d1d96ecb19e
+$ airlock veto --vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG --delegate 5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7 --hash 0x4fd5208446d4b1ed37341ab99a3c148c8035cddea76a8f188f5e6d1d96ecb19e
+chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · node/268 · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944
+[interim-sdk — not V3] ok     veto                 Proxy.proxy(Proxy.reject_announcement)       by cold #18750 id 18750-2 tx 0x25c7355fc2fac5367880217d72da4c1d43ebcaf69ead0837ecf6461e9c3c8d2c
+VETOED 0x4fd5208446d4b1ed37341ab99a3c148c8035cddea76a8f188f5e6d1d96ecb19e — removed from Proxy.Announcements; proxy_announced for it now fails Proxy.Unannounced (veto tx 0x25c7355fc2fac5367880217d72da4c1d43ebcaf69ead0837ecf6461e9c3c8d2c, id 18750-2)
+[driver 16:50:39] 4. registry stalled mid-request (SIGSTOP 78970): owner announce must refuse after the timeout
+chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · node/268 · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944
+airlock: refused, nothing sent: intent not registered, so not announcing (it would alert NOT YOURS): registry at http://127.0.0.1:18787 unreachable or no valid answer (TimeoutError: timed out)
+[driver 16:50:51]    exit 2
+[driver 16:50:51] 5. registry killed (SIGKILL): owner announce must refuse
+chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · node/268 · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944
+airlock: refused, nothing sent: intent not registered, so not announcing (it would alert NOT YOURS): registry at http://127.0.0.1:18787 unreachable or no valid answer (URLError: <urlopen error [Errno 61] Connection refused>)
+[driver 16:50:54]    exit 2
+[driver 16:50:56] pending announcements on the vault: 1 before 4./5., 1 after
+[driver 16:50:56] 6. owner's spend executes after the delay
+chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · node/268 · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944
+executing 0x7400a0c5e26224eb5727696b8baf747ae5cc2e1e43d3babca229328cbdc85d49 from 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG
+[interim-sdk — not V3] ok     execute              Proxy.proxy_announced(Balances.transfer_keep_alive) by hot  #18767 id 18767-2 tx 0x3b40d75560dba70439247f77e97351d4403ea33b67e44f10b8e82f7d7b851a94
+executed: the announced call ran as the vault
+PASS owner spend alerted YOURS
+PASS thief preimage POST answered 401
+PASS thief announce alerted NOT YOURS
+PASS registry stalled -> announce refused (exit 2)
+PASS registry killed -> announce refused (exit 2)
+PASS nothing announced while the registry was down
+PASS exactly 2 alerts (none for the refused spends)
+INTENTS PASS
+[driver 16:51:36] re-fetching the thief's extrinsics and the owner's/veto's by id over HTTP
+1/1 re-fetched and matched by extrinsic id over http (interim-sdk — not V3)
+-> evidence/refetch-interim-sdk-2026-10-14T165137Z.json
+FOUND 18746-2  Proxy.announce                                       outcome=ok                 tx=0x0b14542aa2b6e0724262c4f9c19aa8bd77480c5faa83bcb94e1143bdb62d2740
+FOUND 18767-2  Proxy.proxy_announced(Balances.transfer_keep_alive)  outcome=ok                 tx=0x3b40d75560dba70439247f77e97351d4403ea33b67e44f10b8e82f7d7b851a94
+FOUND 18750-2  Proxy.proxy(Proxy.reject_announcement)               outcome=ok                 tx=0x25c7355fc2fac5367880217d72da4c1d43ebcaf69ead0837ecf6461e9c3c8d2c
+3/3 found by extrinsic id over http (interim-sdk — not V3)
+-> evidence/refetch-interim-sdk-2026-10-14T165140Z.json

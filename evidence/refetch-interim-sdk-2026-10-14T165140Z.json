@@ -1,0 +1,44 @@
+{
+  "started": "2026-10-14T16:51:40Z",
+  "endpoint": "http://127.0.0.1:29944",
+  "transport": "http",
+  "profile": "interim-sdk",
+  "label": "interim \u2014 not V3 (upstream polkadot-sdk substrate-node dev chain)",
+  "genesis_hash": "0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2",
+  "head_at_refetch": 18771,
+  "source": null,
+  "matched": 3,
+  "total": 3,
+  "rows": [
+    {
+      "extrinsic_id": "18746-2",
+      "block_number": 18746,
+      "block_hash": "0x98aadc9ae2f2c0538c0471a213e8df64b9c9854577414a839f7ee0c586b6e423",
+      "extrinsic_hash": "0x0b14542aa2b6e0724262c4f9c19aa8bd77480c5faa83bcb94e1143bdb62d2740",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": null,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "18767-2",
+      "block_number": 18767,
+      "block_hash": "0x8ee8b88762041fb9080f7b982d2b6db964d1984f209b96afd80d8a70116bf9bb",
+      "extrinsic_hash": "0x3b40d75560dba70439247f77e97351d4403ea33b67e44f10b8e82f7d7b851a94",
+      "call": "Proxy.proxy_announced(Balances.transfer_keep_alive)",
+      "outcome": "ok",
+      "match": null,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "18750-2",
+      "block_number": 18750,
+      "block_hash": "0xf8cfee1e9946a682e812e90ec4e5ecd85f95cf06169a87049a4d58cc4342e68a",
+      "extrinsic_hash": "0x25c7355fc2fac5367880217d72da4c1d43ebcaf69ead0837ecf6461e9c3c8d2c",
+      "call": "Proxy.proxy(Proxy.reject_announcement)",
+      "outcome": "ok",
+      "match": null,
+      "diffs": []
+    }
+  ]
+}

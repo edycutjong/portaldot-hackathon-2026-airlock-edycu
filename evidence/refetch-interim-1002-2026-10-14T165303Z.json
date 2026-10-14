@@ -1,0 +1,44 @@
+{
+  "started": "2026-10-14T16:53:03Z",
+  "endpoint": "http://127.0.0.1:19933",
+  "transport": "http",
+  "profile": "interim-1002",
+  "label": "interim \u2014 not V3 (Portaldot dev node, runtime spec 1002)",
+  "genesis_hash": "0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22",
+  "head_at_refetch": 9484,
+  "source": null,
+  "matched": 3,
+  "total": 3,
+  "rows": [
+    {
+      "extrinsic_id": "9472-1",
+      "block_number": 9472,
+      "block_hash": "0x2ced3c09f4fd12289512b81983f8cc7602cf0f657e419440fae638fcef5b0bab",
+      "extrinsic_hash": "0xce3a58761cc31f272919b5b897aeee238a501bf197b75f0664d90189ffcb4a28",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": null,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "9483-1",
+      "block_number": 9483,
+      "block_hash": "0x7fc07315251496f567f11d00eff0afab49d757684604d7ac3a1b6bb5fa350ec5",
+      "extrinsic_hash": "0xa336460b0e3139c52d995280a310c0cd9a7019859d2f82a5179c62a8797fcfa9",
+      "call": "Proxy.proxy_announced(Balances.transfer_keep_alive)",
+      "outcome": "ok",
+      "match": null,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "9474-1",
+      "block_number": 9474,
+      "block_hash": "0x5d93693b8c0cc7d0b6db267c48317388597e6df028e8ffde62c1c79100079e8a",
+      "extrinsic_hash": "0x5a057b028a989e78ada6a40c085c1e17cbd34f4faeedd0a0082d4ac1299f56c9",
+      "call": "Proxy.proxy(Proxy.reject_announcement)",
+      "outcome": "ok",
+      "match": null,
+      "diffs": []
+    }
+  ]
+}

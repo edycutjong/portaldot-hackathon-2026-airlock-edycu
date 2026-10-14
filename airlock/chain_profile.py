@@ -177,11 +177,23 @@ class AtRisk:
     reserved: int
     frozen: int
 
+    @property
+    def held_back(self) -> int:
+        """Free balance a transfer cannot touch (the part of the locks not already covered by reserved funds)."""
+        return self.free - self.transferable
+
 
 def at_risk(account_data: Mapping[str, int]) -> AtRisk:
-    """Worst case: everything reducible without keeping the account alive (a thief would not keep it alive)."""
-    return AtRisk(transferable=transferable(account_data), free=int(account_data["free"]),
-                  reserved=int(account_data.get("reserved", 0)), frozen=frozen(account_data))
+    """Worst case: everything a transfer could move without keeping the account alive (a thief would not).
+
+    On the 1002 layout a transfer is checked against `misc_frozen` only (`fee_frozen` gates fee payment, and the
+    thief's fees are paid by the delegate key, not the vault), so the fee lock is left out to avoid understating.
+    """
+    data = dict(account_data)
+    if "misc_frozen" in data:
+        data["fee_frozen"] = 0
+    return AtRisk(transferable=transferable(data), free=int(data["free"]),
+                  reserved=int(data.get("reserved", 0)), frozen=frozen(data))
 
 
 def event_field(attributes: Any, name: str, position: int) -> Any:
@@ -290,10 +302,12 @@ def _block_time(substrate, span: int = 10) -> tuple[int | None, str]:
     return (measured, "measured (median Timestamp.Now delta)") if measured else (None, "unknown")
 
 
-def connect(url: str | None = None, profile_id: str | None = None) -> Chain:
+def connect(url: str | None = None, profile_id: str | None = None, auto_reconnect: bool = True) -> Chain:
     """Connect, identify the chain, and fail loudly if it is unknown or not the requested profile.
 
     `profile_id` defaults to $AIRLOCK_PROFILE; `url` to $AIRLOCK_WSS, then the profile's default endpoint.
+    `auto_reconnect=False` makes a dropped websocket raise instead of silently reconnecting to the same URL, so a
+    long-lived caller (the watcher) can re-check the chain's identity before it trusts the new connection.
     """
     from substrateinterface import SubstrateInterface
 
@@ -306,7 +320,8 @@ def connect(url: str | None = None, profile_id: str | None = None) -> Chain:
 
     def open_(**kwargs):
         try:
-            return SubstrateInterface(url=url, ws_options={"timeout": CONNECT_TIMEOUT_S}, **kwargs)
+            return SubstrateInterface(url=url, ws_options={"timeout": CONNECT_TIMEOUT_S}, auto_reconnect=auto_reconnect,
+                                      **kwargs)
         except Exception as e:
             raise ChainUnreachable(f"no node answered at {url}: {type(e).__name__}: {e}") from e
 

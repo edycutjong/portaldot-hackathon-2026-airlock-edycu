@@ -308,5 +308,17 @@ def test_at_risk_excludes_locks_for_both_layouts():
     assert at_risk(modern).transferable == 800 and at_risk(modern).frozen == 300
     legacy = {"free": 1_000, "reserved": 0, "misc_frozen": 400, "fee_frozen": 250}
     assert frozen(legacy) == 400 and at_risk(legacy).transferable == 600
+    assert at_risk(modern).held_back == 200  # frozen 300, of which reserved 100 already covers part
+
+
+def test_at_risk_1002_ignores_the_fee_lock():
+    """A transfer from the vault is checked against misc_frozen only; the thief's fees come from the delegate."""
+    from airlock.chain_profile import at_risk
+    data = {"free": 1_000, "reserved": 0, "misc_frozen": 100, "fee_frozen": 700}
+    assert at_risk(data).transferable == 900 and at_risk(data).held_back == 100
+
+
+def test_frozen_refuses_unknown_layouts():
+    from airlock.chain_profile import frozen
     with pytest.raises(ValueError):
         frozen({"free": 1})

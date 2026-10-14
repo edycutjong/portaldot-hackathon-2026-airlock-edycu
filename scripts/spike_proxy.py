@@ -37,7 +37,7 @@ sys.path.insert(0, str(ROOT))
 from substrateinterface import Keypair  # noqa: E402
 
 from airlock.callhash import call_hash, is_announced, pending, same_account  # noqa: E402
-from airlock.chain_profile import Chain, connect, pure_address  # noqa: E402
+from airlock.chain_profile import Chain, ProfileMismatch, UnknownChain, connect, pure_address  # noqa: E402
 from airlock.dispatch import OK, error_namer, find_event, outcome  # noqa: E402
 
 
@@ -236,7 +236,18 @@ def main(argv=None) -> int:
     if args.delay < 1:
         ap.error("--delay must be >= 1: a zero-delay delegate is exactly what Airlock exists to avoid")
 
-    chain = connect(args.url, args.profile or None)
+    try:
+        chain = connect(args.url, args.profile or None)
+    except (UnknownChain, ProfileMismatch) as e:  # nothing was sent, so there is no evidence to keep
+        print(f"SPIKE FAILED: {type(e).__name__}: {e}", file=sys.stderr)
+        return 1
+    try:
+        return record(chain, args)
+    finally:
+        chain.substrate.close()
+
+
+def record(chain: Chain, args) -> int:
     started = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     version = code_version()
     sp = Spike(chain)

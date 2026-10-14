@@ -14,7 +14,7 @@ case "$P" in
   interim-1002) WS=ws://127.0.0.1:19944; HTTP=http://127.0.0.1:19933 ;;
   *) echo "unknown profile $P" >&2; exit 2 ;;
 esac
-STATE="$(ls "${AIRLOCK_STATE_DIR:-$HOME/.local/share/airlock}"/seed-"$P"-*.json 2>/dev/null | head -1)"
+STATE="$(ls -t "${AIRLOCK_STATE_DIR:-$HOME/.local/share/airlock}"/seed-"$P"-*.json 2>/dev/null | head -1 || true)"
 [[ -n "$STATE" ]] || { echo "no seed state for $P: run scripts/seed.py --profile $P first" >&2; exit 2; }
 VAULT="$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['vault'])" "$STATE")"
 DELAY="$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['delay'])" "$STATE")"
@@ -22,6 +22,12 @@ TO="$(python3 -c "import json;print(json.load(open('fixtures/accounts.json'))['a
 CODE="$(git rev-parse --short HEAD)"; TS="$(date -u +%Y-%m-%dT%H%M%SZ)"
 LOG="evidence/e2e-$P-$TS.log"; J="evidence/e2e-$P-$TS.jsonl"; T="evidence/thief-$P-$TS.jsonl"; DB=".e2e-$P.db"
 export AIRLOCK_PROFILE="$P" AIRLOCK_COLD_KEY=//AirlockDemo//cold
+WATCHER=""
+cleanup() {
+  [[ -n "$WATCHER" ]] && kill "$WATCHER" 2>/dev/null || true
+  rm -f "$DB" ".thief-$P.json" "$LOG.veto"
+}
+trap cleanup EXIT
 rm -f "$DB"
 say() { echo "[driver $(date -u +%H:%M:%S)] $*" | tee -a "$LOG"; }
 waitfor() {
@@ -30,6 +36,7 @@ waitfor() {
     sleep 1; n=$((n+1)); [[ $n -gt 240 ]] && { echo "timeout waiting for '$pat' in $f" >&2; cat "$f" >&2; exit 1; }
   done; return 0
 }
+[[ -z "$(git status --porcelain -- airlock scripts)" ]] || CODE="$CODE-dirty"
 echo "code $CODE · profile $P · vault $VAULT · delay $DELAY blocks · thief payee attacker-3 $TO" > "$LOG"
 
 balances() { python3 -c "
@@ -47,11 +54,12 @@ waitfor "$LOG" "watching"
 say "thief announces a sweep of the whole vault (scripts/thief.py, no airlock code, no intent registered)"
 python3 scripts/thief.py --url "$WS" --vault "$VAULT" --to "$TO" --amount all --state ".thief-$P.json" | tee -a "$T" "$LOG"
 wait "$WATCHER" || { say "watcher exited non-zero"; exit 1; }
+WATCHER=""
 say "alert delivered; running the veto command exactly as the alert printed it"
 CMD="$(python3 -c "import json,sys;print(json.loads(open(sys.argv[1]).readline())['veto_command'])" "$J")"
 echo "\$ $CMD" | tee -a "$LOG"
 $CMD 2>&1 | tee -a "$LOG" "$LOG.veto"
-VETO_ID="$(grep -o 'id [0-9]*-[0-9]*' "$LOG.veto" | head -1 | cut -d' ' -f2)"; rm -f "$LOG.veto"
+VETO_ID="$(grep -o 'id [0-9][0-9]*-[0-9][0-9]*' "$LOG.veto" | head -1 | cut -d' ' -f2 || true)"; rm -f "$LOG.veto"
 [[ -n "$VETO_ID" ]] || { say "veto produced no extrinsic id"; exit 1; }
 
 ANN_BLOCK="$(python3 -c "import json,sys;print(json.loads(open(sys.argv[1]).readline())['block'])" "$T")"
@@ -59,8 +67,10 @@ say "waiting until the delay has passed (announced #$ANN_BLOCK + $DELAY)"
 python3 -c "
 import time,sys
 from substrateinterface import SubstrateInterface
-s=SubstrateInterface(url='$WS'); t=int(sys.argv[1])
-while s.get_block_number(None) < t: time.sleep(1)" "$((ANN_BLOCK + DELAY + 1))"
+s=SubstrateInterface(url='$WS'); t=int(sys.argv[1]); end=time.monotonic()+int(sys.argv[2])
+while s.get_block_number(None) < t:
+    if time.monotonic() > end: sys.exit('chain stalled: block %d not reached' % t)
+    time.sleep(1)" "$((ANN_BLOCK + DELAY + 1))" "$(( (DELAY + 2) * 30 + 60 ))"
 say "thief executes the announced sweep after the delay"
 python3 scripts/thief.py --url "$WS" --vault "$VAULT" --to "$TO" --amount all --state ".thief-$P.json" --execute | tee -a "$T" "$LOG"
 say "thief tries proxy.proxy directly (no announcement)"
@@ -77,7 +87,6 @@ ok = got == want and before == after
 print("E2E", "PASS" if ok else "FAIL", got, "· vault total and thief payee total unchanged:", before == after)
 sys.exit(0 if ok else 1)
 EOF
-rm -f "$DB" ".thief-$P.json"
 say "re-fetching the thief's extrinsics by id over HTTP"
 python3 scripts/refetch.py "$T" --profile "$P" --url "$HTTP" | tail -2 | tee -a "$LOG"
 python3 scripts/refetch.py --id "$VETO_ID" --profile "$P" --url "$HTTP" | tail -3 | tee -a "$LOG"

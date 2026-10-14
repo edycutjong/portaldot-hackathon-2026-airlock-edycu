@@ -22,7 +22,7 @@ import argparse
 import hashlib
 import json
 import sys
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from substrateinterface import Keypair, SubstrateInterface
@@ -86,11 +86,15 @@ def _error_name(s, err):
     err = _unwrap(err)
     if isinstance(err, dict) and "Module" in err:
         module = err["Module"]
-        raw = module["error"]
-        i = bytes.fromhex(raw[2:])[0] if isinstance(raw, str) else int(raw if isinstance(raw, int) else raw[0])
+        try:
+            raw = module["error"]
+            i = bytes.fromhex(raw[2:])[0] if isinstance(raw, str) else int(raw if isinstance(raw, int) else raw[0])
+        except (KeyError, ValueError, TypeError, IndexError):
+            return f"Module.unreadable:{module!r}"
         for pallet in s.get_metadata().pallets:
             if int(getattr(pallet["index"], "value", pallet["index"])) == int(module["index"]):
-                return f"{pallet.name}.{pallet.errors[i].name}"
+                errors = pallet.errors or []
+                return f"{pallet.name}.{errors[i].name if i < len(errors) else f'error#{i}'}"
         return f"pallet#{module['index']}.error#{i}"
     if isinstance(err, dict) and len(err) == 1:
         variant, detail = next(iter(err.items()))
@@ -137,9 +141,17 @@ def main(argv=None):
         else:
             planck = sweepable(s, args.vault)
     else:
-        planck = int(Decimal(args.amount) * 10 ** decimals_of(s))
+        try:
+            exact = Decimal(args.amount).scaleb(decimals_of(s))
+        except InvalidOperation:
+            sys.exit(f"--amount {args.amount!r} is not a number (or 'all')")
+        if not exact.is_finite() or exact <= 0 or exact != exact.to_integral_value():
+            sys.exit(f"--amount {args.amount!r} must be positive and a whole number of planck")
+        planck = int(exact)
     sweep = s.compose_call("Balances", "transfer_keep_alive", {"dest": args.to, "value": planck})
     call_hash = "0x" + hashlib.blake2b(sweep.data.data, digest_size=32).hexdigest()
+    if args.execute and args.amount == "all" and call_hash != st["call_hash"]:
+        sys.exit(f"rebuilt call hash {call_hash} differs from the announced {st['call_hash']}: not sending")
 
     if args.execute:
         step, call = "execute", s.compose_call("Proxy", "proxy_announced", {
@@ -150,7 +162,10 @@ def main(argv=None):
     else:
         step, call = "announce", s.compose_call("Proxy", "announce", {"real": args.vault, "call_hash": call_hash})
     receipt = s.submit_extrinsic(s.create_signed_extrinsic(call=call, keypair=hot), wait_for_inclusion=True)
-    result = verdict(s, receipt)
+    try:
+        result = verdict(s, receipt)
+    except Exception as e:  # never lose the evidence line of a transaction that was sent
+        result = f"unreadable:{type(e).__name__}"
     if step == "announce" and result == "ok":
         args.state.write_text(json.dumps({"vault": args.vault, "to": args.to, "planck": str(planck),
                                           "call_hash": call_hash}) + "\n")

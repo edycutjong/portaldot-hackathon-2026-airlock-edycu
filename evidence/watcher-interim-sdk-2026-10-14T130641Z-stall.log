@@ -1,20 +1,21 @@
-code b1a92e6
+code c1bdca9
 telegram: not configured (no token) — alerts go to stdout and the JSON-lines log
 watching 1 vault(s) on interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944 · block 3000 ms · notifiers: stdout, jsonl · db .watcher-evidence-sdk.db
-catching up 2 blocks: #14085..#14086
+[driver] node frozen (SIGSTOP) at 13:08:00
 connection lost (no new header for 30 s); reconnecting in 1 s
-reconnected to ws://127.0.0.1:29944 (same genesis); resuming after #14087
-catching up 2 blocks: #14088..#14089
+[driver] node resumed (SIGCONT) at 13:08:34
+reconnected to ws://127.0.0.1:29944 (same genesis); resuming after #14422
+catching up 2 blocks: #14423..#14424
 ========================================================================
 NOT YOURS — VETO
-Vault 5CYSL2aamgdhdnUf92cw75LZoPoAtzvRkdVyDXMsPK5A4iEq
+Vault 5GUUKcTc7dVkLZ4FpCWoVnJEgNnkVJT4aBqB7yXyfJaj9Fpe
 Chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain)
 Up to 202.0000 UNIT at risk (100.0000 UNIT of the free balance cannot move: locks, or the existential deposit a vault with deposits keeps)
-Announced by delegate 5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y at block #14092; executable from #14112. Veto must land by #14111: 19 blocks (≈ 57 s) from head #14092
+Announced by delegate 5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y at block #14427; executable from #14447. Veto must land by #14446: 19 blocks (≈ 57 s) from head #14427
 Call hash 0xaeb5f0c76c25708f5d2973051abfd7912357751acfabba068c94fd71342b04df (an announcement publishes only the hash)
 Veto with the cold key — Airlock CLI (ships with the CLI step):
-airlock veto --vault 5CYSL2aamgdhdnUf92cw75LZoPoAtzvRkdVyDXMsPK5A4iEq --delegate 5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y --hash 0xaeb5f0c76c25708f5d2973051abfd7912357751acfabba068c94fd71342b04df
+airlock veto --vault 5GUUKcTc7dVkLZ4FpCWoVnJEgNnkVJT4aBqB7yXyfJaj9Fpe --delegate 5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y --hash 0xaeb5f0c76c25708f5d2973051abfd7912357751acfabba068c94fd71342b04df
 or today in polkadot.js Apps > Developer > Extrinsics, signed by the cold key:
-proxy.proxy(real=5CYSL2aamgdhdnUf92cw75LZoPoAtzvRkdVyDXMsPK5A4iEq, forceProxyType=None, call=proxy.rejectAnnouncement(delegate=5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y, callHash=0xaeb5f0c76c25708f5d2973051abfd7912357751acfabba068c94fd71342b04df))
+proxy.proxy(real=5GUUKcTc7dVkLZ4FpCWoVnJEgNnkVJT4aBqB7yXyfJaj9Fpe, forceProxyType=None, call=proxy.rejectAnnouncement(delegate=5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y, callHash=0xaeb5f0c76c25708f5d2973051abfd7912357751acfabba068c94fd71342b04df))
 ========================================================================
 watcher exit 0

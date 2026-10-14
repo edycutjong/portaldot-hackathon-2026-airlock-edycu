@@ -5,14 +5,14 @@
 **A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.**
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Tests: 167 passing](https://img.shields.io/badge/tests-167%20passing-brightgreen)
+![Tests: 173 passing](https://img.shields.io/badge/tests-173%20passing-brightgreen)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)
 ![Chain: interim, not V3](https://img.shields.io/badge/chain-interim%20%E2%80%94%20not%20V3-orange)
 
 </div>
 
 > **Status: work in progress (README v0).** Portaldot Hacker House 2026 · track: Ecosystem DApps. The Portaldot V3
-> testnet RPC (`testnetv3-node.feso-apps.xyz`) had no DNS record at 2026-10-14 01:04 UTC (again at 11:30 UTC), so everything below ran on
+> testnet RPC (`testnetv3-node.feso-apps.xyz`) did not resolve on 2026-10-14 (`NXDOMAIN` at 12:44 UTC, [evidence/v3-dns.txt](evidence/v3-dns.txt)), so everything below ran on
 > **labelled interim chains, not V3** (see [docs/PROOF.md](docs/PROOF.md)). No V3 claim is made until a V3 run exists.
 
 ## Project Name
@@ -116,7 +116,7 @@ cd portaldot-hackathon-2026-airlock-edycu
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'
 
-pytest -q                          # 167 unit tests, no chain or network needed (metadata fixtures committed; Telegram mocked on localhost)
+pytest -q                          # 173 unit tests, no chain or network needed (metadata fixtures committed; Telegram mocked on localhost)
 
 scripts/interim_node.sh interim-sdk   # terminal 1: dev chain on ws://127.0.0.1:29944 (archive state)
 python scripts/spike_proxy.py --profile interim-sdk   # terminal 2: the 10-extrinsic flow, ~1 min
@@ -133,18 +133,21 @@ four vesting/at-risk steps, `--proof docs/PROOF.md` appends the rows of a passin
 - **Video:** coming at check-in.
 - **Live demo:** none yet.
 - **Proof:** [docs/PROOF.md](docs/PROOF.md) — 28 extrinsics (14 per chain profile), each with extrinsic id, block hash and
-  tx hash, labelled "interim — not V3", each re-fetched by extrinsic id over HTTP from a fresh process. Per run: an
+  tx hash, labelled "interim — not V3", each re-fetched by extrinsic id over HTTP from a fresh process (same local
+  node, not an independent one). Per run: an
   unannounced spend fails (`Unannounced`), the announced theft call's hash equals the stored `Proxy.Announcements` entry, a
   vetoed call stays dead after the delay, an early execution fails, the same payment without a veto executes after the
   delay and moves exactly the announced amount, vesting-locked funds in the vault are not counted as at risk, and the
-  at-risk figure is exact on chain: one planck more fails on the lock, exactly that amount moves.
+  at-risk figure is exact on chain where a lock is the limit: one planck more fails on the lock, exactly that amount
+  moves.
 - **Watcher:** [docs/WATCHER.md](docs/WATCHER.md) — NOT YOURS alerts (stdout + JSON lines) triggered by a
   `Proxy.announce` from [scripts/raw_announce.py](scripts/raw_announce.py), which imports nothing from Airlock: live on
   both interim chains, and on `interim-sdk` also after the watcher was stopped, after the node was restarted mid-watch,
   and after the node was frozen (no headers) mid-watch. Reorg re-scan, reset-chain stop, retries and the pruned-state
   gap are covered by unit tests only. No alert has reached a phone yet (no Telegram bot token configured).
 - **Test accounts:** dev keys only (`//Alice` cold — `//Dave` on `interim-1002`, `//Bob` hot, `//Eve` thief's payee, `//Ferdie` legitimate payee; `//Charlie` is the delegate in the watcher runs) on the interim
-  chains. The script refuses any chain whose genesis and runtime code hash are not a known interim profile.
+  chains. `spike_proxy.py` refuses any chain whose genesis and runtime code hash are not a known interim profile, and
+  `raw_announce.py` any chain but the two local interim dev chains.
 
 ## Roadmap
 
@@ -154,9 +157,10 @@ four vesting/at-risk steps, `--proof docs/PROOF.md` appends the rows of a passin
 - Call hashing and the `Proxy.Announcements` reader; encode-only `Revive.call` composer (not exercised on a chain).
 - End-to-end 10-extrinsic Proxy flow on two interim chains (+4 vesting/at-risk steps), 28 recorded extrinsics in
   PROOF.md, all re-fetched by extrinsic id.
-- Watcher: header subscription, `Proxy.Announced` decoding, pending sweep, NOT YOURS alerts with an exact at-risk
-  balance, veto deadline and the veto command, SQLite state, catch-up after downtime, reconnect and stall watchdog
-  (shown live); reorg re-scan and retries (unit-tested); Telegram sender tested against a mock Bot API.
+- Watcher, shown live: header subscription, `Proxy.Announced` decoding, NOT YOURS alerts with the at-risk balance, veto
+  deadline and veto command, catch-up after downtime, reconnect after a node restart, stall watchdog. Unit-tested only:
+  pending sweep and NO LONGER PENDING alerts, reorg re-scan, reset-chain stop, retries and give-up, pruned or
+  undecodable blocks, the Telegram sender (against a mock Bot API).
 
 **Next**
 

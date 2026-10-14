@@ -6,7 +6,7 @@ produced them (`scripts/spike_proxy.py --proof docs/PROOF.md`, `scripts/refetch.
 by hand (a stale row may be deleted by hand); each run names the commit that produced it; its JSON is in `evidence/`.
 
 **Profile labels.** The target is the Portaldot V3 testnet. Its RPC host `testnetv3-node.feso-apps.xyz` did not
-resolve in any check on 2026-10-14 (checks from 12:09 UTC on are logged in `evidence/v3-dns.txt`; at 12:44 UTC the
+resolve in the checks on 2026-10-14 logged in `evidence/v3-dns.txt` (at 12:44 UTC the
 resolver answered `NXDOMAIN`), so these rows come from
 **interim chains — not V3**:
 

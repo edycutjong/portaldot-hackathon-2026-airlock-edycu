@@ -80,6 +80,11 @@ def same_account(a: str, b: str) -> bool:
     return _public_key(a) == _public_key(b)
 
 
+def account_key(account: str) -> str:
+    """The account's public key as lowercase hex (no 0x): one spelling for every SS58 prefix of the same account."""
+    return _public_key(account)
+
+
 def _public_key(account: str) -> str:
     if account.startswith("0x"):
         return account[2:].lower()

@@ -6,6 +6,9 @@ ships and are nullable until then (a vault can be watched by address alone). One
 (I4); each channel's delivery is recorded as soon as it succeeds, so a crash can repeat at most the channel that was
 mid-send (delivery is at-least-once, never silently zero). The hashes of recently processed blocks let the watcher
 notice a reorg or a reset chain instead of trusting a stale cursor.
+
+The owner intent registry lives in the same file (`owner`, `intent`): the registry API (`airlock/api.py`) writes it,
+the watcher reads it, so both must use the same database (the default path is per profile, so they do).
 """
 
 from __future__ import annotations
@@ -15,7 +18,10 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from .callhash import account_key
+
 BLOCK_HASHES_KEPT = 512  # how far back a reorg can be detected and re-scanned
+INTENT_WINDOW_BLOCKS = 50  # an intent vouches for an announcement made within this many blocks of its registration
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -54,6 +60,27 @@ CREATE TABLE IF NOT EXISTS announcement (
   delivered_via TEXT,
   PRIMARY KEY (vault, delegate, call_hash, announced_block)
 );
+CREATE TABLE IF NOT EXISTS owner (
+  vault_key TEXT PRIMARY KEY,        -- the vault's public key (hex): any SS58 spelling of the vault is the same row
+  vault TEXT NOT NULL,
+  cold TEXT NOT NULL,                -- the delay-0 delegate whose signature enrolled the token
+  token_sha256 TEXT NOT NULL,        -- the token itself is never stored
+  issued_at INTEGER NOT NULL,        -- signed with the token digest; a re-enrolment must be newer
+  signature TEXT NOT NULL,
+  enrolled_at REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS intent (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  vault_key TEXT NOT NULL,
+  vault TEXT NOT NULL,
+  call_hash TEXT NOT NULL,
+  call_hex TEXT NOT NULL,
+  summary TEXT,                      -- the decoded call, as the alert shows it
+  registered_head INTEGER NOT NULL,  -- best block when it was registered: it vouches only for a LATER announcement
+  registered_at REAL NOT NULL,
+  used_by TEXT                       -- "<delegate key>@<block>": the one announcement it vouched for
+);
+CREATE INDEX IF NOT EXISTS intent_by_hash ON intent (vault_key, call_hash);
 """
 
 
@@ -64,6 +91,24 @@ class GenesisChanged(RuntimeError):
 class ChainReset(GenesisChanged):
     """Same genesis, but the blocks the watcher processed are gone (a dev chain restarted from genesis, or a reorg
     deeper than the hashes kept): stop instead of trusting the cursor."""
+
+
+@dataclass(frozen=True)
+class Owner:
+    vault: str
+    cold: str
+    token_sha256: str
+    issued_at: int
+
+
+@dataclass(frozen=True)
+class Intent:
+    id: int
+    vault: str
+    call_hash: str
+    call_hex: str
+    summary: str | None
+    registered_head: int
 
 
 @dataclass(frozen=True)
@@ -87,7 +132,8 @@ class Store:
         self.path = str(path)
         if self.path != ":memory:":
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(self.path)
+        # the registry API and the watcher are separate processes on one file: wait for the other's write lock
+        self.db = sqlite3.connect(self.path, timeout=10)
         self.db.executescript(SCHEMA)
         self._migrate()
         self.db.commit()
@@ -221,5 +267,58 @@ class Store:
 
     def announcements(self) -> list[dict]:
         cur = self.db.execute("SELECT * FROM announcement ORDER BY announced_block")
+        names = [d[0] for d in cur.description]
+        return [dict(zip(names, row)) for row in cur.fetchall()]
+
+    # -- owner intent registry -------------------------------------------------------------------------------------
+    def enroll(self, vault: str, cold: str, token_sha256: str, issued_at: int, signature: str) -> None:
+        """Bind an owner token (by digest) to the vault. Signature and freshness are checked by the caller."""
+        self.db.execute(
+            "INSERT INTO owner (vault_key, vault, cold, token_sha256, issued_at, signature, enrolled_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(vault_key) DO UPDATE SET vault = excluded.vault, "
+            "cold = excluded.cold, token_sha256 = excluded.token_sha256, issued_at = excluded.issued_at, "
+            "signature = excluded.signature, enrolled_at = excluded.enrolled_at",
+            (account_key(vault), vault, cold, token_sha256, issued_at, signature, time.time()))
+        self.db.commit()
+
+    def owner(self, vault: str) -> Owner | None:
+        row = self.db.execute("SELECT vault, cold, token_sha256, issued_at FROM owner WHERE vault_key = ?",
+                              (account_key(vault),)).fetchone()
+        return Owner(*row) if row else None
+
+    def add_intent(self, vault: str, call_hash: str, call_hex: str, summary: str | None, registered_head: int) -> int:
+        cur = self.db.execute(
+            "INSERT INTO intent (vault_key, vault, call_hash, call_hex, summary, registered_head, registered_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (account_key(vault), vault, call_hash.lower(), call_hex.lower(), summary, registered_head, time.time()))
+        self.db.commit()
+        return cur.lastrowid
+
+    def match_intent(self, vault: str, call_hash: str, delegate: str, announced_block: int,
+                     window: int = INTENT_WINDOW_BLOCKS) -> Intent | None:
+        """The owner intent that vouches for this announcement, or None (-> NOT YOURS, I6).
+
+        An intent vouches for exactly one announcement: one of the same vault and call hash, made AFTER it was
+        registered (register-before-announce) and within `window` blocks of it. The first such announcement claims it;
+        processing that same announcement again (a rescan) finds it again, but a second announcement of the same call
+        (a replay of a spend already made) is not vouched for."""
+        tag = f"{account_key(delegate)}@{announced_block}"
+        rows = self.db.execute(
+            "SELECT id, vault, call_hash, call_hex, summary, registered_head, used_by FROM intent "
+            "WHERE vault_key = ? AND call_hash = ? AND registered_head < ? AND registered_head + ? >= ? ORDER BY id",
+            (account_key(vault), call_hash.lower(), announced_block, window, announced_block)).fetchall()
+        for row in rows:
+            if row[6] == tag:
+                return Intent(*row[:6])
+        for row in rows:
+            if row[6] is None:
+                cur = self.db.execute("UPDATE intent SET used_by = ? WHERE id = ? AND used_by IS NULL", (tag, row[0]))
+                self.db.commit()
+                if cur.rowcount:
+                    return Intent(*row[:6])
+        return None
+
+    def intents(self, vault: str) -> list[dict]:
+        cur = self.db.execute("SELECT * FROM intent WHERE vault_key = ? ORDER BY id", (account_key(vault),))
         names = [d[0] for d in cur.description]
         return [dict(zip(names, row)) for row in cur.fetchall()]

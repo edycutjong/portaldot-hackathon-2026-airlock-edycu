@@ -1,10 +1,12 @@
 # Airlock — on-chain proof
 
 Every row is a real extrinsic, identified by extrinsic id (`block-index`), block hash and transaction hash, and
-labelled with the chain profile it ran on (`airlock/chain_profile.py`). Rows are appended by the scripts that
-produced them (`scripts/spike_proxy.py --proof docs/PROOF.md`), never typed by hand.
+labelled with the chain profile it ran on (`airlock/chain_profile.py`). Rows are appended by the script that
+produced them (`scripts/spike_proxy.py --proof docs/PROOF.md`), never typed by hand; each run names the commit
+that produced it. The JSON for every run, including earlier ones, is in `evidence/`.
 
-**Profile labels.** The target is the Portaldot V3 testnet. It is offline while this is written, so these rows come from
+**Profile labels.** The target is the Portaldot V3 testnet. At 2026-10-14 00:32 UTC its RPC host
+`testnetv3-node.feso-apps.xyz` had no DNS record (`dig +short @1.1.1.1` returned nothing), so these rows come from
 **interim chains — not V3**:
 
 | Profile | Chain | Runtime | Genesis hash |
@@ -14,62 +16,42 @@ produced them (`scripts/spike_proxy.py --proof docs/PROOF.md`), never typed by h
 
 The dev genesis is deterministic, so a fresh `interim-sdk` chain has the same genesis hash; a row can be re-fetched only
 from the node that recorded it (`--base-path` keeps it across restarts). `interim-1002` runs with `--tmp`, so its rows
-are a run log, not re-fetchable proof. Signers are dev keys (`//Alice` cold, `//Bob` hot, `//Eve` payee).
+are a run log, not re-fetchable proof. Signers are dev keys (`//Alice` cold, `//Bob` hot, `//Eve` thief's payee,
+`//Ferdie` legitimate payee).
+
+**Reading a run.** Step 4 (I1) and step 7 (I2) are expected failures: `Proxy.Unannounced` is the pallet refusing the
+thief. Step 9 is the control for step 7: the same delegate and delay, without a veto, and the payment executes.
 
 ## Runs
 
-### spike_proxy — 2026-10-14T00:12:14Z — interim — not V3 (upstream polkadot-sdk substrate-node dev chain)
+### spike_proxy — 2026-10-14T00:32:24Z — interim — not V3 (upstream polkadot-sdk substrate-node dev chain)
 
-Profile `interim-sdk` · runtime `node/268` · genesis `0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2` · vault `5CBL5HHyGCz9MMVNsfzYP9Y14QbfAwQXe2ibKbJucFFhvLHt`
-
-| # | step | call | signer | expected | outcome | extrinsic id | block hash | tx hash | profile |
-|---|---|---|---|---|---|---|---|---|---|
-| 1 | create vault | `Proxy.create_pure` | cold | ok | ok | `188-2` | `0x75ef0b45cea65b2dfbb5c25866b665380b1df8fb074d28b408784ef00e9c2dc0` | `0xe4d325416c5ea1089710714bd3b82da926f3f1b32a6757804dcd1fc19b660183` | interim-sdk |
-| 2 | fund vault | `Balances.transfer_keep_alive` | cold | ok | ok | `189-2` | `0xc2048db07ca0c5645b3988a3a2ae1025d3d47089bccf9f151f431055c49778bc` | `0x79d1d70d161e1444a8831ba916586d5189b6b36a1080b09a7fda5b537ca40171` | interim-sdk |
-| 3 | add delayed hot key | `Proxy.proxy(Proxy.add_proxy)` | cold | ok | ok | `190-2` | `0xcba000b52b68e68fb38634e21b4064d4efa3e89d406d57fdee1afb8004040804` | `0xc5e1f37fc60a4217a893682572c16323994bc5ca2de7314ea91b1079453233ae` | interim-sdk |
-| 4 | hot spends unannounced | `Proxy.proxy(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `191-2` | `0x1729c6051abc58f7cf66b1fc7dc8e0d200712529b41d6d019b2292235fc2927a` | `0x3ff6d8f740b9a6b284223f73f7b53a15daa21ddac599945145e795e5d2ca262a` | interim-sdk |
-| 5 | hot announces | `Proxy.announce` | hot | ok | ok | `192-2` | `0xa14f3f744ebda2b4424299531135aac5d0158452b04c84e0411251e69a17509f` | `0x88f7c4d1607e7f98551e6d28120329506915611e6b307ec9c60a7765b9d271ad` | interim-sdk |
-| 6 | cold vetoes | `Proxy.proxy(Proxy.reject_announcement)` | cold | ok | ok | `193-2` | `0x40467a4629d64d4f8027ac9aa4bb5f4e32c6d42394cd12e0b3e3dadccf6a6f0b` | `0x0588a9f0123694d554c1690d44c471306820203cc2b5ce48c763804c9f975467` | interim-sdk |
-| 7 | hot executes after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `200-2` | `0xc4d0985229755cc93044f6c24bd573cd34849a54bbc8047faccfa8ea1eb8a9db` | `0x0699d92065e6cfa192206ab1bdc3e7213bd6f79a29a6e19270cd12d148d6676c` | interim-sdk |
-
-### spike_proxy — 2026-10-14T00:12:55Z — interim — not V3 (Portaldot dev node, runtime spec 1002)
-
-Profile `interim-1002` · runtime `portaldot/1002` · genesis `0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22` · vault `5FxZ8BvR7yQbBQ2bKVbfDqRZTjCSBCEBqHqjyGZu1gerq2xT`
+Runtime `node/268` · genesis `0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2` · vault `5CCGa8w5btggNvMQi6hLR4ZozRpcBVzqFptVPYn4EQQDPn4f` · delay D = 5 blocks · code `e5e4a0d`
 
 | # | step | call | signer | expected | outcome | extrinsic id | block hash | tx hash | profile |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | create vault | `Proxy.anonymous` | cold | ok | ok | `43-1` | `0x304890b4151dfa42a7b97cc89f74d4e49ebc5f91ebed3334312f31a76ee29c88` | `0x77a7c92e1d48c7887c437451c03f54c642edc4dacfa40a4c25a997dcf915f243` | interim-1002 |
-| 2 | fund vault | `Balances.transfer_keep_alive` | cold | ok | ok | `44-1` | `0x274451e6c0f1a2c6d39a48790e5d5e5c41173b3ec838398928b723291e1032c5` | `0xb5ce8e1a52d838a1ab4a84fa2a117c72daa48b1a01b90a35d14a1a87ceba4787` | interim-1002 |
-| 3 | add delayed hot key | `Proxy.proxy(Proxy.add_proxy)` | cold | ok | ok | `45-1` | `0xcaf70e0c8a6d11413d8b189a4ae80e0c595463ff55a60094882f84a43e5de2cf` | `0x0cf7a2e8ac462405c8b7061e47fb64b9373633ca904b5a7d40843e4784ba89d7` | interim-1002 |
-| 4 | hot spends unannounced | `Proxy.proxy(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `46-1` | `0x54057c33c58cbf89312f491d3b9275a7df1300a2f5db75bba040d801d7006742` | `0x69bab140a5d96dbb8d699f23fe534895116bbccb273d7481436975da9e3095c1` | interim-1002 |
-| 5 | hot announces | `Proxy.announce` | hot | ok | ok | `47-1` | `0xd9d7bd691fb34d552b32a891b682d803d0c421caf982456259a68fc5f10feb1f` | `0x03d240b299ca4515fff7278d1f874e3aaaa7bd5f05538a7f6b3819676e2cc4f3` | interim-1002 |
-| 6 | cold vetoes | `Proxy.proxy(Proxy.reject_announcement)` | cold | ok | ok | `48-1` | `0xf90a13e00a46b3e550d24e8894f79f2fc1b9cf7331bbbbd8fb88b2a28421e957` | `0x8559e9fcae68f82859cdc5594fa429ed7ddeb4eb21f93148ca12382de179e516` | interim-1002 |
-| 7 | hot executes after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `54-1` | `0x6dc44d6fb64532a9c29a98d42474c16f18da03bd17a0911ef097525c31580e6a` | `0x9dbc86597afff4907a97b407629c08fdc92ae7bf671410018500efea3c7dd80f` | interim-1002 |
+| 1 | create vault | `Proxy.create_pure` | cold | ok | ok | `591-2` | `0xf88028f8571707815c2bedb5a4d85782ed35756cd8b4b65c5e528a5d5a1dab58` | `0x99cf4374732fabf3698d97aa6ab7a7f1a6a12e315880a9febf5fde2aacbf0665` | interim-sdk — not V3 |
+| 2 | fund vault | `Balances.transfer_keep_alive` | cold | ok | ok | `592-2` | `0x77d2c3482e12952256cdcec55d57e4a10f788abf2b5596d4ee458b99bd3789ae` | `0x3b25bc9cb8d8c381501ff514ce25ebac14baa13e7dcdb916ba57da4e43b32f3b` | interim-sdk — not V3 |
+| 3 | add delayed hot key | `Proxy.proxy(Proxy.add_proxy)` | cold | ok | ok | `593-2` | `0x51306b0034d9b0e391f6615b8b9ac08672ec6fb98709bf58caa926c9154b7bcd` | `0x88cc01e938ce02fa2f1fefa169d3129fbb2428cd39cd4f95a9f21f91d8917e67` | interim-sdk — not V3 |
+| 4 | hot spends unannounced | `Proxy.proxy(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `594-2` | `0x881e539ac6c4db2a02e690d47f0b82019688376f51456f78dc7933eacf39511a` | `0xd535ea1050e95ab3647e9ae7e2e95e142d5733747adf7d16714c75f79edcaa10` | interim-sdk — not V3 |
+| 5 | hot announces theft | `Proxy.announce` | hot | ok | ok | `595-2` | `0x29ef132b58e061266a93f6520f3fa0cdb035f7e343702151734c4c8b8060b6df` | `0xc4f864ce8bba9109a3865b112ef11fb86eb584a50213e9ab1974b356a1b66d9c` | interim-sdk — not V3 |
+| 6 | cold vetoes | `Proxy.proxy(Proxy.reject_announcement)` | cold | ok | ok | `596-2` | `0x943c6b6c24574173140f9b3a8960b1b3c7ecbde630b943ed9d7611ab58c833ef` | `0x20868ccce62dcb2b6f936f518c54b2d7ad2ab419d7ec3101e1680fc63bb0a30a` | interim-sdk — not V3 |
+| 7 | vetoed theft after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `602-2` | `0x1fecf2a10844a485e156d95dd11715143d902702e21041f2d0dc94c3fad156bf` | `0xf9f6da751120028c327b05c37086eddce4d85cbd06c44881c06826a59a1b7333` | interim-sdk — not V3 |
+| 8 | hot announces payment | `Proxy.announce` | hot | ok | ok | `603-2` | `0xa9e4f0e3f8c4ea245d09aa940b6d9283d37552ae5a659b45235335be672a9e7e` | `0x2f8e3cea0aeab83d0a3d1d9405cd6c441b4c0f74ad196ba6af6c24f37e20fe1e` | interim-sdk — not V3 |
+| 9 | payment executes after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | ok | ok | `610-2` | `0x4849d65441ed9e82cfd20b92e56520be0eab615ead33d07149fc4621ca640bf7` | `0x9fe70760f58eac57323ef77a01cfd0a4ec67e839d7ef6f2125b705eadfcd0cdf` | interim-sdk — not V3 |
 
-### spike_proxy — 2026-10-14T00:16:27Z — interim — not V3 (upstream polkadot-sdk substrate-node dev chain)
+### spike_proxy — 2026-10-14T00:33:25Z — interim — not V3 (Portaldot dev node, runtime spec 1002)
 
-Profile `interim-sdk` · runtime `node/268` · genesis `0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2` · vault `5Fe5MVGFazAbD2Gg8YVVKR3ELTpL8HkMTdJe9Y7SAryX2pp7`
-
-| # | step | call | signer | expected | outcome | extrinsic id | block hash | tx hash | profile |
-|---|---|---|---|---|---|---|---|---|---|
-| 1 | create vault | `Proxy.create_pure` | cold | ok | ok | `272-2` | `0x0fe9e5aa06974d1a801d6f3c927593c517280232f854f827783d3de5b321f94c` | `0x630e3a9987c98901b02dbaf2dd47f1ebb2c295eeddd7436e818b07f1726220c0` | interim-sdk |
-| 2 | fund vault | `Balances.transfer_keep_alive` | cold | ok | ok | `273-2` | `0x1ae6687a101431427ac0ce00cde748bc8728f7758d52a714b198bcf120080d4f` | `0xe81a661200e0a6718698a3af266f7f21aba76b18236e3e592b07402acaac59f5` | interim-sdk |
-| 3 | add delayed hot key | `Proxy.proxy(Proxy.add_proxy)` | cold | ok | ok | `274-2` | `0xbee04413af940306130cd4e40fffa8280b70858eeef7a49e2fa64f3f3535141c` | `0x3907473a4602b8e867da9616b796fc2d2a1e8472818931691863f471de98f95f` | interim-sdk |
-| 4 | hot spends unannounced | `Proxy.proxy(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `275-2` | `0x3953ad30521e480e40a1780f7802c4c9a1bafa8ae0606f1614a4d0e962fc2d97` | `0x7be406822ecb055ce7f9fbc65266071537169707bfcc9826f1ce7962dc4ea92f` | interim-sdk |
-| 5 | hot announces | `Proxy.announce` | hot | ok | ok | `276-2` | `0x8aa2345dc646d44fdf5dced6a3ef295d745de535f50eed9232c835e6ebba5882` | `0x42f78a5488c513ca845070b65f0b84e98e408153b2f9d3aefb6738787f361b94` | interim-sdk |
-| 6 | cold vetoes | `Proxy.proxy(Proxy.reject_announcement)` | cold | ok | ok | `277-2` | `0x673fb6c0b5aabc7706b787e6c867dc0ee1dd81f36b3a7ea6563d797abdd5e09f` | `0x243bebc35668ad0b418820d9c2f79f958989e04284d99664adfd5ab1de80ef7f` | interim-sdk |
-| 7 | hot executes after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `283-2` | `0x43da1502729c091b18a963071666f8ad4c2c94ad07ae124a8decebfe8096dc9a` | `0xc4a22d574c4765c253b7484dc17167cbd61e2f70475bfed406d12b80f77278ce` | interim-sdk |
-
-### spike_proxy — 2026-10-14T00:17:04Z — interim — not V3 (Portaldot dev node, runtime spec 1002)
-
-Profile `interim-1002` · runtime `portaldot/1002` · genesis `0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22` · vault `5FQ9Ld4TshxD5PvecCpVQfcRS9KWsqcLdjyqK1VeePDKu2gf`
+Runtime `portaldot/1002` · genesis `0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22` · vault `5GfhoE1bDLj7tMVgyVB6HmHY6DCAmYX77dxmTSNEW3W85YQc` · delay D = 5 blocks · code `e5e4a0d`
 
 | # | step | call | signer | expected | outcome | extrinsic id | block hash | tx hash | profile |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | create vault | `Proxy.anonymous` | cold | ok | ok | `84-1` | `0xe9d55067701cc2217d03ec7ad294ad8e084502509f65ee36bfd2f376af7b8b0a` | `0xc33d04702f4cdbd3769aaa4b25838894815dc17b070bfbe29aea9f142866c083` | interim-1002 |
-| 2 | fund vault | `Balances.transfer_keep_alive` | cold | ok | ok | `85-1` | `0xd870b79c81de840aa000f00ea6e12f2bb914abc350a43dbba7f128f2f3477296` | `0xd4ed44f1554b87efad38393986733f51da56429ee0480d45a0885aae5e48f3c3` | interim-1002 |
-| 3 | add delayed hot key | `Proxy.proxy(Proxy.add_proxy)` | cold | ok | ok | `86-1` | `0xce2dea92b9d2b8b777eca46e3bb6d20bab2f967d6c7536c63b859b4966a3dbd2` | `0x3bbe79c325871dc4514a8e4117737d2ed5170bd12ebd1f0377b32bc8878e1966` | interim-1002 |
-| 4 | hot spends unannounced | `Proxy.proxy(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `87-1` | `0x26e40b7d11907b33576167903e1173dc98825bc65745b6ce836e1b8527409253` | `0x3d5275fe57d458a6be583c77b10f1b5d24d8cb918d33a4326d58506c35652e65` | interim-1002 |
-| 5 | hot announces | `Proxy.announce` | hot | ok | ok | `88-1` | `0xe88c380a38811c1368967f1f5926a2f6a3b7508570bcbcbedb1a3a1eca87a8e9` | `0xc0197d05c2fbc4e1797362127e58ce6b5e8a42788530493c7edd37691255bdd0` | interim-1002 |
-| 6 | cold vetoes | `Proxy.proxy(Proxy.reject_announcement)` | cold | ok | ok | `89-1` | `0xbeaf6838bf218ab1ec8bbf9889ff50bf5c8fded692f2fceb32e7479895b2433d` | `0xd12db51a02a58a216dcd2581b34d49fbf20dfe9ee2171d7577168cafa420ec82` | interim-1002 |
-| 7 | hot executes after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `95-1` | `0xc47cdc1425d73299f2b80a697e67f00c8189d977adf55b80fcaec5fa0d9b2a4c` | `0x11919371b91239576cd1e9a2a997629cf23752c3147f7d23287e0857d13dc74f` | interim-1002 |
+| 1 | create vault | `Proxy.anonymous` | cold | ok | ok | `248-1` | `0x0c4ff0ee917b2cf96a3c1061079c417be29256d752b4e5eaff355ad1a2cf6cd9` | `0x875ebcbdcaa1795f6a188538d59b243c080135db750fdacb692bd93841427699` | interim-1002 — not V3 |
+| 2 | fund vault | `Balances.transfer_keep_alive` | cold | ok | ok | `249-1` | `0xf4d46928dcd21549cdd58c8c061ba21755fc679270ab44cfacae406cb8531f16` | `0xe4d27f4f184f9ca50566c6c23bcde7662974bdfd53e7f7379e40be779724f4f0` | interim-1002 — not V3 |
+| 3 | add delayed hot key | `Proxy.proxy(Proxy.add_proxy)` | cold | ok | ok | `250-1` | `0x902e8afdc553360c01272416c7afbd4cd493f042b69630782ae4ad162ccf199b` | `0xf129bab29ea7ca6a177b28dd2a1e2b856965d25c25659f71d34831cce53f917d` | interim-1002 — not V3 |
+| 4 | hot spends unannounced | `Proxy.proxy(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `251-1` | `0x16616977a73324ad8d8087c20d825f5e8c053864c498a14fbf3080eecc5062fe` | `0xae40bf29d856060e4273d141df5e1d7a9414b63c108534a843419493aa4b68e7` | interim-1002 — not V3 |
+| 5 | hot announces theft | `Proxy.announce` | hot | ok | ok | `252-1` | `0xd567046edfb96e4a9b4c0bec407e1f6951592b3a56392f6f81faf01b0ee30bf7` | `0x86e261be67c69e2b48468392b1de1f2ae6d981abbf1f9e3ce9ce2289cb519bbc` | interim-1002 — not V3 |
+| 6 | cold vetoes | `Proxy.proxy(Proxy.reject_announcement)` | cold | ok | ok | `253-1` | `0x56797d1a73f441da156dd8234fcf04c9a28c3033697c5b6237a081bc6834c7b5` | `0x457aabf62ad2a810115da401b3d0a955b99f9712ee1510917d8191cb8a90952d` | interim-1002 — not V3 |
+| 7 | vetoed theft after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `259-1` | `0xb988c7a01054ed604723c090be084cf8630c292263a62a2ad42455a0251318a2` | `0xdf821ab660db05faa553e6d2d340bb1275f21e431dfc0fcfbc67286369c47231` | interim-1002 — not V3 |
+| 8 | hot announces payment | `Proxy.announce` | hot | ok | ok | `260-1` | `0xde5d958c04ab8dd7b2d1e478839e7dbb43b9798b3c3eae93685d823339c75b43` | `0x13f3c5f1672f6c50ab64727738bb3658723798e2f05305fc6d0932b5b3ff04fc` | interim-1002 — not V3 |
+| 9 | payment executes after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | ok | ok | `267-1` | `0xb71e41a227a2d6b35e3a368f297507c3690423f13228fb420752730b69ada250` | `0x163ace1d5abf5c52a37dbe6fe54d191d09b1d362d20ca92a08aa58dd70669d68` | interim-1002 — not V3 |

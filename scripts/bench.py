@@ -31,6 +31,7 @@ import argparse
 import json
 import math
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -220,6 +221,7 @@ def run(args) -> int:
         watcher.terminate()
         watcher.wait(10)
         log.close()
+        shutil.rmtree(tmp, ignore_errors=True)  # watcher db, alert log, thief state: everything kept is in the JSON
 
     ablation = None
     if args.ablate:

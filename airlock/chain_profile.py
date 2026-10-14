@@ -38,6 +38,8 @@ class Profile:
     pure_field: str = "pure"
     # substrate-interface type registry preset; only the 1002 runtime needs one.
     type_registry_preset: str | None = None
+    # substrate-interface type overrides on top of the preset, keyed by the metadata's exact type string.
+    type_registry_types: Mapping[str, str] = field(default_factory=dict)
     # @polkadot/api type overrides (UI side); only the 1002 runtime needs one.
     polkadotjs_types: Mapping[str, str] = field(default_factory=dict)
     # Used only when the chain's system_properties carry no tokenDecimals.
@@ -80,6 +82,13 @@ INTERIM_1002 = Profile(
     pure_created_event="AnonymousCreated",
     pure_field="anonymous",
     type_registry_preset="legacy",
+    # The 1002 metadata spells Proxy storage values with stray spaces/commas the legacy preset cannot parse.
+    type_registry_types={
+        "(BoundedVec<ProxyDefinition<AccountId, ProxyType,  BlockNumber>, MaxProxies,>, BalanceOf)":
+            "(Vec<ProxyDefinition>, BalanceOf)",
+        "(BoundedVec<Announcement<AccountId, CallHashOf,  BlockNumber>, MaxPending,>, BalanceOf,)":
+            "(Vec<ProxyAnnouncement>, BalanceOf)",
+    },
     polkadotjs_types={"DispatchErrorModule": "DispatchErrorModuleU8"},
     decimals_fallback=14,  # the dev node exposes empty system_properties; mainnet POT has 14
     symbol_fallback="POT",
@@ -133,13 +142,26 @@ def transferable(account_data: Mapping[str, int], existential_deposit: int = 0, 
     return max(free - untouchable, 0)
 
 
-def pure_address(profile: Profile, attributes: Any) -> str:
-    """Pull the new vault address out of a PureCreated / AnonymousCreated event's attributes."""
+def event_field(attributes: Any, name: str, position: int) -> Any:
+    """Read one event field whatever the decoder produced.
+
+    Modern metadata decodes attributes as a dict keyed by field name. The 1002 runtime under the
+    `legacy` preset decodes them positionally, each wrapped as {"type": ..., "value": ...}.
+    """
     if isinstance(attributes, Mapping):
-        return attributes[profile.pure_field]
-    if isinstance(attributes, (list, tuple)) and attributes:
-        return attributes[0]  # positional decoding (legacy preset): (pure, who, proxy_type, index)
-    raise ValueError(f"cannot read the pure account from {attributes!r}")
+        value = attributes[name]
+    elif isinstance(attributes, (list, tuple)) and len(attributes) > position:
+        value = attributes[position]
+    else:
+        raise ValueError(f"no field {name!r} (position {position}) in {attributes!r}")
+    if isinstance(value, Mapping) and set(value) == {"type", "value"}:
+        value = value["value"]
+    return value
+
+
+def pure_address(profile: Profile, attributes: Any) -> str:
+    """The new vault address from a PureCreated / AnonymousCreated event: (pure, who, proxy_type, index)."""
+    return event_field(attributes, profile.pure_field, 0)
 
 
 @dataclass
@@ -202,7 +224,8 @@ def connect(url: str | None = None, profile_id: str | None = None) -> Chain:
 
     if profile.type_registry_preset:
         probe.close()
-        substrate = SubstrateInterface(url=url, type_registry_preset=profile.type_registry_preset)
+        substrate = SubstrateInterface(url=url, type_registry_preset=profile.type_registry_preset,
+                                       type_registry={"types": dict(profile.type_registry_types)})
     else:
         substrate = probe
     substrate.init_runtime()

@@ -7,6 +7,7 @@ from airlock.chain_profile import (
     UnknownChain,
     identify,
     missing_proxy_calls,
+    event_field,
     pure_address,
     transferable,
 )
@@ -83,3 +84,12 @@ def test_pure_address_from_named_and_positional_attributes():
     assert pure_address(INTERIM_SDK, {"pure": "5Vault", "who": "5Cold"}) == "5Vault"
     assert pure_address(INTERIM_1002, {"anonymous": "5Vault", "who": "5Cold"}) == "5Vault"
     assert pure_address(INTERIM_1002, ["5Vault", "5Cold", "Any", 0]) == "5Vault"
+    # what the 1002 runtime actually decodes to under the legacy preset
+    assert pure_address(INTERIM_1002, [{"type": "AccountId", "value": "5Vault"}, {"type": "AccountId", "value": "5Cold"}]) == "5Vault"
+
+
+def test_event_field_unwraps_legacy_and_reports_missing():
+    assert event_field({"result": {"Ok": None}}, "result", 0) == {"Ok": None}
+    assert event_field([{"type": "DispatchResult", "value": {"Ok": None}}], "result", 0) == {"Ok": None}
+    with pytest.raises(ValueError):
+        event_field([], "result", 0)

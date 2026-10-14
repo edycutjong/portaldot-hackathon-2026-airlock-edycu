@@ -11,6 +11,8 @@ import hashlib
 from dataclasses import dataclass
 from typing import Any, Iterable
 
+from substrateinterface.utils.ss58 import ss58_decode
+
 
 class ReviveUnavailable(LookupError):
     """The runtime has no `Revive.call`, so an EVM-side protected call cannot be composed on this chain."""
@@ -35,10 +37,9 @@ def call_bytes(call: Any) -> bytes:
         if not call.startswith("0x"):
             raise ValueError("hex call data must start with 0x")
         return bytes.fromhex(call[2:])
-    data = getattr(call, "data", None)
-    raw = getattr(data, "data", None)
-    if isinstance(raw, (bytes, bytearray)):
-        return bytes(raw)
+    if hasattr(call, "get_used_bytes") and getattr(call, "data", None) is not None:
+        # only the bytes this call occupies: a call decoded out of a block shares the block's buffer
+        return bytes(call.get_used_bytes())
     raise TypeError(f"not an encoded call: {call!r}")
 
 
@@ -62,8 +63,9 @@ def normalize_announcements(storage_value: Any) -> list[Announcement]:
     if storage_value is None:
         return []
     entries = storage_value
-    if isinstance(storage_value, (list, tuple)) and len(storage_value) == 2 and isinstance(storage_value[0], (list, tuple)):
-        entries = storage_value[0]
+    if (isinstance(storage_value, (list, tuple)) and len(storage_value) == 2
+            and isinstance(storage_value[0], (list, tuple)) and isinstance(storage_value[1], int)):
+        entries = storage_value[0]  # (announcements, deposit)
     return [Announcement(real=_field(e, "real", 0), call_hash=_field(e, "call_hash", 1).lower(),
                          height=int(_field(e, "height", 2))) for e in entries]
 
@@ -73,10 +75,24 @@ def pending(substrate: Any, delegate: str) -> list[Announcement]:
     return normalize_announcements(substrate.query("Proxy", "Announcements", [delegate]).value)
 
 
+def same_account(a: str, b: str) -> bool:
+    """Compare accounts by public key, so the same account under different SS58 prefixes (or as hex) matches."""
+    return _public_key(a) == _public_key(b)
+
+
+def _public_key(account: str) -> str:
+    if account.startswith("0x"):
+        return account[2:].lower()
+    try:
+        return ss58_decode(account)
+    except ValueError:
+        return account  # not an address we can decode; compare as given
+
+
 def is_announced(announcements: Iterable[Announcement], real: str, call: Any) -> bool:
     """I3: is this exact call announced by the delegate for this vault?"""
     h = call_hash(call)
-    return any(a.real == real and a.call_hash == h for a in announcements)
+    return any(a.call_hash == h and same_account(a.real, real) for a in announcements)
 
 
 def _has_call(runtime: Any, module: str, function: str) -> bool:

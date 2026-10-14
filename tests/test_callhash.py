@@ -16,6 +16,7 @@ from airlock.callhash import (
     is_announced,
     normalize_announcements,
     revive_call,
+    same_account,
 )
 from airlock.offline import load
 
@@ -56,6 +57,15 @@ def test_call_hash_same_for_object_bytes_and_hex(sdk):
     call = theft(sdk, 12)
     raw = call_bytes(call)
     assert call_hash(call) == call_hash(raw) == call_hash("0x" + raw.hex())
+
+
+def test_call_hash_of_a_decoded_call_ignores_trailing_bytes(sdk):
+    from scalecodec.base import ScaleBytes
+
+    raw = call_bytes(theft(sdk, 12))
+    decoded = sdk.runtime_config.create_scale_object("Call", data=ScaleBytes(raw + b"\x01\x02\x03"), metadata=sdk.metadata)
+    decoded.decode(check_remaining=False)  # as when a call is read out of a block or a batch
+    assert call_bytes(decoded) == raw and call_hash(decoded) == call_hash(raw)
 
 
 def test_call_hash_rejects_non_calls():
@@ -108,6 +118,9 @@ def test_normalize_announcements_storage_shapes():
     wrapped = [{"type": "AccountId", "value": VAULT}, {"type": "Hash", "value": "0xabcd"}, {"type": "u32", "value": 7}]
     assert normalize_announcements(([wrapped], 459)) == expected
     assert normalize_announcements(None) == [] and normalize_announcements(([], 0)) == []
+    # a bare list of exactly two positional entries is two announcements, not (announcements, deposit)
+    two = [[VAULT, "0x01", 1], [VAULT, "0x02", 2]]
+    assert [a.call_hash for a in normalize_announcements(two)] == ["0x01", "0x02"]
 
 
 def test_is_announced_matches_vault_and_exact_call(sdk):
@@ -116,3 +129,13 @@ def test_is_announced_matches_vault_and_exact_call(sdk):
     assert is_announced(pending, VAULT, call)
     assert not is_announced(pending, "5Other", call)
     assert not is_announced(pending, VAULT, theft(sdk, 12, amount=99))
+
+
+def test_same_vault_under_another_ss58_prefix_still_matches(sdk):
+    from substrateinterface.utils.ss58 import ss58_decode, ss58_encode
+
+    call = theft(sdk, 12)
+    as_polkadot = ss58_encode(ss58_decode(VAULT), ss58_format=0)
+    assert as_polkadot != VAULT and same_account(as_polkadot, VAULT)
+    assert is_announced([Announcement(as_polkadot, call_hash(call), 1)], VAULT, call)
+    assert same_account("0x" + ss58_decode(VAULT), VAULT)

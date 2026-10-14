@@ -131,3 +131,27 @@ def test_thief_script_posting_its_preimage_gets_401(api):
     thief = load_script("thief")
     assert thief.post_intent(url, VAULT, CALL, H) == 401
     assert store.intents(VAULT) == [] and store.match_intent(VAULT, H, HOT.ss58_address, 101) is None
+
+
+@pytest.mark.parametrize("profile_id", ["interim-sdk", "interim-1002"])
+def test_describe_call_against_recorded_metadata(profile_id):
+    """The decoder the registry uses, on both interim runtimes (decoded args arrive as a list of name/value)."""
+    from airlock import offline
+    from airlock.api import describe_call
+    from airlock.callhash import call_bytes, same_account
+    from airlock.chain_profile import PROFILES, Chain
+
+    rt = offline.load(profile_id)
+    chain = Chain(substrate=rt, profile=PROFILES[profile_id], url="offline", genesis_hash="0x", code_hash="0x",
+                  spec_name="x", spec_version=rt.spec_version, decimals=12, symbol="UNIT", block_time_ms=3000,
+                  block_time_source="test", has_revive=False, existential_deposit=1)
+    raw = call_bytes(rt.compose_call("Balances", "transfer_keep_alive",
+                                     {"dest": "5C5vdpsPjL7KwZySdTNBxVRJ5os7qQBwrkU7mu4fA61jCryJ", "value": 1_500_000_000_000}))
+    text = describe_call(chain, raw)
+    dest = text.split("dest=")[1].split(",")[0]  # SS58 from a live node; the offline registry has no SS58 format
+    assert same_account(dest, "5C5vdpsPjL7KwZySdTNBxVRJ5os7qQBwrkU7mu4fA61jCryJ")
+    assert text.startswith("Balances.transfer_keep_alive(dest=") and text.endswith(", value=1.5000 UNIT)")
+    with pytest.raises(ValueError):
+        describe_call(chain, raw + b"\x00")
+    with pytest.raises(Exception):
+        describe_call(chain, b"\xff\xff")

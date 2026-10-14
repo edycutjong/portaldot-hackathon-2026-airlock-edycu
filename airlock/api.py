@@ -37,14 +37,18 @@ def describe_call(chain: Chain, raw: bytes) -> str:
     bytes that are not exactly one call of this runtime."""
     from scalecodec.base import ScaleBytes
 
+    if chain.substrate.metadata is None:  # a fresh connection loads the runtime's metadata lazily
+        chain.substrate.init_runtime()
     obj = chain.substrate.runtime_config.create_scale_object("Call", data=ScaleBytes(raw),
                                                             metadata=chain.substrate.metadata)
     obj.decode()
     if len(obj.get_used_bytes()) != len(raw):
         raise ValueError("trailing bytes after the call")
     v = obj.value
+    call_args = v.get("call_args") or []
+    pairs = call_args.items() if isinstance(call_args, dict) else ((a["name"], a["value"]) for a in call_args)
     args = []
-    for name, value in (v.get("call_args") or {}).items():
+    for name, value in pairs:
         if name in ("value", "amount") and isinstance(value, int):
             value = chain.fmt(value)
         elif isinstance(value, (dict, list)):

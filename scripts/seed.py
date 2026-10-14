@@ -183,9 +183,10 @@ def seed(sp: Sender, chain: Chain, args, who_keys: dict[str, Keypair], spends, a
     withdraw(sp, hot, vault, p.call_hash, step="withdraw own announcement")
 
     # panic on a throwaway vault, so the demo vault keeps its hot key for the live demo
-    st["throwaway"] = vault2 = create_vault(sp, cold, who["hot"], delay, index=args.index + 1, fund=need["throwaway"])
-    panic(sp, cold, vault2, who["hot"], step="panic (throwaway vault)")
-    sp.send("hot announces after panic", "hot", hot,
+    st["throwaway"] = vault2 = create_vault(sp, cold, who["hot"], delay, index=args.index + 1, fund=need["throwaway"],
+                                          label="throwaway: ")
+    panic(sp, cold, vault2, who["hot"], step="throwaway: panic")
+    sp.send("throwaway: hot announces after panic", "hot", hot,
             s.compose_call("Proxy", "announce", {"real": vault2, "call_hash": p.call_hash}), "Proxy.NotProxy")
     return st
 

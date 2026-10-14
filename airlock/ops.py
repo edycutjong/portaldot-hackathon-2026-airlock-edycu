@@ -214,23 +214,25 @@ def deposits(chain: Chain) -> dict[str, int]:
 # operations ---------------------------------------------------------------------------------------------------------
 
 
-def create_vault(tx: Sender, cold: Keypair, hot: str, delay: int, index: int = 0, fund: int | None = None) -> str:
-    """cold creates a pure vault (cold = its delay-0 delegate) and adds `hot` as an Any delegate with `delay` blocks."""
+def create_vault(tx: Sender, cold: Keypair, hot: str, delay: int, index: int = 0, fund: int | None = None,
+                 label: str = "") -> str:
+    """cold creates a pure vault (cold = its delay-0 delegate) and adds `hot` as an Any delegate with `delay` blocks.
+    `label` prefixes the step names of the rows (e.g. "throwaway: ")."""
     chain, s, p = tx.chain, tx.s, tx.chain.profile
     if delay < 1:
         raise Refused("delay must be at least 1 block: a delay-0 hot key is exactly what Airlock exists to avoid")
     if same_account(hot, cold.ss58_address):
         raise Refused("the hot key must not be the cold key")
-    r = tx.send("create vault", "cold", cold,
+    r = tx.send(f"{label}create vault", "cold", cold,
                 s.compose_call("Proxy", p.create_pure_call, {"proxy_type": "Any", "delay": 0, "index": index}))
     attrs = find_event(r, "Proxy", p.pure_created_event)
     if attrs is None:
         raise NotConfirmed(f"create vault succeeded but emitted no Proxy.{p.pure_created_event}")
     vault = pure_address(p, attrs)
     if fund:
-        tx.send("fund vault", "cold", cold, transfer(chain, vault, fund), note=chain.fmt(fund))
+        tx.send(f"{label}fund vault", "cold", cold, transfer(chain, vault, fund), note=chain.fmt(fund))
     add = s.compose_call("Proxy", "add_proxy", {"delegate": hot, "proxy_type": "Any", "delay": delay})
-    tx.send("add delayed hot key", "cold", cold, as_vault(chain, vault, add), note=f"delay {delay} blocks")
+    tx.send(f"{label}add delayed hot key", "cold", cold, as_vault(chain, vault, add), note=f"delay {delay} blocks")
     defs = tx.delegates(vault)
     if delay_of(defs, hot) != delay or delay_of(defs, cold.ss58_address) != 0:
         raise NotConfirmed(f"Proxy.Proxies({vault}) should hold hot with delay {delay} and cold with delay 0: {defs}")

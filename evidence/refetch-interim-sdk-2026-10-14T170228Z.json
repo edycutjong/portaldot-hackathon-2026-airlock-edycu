@@ -1,0 +1,24 @@
+{
+  "started": "2026-10-14T17:02:28Z",
+  "endpoint": "http://127.0.0.1:29944",
+  "transport": "http",
+  "profile": "interim-sdk",
+  "label": "interim \u2014 not V3 (upstream polkadot-sdk substrate-node dev chain)",
+  "genesis_hash": "0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2",
+  "head_at_refetch": 18987,
+  "source": "evidence/thief-intents-interim-sdk-2026-10-14T170106Z.jsonl",
+  "matched": 1,
+  "total": 1,
+  "rows": [
+    {
+      "extrinsic_id": "18964-2",
+      "block_number": 18964,
+      "block_hash": "0x04312045c7dc19dacb70b24af60e93d798d39dec7bff76f693f3bf781d49068f",
+      "extrinsic_hash": "0x0600d9f1acee8f866191cb48f3d2fda7e58f3e06354c69190cb466a43f40a083",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    }
+  ]
+}

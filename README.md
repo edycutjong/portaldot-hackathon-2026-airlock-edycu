@@ -189,8 +189,8 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
 - **Proof:** [docs/PROOF.md](docs/PROOF.md) — every row with extrinsic id, block hash, tx hash and the profile label.
 - **Tests:** 341 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
   I2: a vetoed announcement never executes, also after the delay; the control; panic) that pass on both interim chains
-  (`evidence/integration-*-T154*Z.json` and `…-T155*Z.json`, `"status": "passed"`; the two earlier `…T1522*Z.json`
-  runs predate that field).
+  (`evidence/integration-*-T154*Z.json`, `…-T155*Z.json` and, after the intent registry, `…-T171*Z.json`,
+  `"status": "passed"`; the two earlier `…T1522*Z.json` runs predate that field).
 - **Watcher:** [docs/WATCHER.md](docs/WATCHER.md) — also shown live after a watcher restart, a node restart and a node
   freeze (recorded by [scripts/watcher_evidence.sh](scripts/watcher_evidence.sh)). No alert has reached a phone yet
   (no Telegram bot token configured).

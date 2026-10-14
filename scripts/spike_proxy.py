@@ -18,7 +18,6 @@ usage: python scripts/spike_proxy.py [--profile interim-sdk] [--url ws://…] [-
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 import time
@@ -30,6 +29,7 @@ sys.path.insert(0, str(ROOT))
 
 from substrateinterface import Keypair  # noqa: E402
 
+from airlock.callhash import call_hash, is_announced, pending  # noqa: E402
 from airlock.chain_profile import Chain, connect, event_field, pure_address  # noqa: E402
 
 
@@ -46,11 +46,6 @@ def find_event(receipt, module, event):
         if (m, e) == (module, event):
             return attrs
     return None
-
-
-def call_hash(call) -> str:
-    """blake2_256 of the SCALE-encoded call: what proxy.announce stores."""
-    return "0x" + hashlib.blake2b(call.data.data, digest_size=32).hexdigest()
 
 
 def outcome(receipt) -> str:
@@ -161,17 +156,18 @@ def run(chain: Chain, delay: int, index: int, fund: float, amount: float) -> Spi
     r = sp.submit("hot announces", "hot", hot, s.compose_call("Proxy", "announce", {"real": vault, "call_hash": h}), "ok",
                   note=f"call hash {h}")
     announced_at = s.get_block_number(r.block_hash)
-    pending = s.query("Proxy", "Announcements", [hot.ss58_address]).value
-    stored = [a["call_hash"] for a in pending[0]]
-    if h not in stored:
-        raise StepFailed(f"I3: announced hash {h} not in Proxy.Announcements(hot) {stored}")
+    stored = pending(s, hot.ss58_address)
+    if not is_announced(stored, vault, theft):
+        raise StepFailed(f"I3: blake2_256(call) {h} not in Proxy.Announcements(hot) {stored}")
     print(f"I3 PASS blake2_256(call) == Proxy.Announcements(hot) entry {h}")
 
     # 6. the veto
     veto = s.compose_call("Proxy", "reject_announcement", {"delegate": hot.ss58_address, "call_hash": h})
     sp.submit("cold vetoes", "cold", cold,
               s.compose_call("Proxy", "proxy", {"real": vault, "force_proxy_type": None, "call": veto}), "ok")
-    left = s.query("Proxy", "Announcements", [hot.ss58_address]).value[0]
+    left = pending(s, hot.ss58_address)
+    if any(a.real == vault and a.call_hash == h for a in left):
+        raise StepFailed(f"veto: {h} still pending after reject_announcement: {left}")
     print(f"Proxy.Announcements(hot) after veto = {left}")
 
     # 7. the delay passes; the vetoed call still cannot execute

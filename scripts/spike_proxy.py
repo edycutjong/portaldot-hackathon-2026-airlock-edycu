@@ -11,6 +11,9 @@
   8. hot    proxy.announce(vault, blake2_256(payment))             -> a legitimate spend, not vetoed
   9. hot    proxy.proxy_announced(hot, vault, payment) before D    -> must FAIL Proxy.Unannounced    (delay enforced)
  10. hot    proxy.proxy_announced(hot, vault, payment) after D     -> succeeds; payee +amount exactly (control)
+ --vesting N (optional, chains with a Vesting pallet):
+ 11. cold   vesting.vested_transfer(vault, N locked)               -> locked funds are NOT counted as at risk
+ 12. cold   proxy.proxy(vault, vesting.vest())                     -> claimed through the vault; at-risk = transferable
 
 Step 10 is the control for step 7: the same delegate and delay, and the only difference is the veto. Step 9 shows the
 delay itself is enforced, not just stored.
@@ -206,6 +209,50 @@ def run(sp: Spike, delay: int, index: int, fund: str, amount: str) -> None:
     print(f"control PASS payee +{chain.fmt(received)} exactly, after {delay} blocks with no veto")
 
 
+def run_vesting(sp: Spike, amount: str) -> None:
+    """Optional steps 11–12: a vested payout lands in the vault; locked funds are not at risk, vesting is claimed
+    through the vault, and at-risk stays equal to the transferable balance throughout."""
+    chain, s = sp.chain, sp.s
+    cold = Keypair.create_from_uri("//Alice")
+    vault = sp.vault
+    if not any(p.name == "Vesting" for p in s.get_metadata().pallets):
+        print(f"vesting steps skipped: {chain.profile.id} has no Vesting pallet")
+        return
+
+    def lock_amount() -> int:
+        locks = s.query("Balances", "Locks", [vault]).value or []
+        def lock_id(raw) -> bytes:  # [u8; 8]: hex on modern decoders, text on some legacy ones
+            raw = str(raw)
+            return bytes.fromhex(raw[2:]) if raw.startswith("0x") else raw.encode()
+        return sum(int(lock["amount"]) for lock in locks if lock_id(lock["id"]) == b"vesting ")
+
+    def check(stage: str) -> int:
+        risk, lock = chain.at_risk(vault), lock_amount()
+        expected = max(risk.free - max(risk.frozen - risk.reserved, 0), 0)
+        if lock <= 0 or risk.frozen != lock or risk.transferable != expected or risk.transferable >= risk.free:
+            raise StepFailed(f"vesting {stage}: lock {lock}, {risk}, expected transferable {expected}")
+        print(f"at-risk PASS ({stage}): transferable {chain.fmt(risk.transferable)} < free {chain.fmt(risk.free)}; "
+              f"vesting-locked {chain.fmt(risk.frozen)}, reserved {chain.fmt(risk.reserved)} "
+              f"(untouchable = locked - reserved)")
+        return lock
+
+    locked = chain.units(amount)
+    per_block = max(locked // 1000, 1)
+    start = s.get_block_number(None)
+    schedule = {"locked": locked, "per_block": per_block, "starting_block": start}
+    r = sp.submit("vested payout to vault", "cold", cold,
+                  s.compose_call("Vesting", "vested_transfer", {"target": vault, "schedule": schedule}), OK,
+                  note=f"{amount} locked, {chain.fmt(per_block)}/block from #{start}")
+    lock_before = check("after vested payout")
+    sp.wait_until_block(sp.block_of(r) + 2)
+    sp.submit("vault claims vested", "cold", cold, as_vault(s, vault, s.compose_call("Vesting", "vest", {})), OK,
+              note="vest through the vault")
+    lock_after = check("after vest")
+    if lock_after >= lock_before:
+        raise StepFailed(f"vest through the vault did not release anything: lock {lock_before} -> {lock_after}")
+    print(f"vest PASS lock {chain.fmt(lock_before)} -> {chain.fmt(lock_after)}")
+
+
 def proof_markdown(chain: Chain, sp: Spike, started: str, version: str, delay: int) -> str:
     lines = [
         f"### spike_proxy — {started} — {chain.profile.label}",
@@ -231,6 +278,7 @@ def main(argv=None) -> int:
     ap.add_argument("--index", type=int, default=0, help="create_pure disambiguation index")
     ap.add_argument("--fund", default="1000", help="tokens sent to the vault")
     ap.add_argument("--amount", default="100", help="tokens each spend tries to move")
+    ap.add_argument("--vesting", default=None, help="also run steps 11-12 with this many tokens vested to the vault")
     ap.add_argument("--proof", type=Path, default=None, help="append the run's rows to this PROOF.md (passing runs only)")
     args = ap.parse_args(argv)
     if args.delay < 1:
@@ -254,6 +302,8 @@ def record(chain: Chain, args) -> int:
     failure = None
     try:
         run(sp, args.delay, args.index, args.fund, args.amount)
+        if args.vesting:
+            run_vesting(sp, args.vesting)
     except Exception as e:  # any failure still leaves an evidence file with the rows collected so far
         failure = str(e) if isinstance(e, StepFailed) else f"{type(e).__name__}: {e}"
         print(f"SPIKE FAILED: {failure}", file=sys.stderr)

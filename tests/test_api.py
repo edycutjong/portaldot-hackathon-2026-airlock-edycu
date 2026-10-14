@@ -121,3 +121,13 @@ def test_registry_answering_for_another_hash_is_not_trusted(monkeypatch):
     monkeypatch.setattr(intents, "post", lambda *a, **k: {"call_hash": "0x" + "ab" * 32})
     with pytest.raises(RegistryError):
         register_intent("http://x", "t", VAULT, CALL)
+
+
+def test_thief_script_posting_its_preimage_gets_401(api):
+    from tests.test_seed_fixtures import load_script
+
+    url, store, _ = api
+    owner_token(url)
+    thief = load_script("thief")
+    assert thief.post_intent(url, VAULT, CALL, H) == 401
+    assert store.intents(VAULT) == [] and store.match_intent(VAULT, H, HOT.ss58_address, 101) is None

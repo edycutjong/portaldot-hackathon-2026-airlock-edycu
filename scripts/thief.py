@@ -9,6 +9,10 @@ chain sees a call hash only.
   python scripts/thief.py --vault <V> --to <address> --amount all --execute   # after the delay: try to take it
   python scripts/thief.py --vault <V> --to <address> --amount 10 --direct     # skip the announcement (I1)
 
+--post-intent <registry URL>: before announcing, also try to register the sweep as an owner intent — POST
+/api/intents with the call's bytes but no owner token (the thief has the hot key, not the token). The registry answers
+401 and stores nothing, so the announcement stays NOT YOURS even though its preimage is now public (I6).
+
 --execute and --direct report the chain's verdict instead of failing: after a veto, --execute is expected to end in
 Proxy.Unannounced, and --direct always does for a delayed key. `--amount all` = the vault's free balance minus locks
 and the existential deposit, read at announce time and recorded in --state, so --execute rebuilds the identical call.
@@ -22,6 +26,8 @@ import argparse
 import hashlib
 import json
 import sys
+import urllib.error
+import urllib.request
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -116,6 +122,20 @@ def verdict(s, receipt):
     return "ok" if receipt.is_success else "failed"
 
 
+def post_intent(registry, vault, call_bytes, call_hash):
+    """What a thief can send the registry: the preimage, without the owner token. Returns the HTTP status."""
+    body = json.dumps({"vault": vault, "call_hex": "0x" + call_bytes.hex(), "call_hash": call_hash}).encode()
+    request = urllib.request.Request(registry.rstrip("/") + "/api/intents", data=body, method="POST",
+                                     headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return response.status
+    except urllib.error.HTTPError as e:
+        return e.code
+    except (urllib.error.URLError, OSError) as e:
+        return f"unreachable:{type(e).__name__}"
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--url", default="ws://127.0.0.1:29944", help="node websocket (default: local interim-sdk)")
@@ -125,6 +145,8 @@ def main(argv=None):
     ap.add_argument("--hot", default=DEMO_HOT, help="the stolen hot key: file:<path>, or a //dev URI on interim chains")
     ap.add_argument("--state", type=Path, default=Path("/tmp/airlock-thief.json"),
                     help="where the announced amount is kept for --execute (default /tmp/airlock-thief.json)")
+    ap.add_argument("--post-intent", default=None, metavar="URL",
+                    help="before announcing, POST the sweep to this intent registry without the owner token")
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--execute", action="store_true", help="proxy_announced the announced sweep (after the delay)")
     mode.add_argument("--direct", action="store_true", help="proxy.proxy the sweep with no announcement")
@@ -161,6 +183,10 @@ def main(argv=None):
                                                                   "call": sweep})
     else:
         step, call = "announce", s.compose_call("Proxy", "announce", {"real": args.vault, "call_hash": call_hash})
+        if args.post_intent:
+            status = post_intent(args.post_intent, args.vault, bytes(sweep.data.data), call_hash)
+            out(step="post-intent", script="scripts/thief.py (no airlock imports)", registry=args.post_intent,
+                vault=args.vault, call_hash=call_hash, http_status=status, token="none")
     receipt = s.submit_extrinsic(s.create_signed_extrinsic(call=call, keypair=hot), wait_for_inclusion=True)
     try:
         result = verdict(s, receipt)

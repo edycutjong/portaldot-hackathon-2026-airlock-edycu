@@ -39,3 +39,13 @@ def test_markdown_quotes_the_run_numbers_only(tmp_path):
 def test_bench_dev_keys_are_namespaced():
     assert bench.key("cold").ss58_address != bench.key("hot").ss58_address
     assert set(bench.KEYS) >= {"cold", "hot", "thief-payee"}
+
+
+def test_timed_sender_times_only_the_extrinsic_and_records_the_head_before():
+    from tests.test_ops import COLD, make, spend
+
+    s, plain = make(head=100)
+    tx = bench.TimedSender(plain.chain)
+    tx.send("t", "cold", COLD, spend(s))
+    row = tx.rows[-1]
+    assert row["head_before"] == 100 and row["block"] == 101 and 0 <= row["send_to_inclusion_s"] < 5

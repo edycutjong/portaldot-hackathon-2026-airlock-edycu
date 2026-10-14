@@ -2,11 +2,13 @@
 """Benchmark: N thief drains against an Airlock vault, each alerted by the watcher and vetoed by the cold key.
 
 Per drain (scripts/thief.py, which imports no Airlock code, announces a sweep of the vault's whole sweepable balance):
-  alert latency     announce block's on-chain timestamp (Timestamp.Now) -> the watcher's alert written to its
-                    JSON-lines log (wall clock, same machine as the node); in blocks: head when the alert was built -
-                    announce block. Telegram is not in this path (its delivery time is not measured here).
-  veto inclusion    the alert's veto sent automatically (no human: this measures the chain, not a person) -> included;
-                    seconds as the client observed it, blocks = veto block - head when the veto was sent
+  alert latency     announce block's on-chain timestamp (Timestamp.Now, the block's slot time) -> the watcher's alert
+                    written to its JSON-lines log (wall clock, same machine as the node: includes block import and
+                    header delivery); in blocks: head when the alert was built - announce block. Telegram is not in
+                    this path (its delivery time is not measured here).
+  veto inclusion    the alert's own veto (its vault, delegate and hash) sent automatically — no human, so this measures
+                    the chain, not a person: from signing the veto extrinsic to the client seeing it in a block (the
+                    CLI's pre-checks and read-back are outside the timer); blocks = veto block - head just before
   announce -> veto  on-chain: veto block timestamp - announce block timestamp, and veto block - announce block,
                     against the delay D (blocks to spare = announce block + D - veto block)
 Then, once every drain's delay has passed, the thief executes each one (`--execute`): each must fail
@@ -125,6 +127,18 @@ def control_vault(tx: Sender, cold: Keypair, control_hot: str, amount: int) -> s
     return vault
 
 
+class TimedSender(Sender):
+    """Sender that records, per extrinsic, the head just before signing and the wall time from signing to inclusion."""
+
+    def send(self, step, signer_name, signer, call, expect="ok", note=""):
+        head, t0 = self.head(), time.time()
+        try:
+            return super().send(step, signer_name, signer, call, expect, note)
+        finally:
+            if self.rows and self.rows[-1]["step"] == step:
+                self.rows[-1]["head_before"], self.rows[-1]["send_to_inclusion_s"] = head, round(time.time() - t0, 3)
+
+
 def run(args) -> int:
     chain = connect(args.url, args.profile)
     if not chain.profile.is_interim:
@@ -132,7 +146,7 @@ def run(args) -> int:
     url = args.url or ENDPOINTS[chain.profile.id]
     started = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     version = code_version()
-    tx = Sender(chain)
+    tx = TimedSender(chain)
     who = {k: key(k) for k in KEYS}
     funder = Keypair.create_from_uri(FUNDER[chain.profile.id])
     delay = blocks_for(args.delay_s, chain.block_time_ms)
@@ -175,9 +189,9 @@ def run(args) -> int:
             thief_rows.append({**ann, "step": f"drain {i} announce (thief.py)", "expected": "ok"})
             ann_ts = timestamp_s(chain, ann["block_hash"])
             alert = wait_alert(alerts_path, ann["call_hash"], ann["block"])
-            tap_head, tap_t = tx.head(), time.time()
-            r = veto(tx, cold, vault, hot.ss58_address, ann["call_hash"], step=f"drain {i} veto")
-            seen_t = time.time()
+            # the veto the alert carries (its veto_command names exactly these), signed by the cold key at once
+            r = veto(tx, cold, alert["vault"], alert["delegate"], alert["call_hash"], step=f"drain {i} veto")
+            sent = tx.rows[-1]
             veto_block = chain.substrate.get_block_number(r.block_hash)
             veto_ts = timestamp_s(chain, r.block_hash)
             drains.append({
@@ -185,7 +199,7 @@ def run(args) -> int:
                 "announce_id": ann["extrinsic_id"], "veto_block": veto_block, "veto_id": tx.rows[-1]["extrinsic_id"],
                 "alert_latency_s": round(alert["sent_at"] - ann_ts, 3), "alert_head": alert["head"],
                 "alert_latency_blocks": alert["head"] - ann["block"],
-                "veto_inclusion_s": round(seen_t - tap_t, 3), "veto_inclusion_blocks": veto_block - tap_head,
+                "veto_inclusion_s": sent["send_to_inclusion_s"], "veto_inclusion_blocks": veto_block - sent["head_before"],
                 "announce_to_veto_s": round(veto_ts - ann_ts, 3), "announce_to_veto_blocks": veto_block - ann["block"],
                 "blocks_to_spare": ann["block"] + delay - veto_block, "state": str(state)})
             x = drains[-1]
@@ -236,7 +250,8 @@ def run(args) -> int:
         "blocks_to_spare_min": min(x["blocks_to_spare"] for x in drains),
     }
     ok = (vetoed == len(drains) == args.n and summary["moved_to_thief"] == 0 and vault_after == vault_before
-          and summary["alerted_not_yours"] == args.n and (ablation is None or ablation["outcome"] == "ok"))
+          and summary["alerted_not_yours"] == args.n and summary["blocks_to_spare_min"] >= 1
+          and (ablation is None or ablation["outcome"] == "ok"))
     for x in drains:
         x.pop("state")
     out = ROOT / "evidence" / f"bench-{chain.profile.id}-{started.replace(':', '')}.json"
@@ -273,17 +288,20 @@ def markdown(r: dict, out: Path) -> str:
              f"vault total {s['vault_total_before']} planck before, {s['vault_total_after']} after. Fewest blocks to "
              f"spare before a drain could have executed: {s['blocks_to_spare_min']} of {r['delay_blocks']}.", "",
              "| metric (nearest-rank) | p50 | p95 | range |", "|---|---|---|---|",
-             row("alert latency: announce block timestamp → alert written", "alert_latency_s", "s"),
+             row("alert latency: announce block timestamp → alert written (incl. block import + delivery, one "
+                 "machine)", "alert_latency_s", "s"),
              row("alert latency in blocks (head at alert − announce block)", "alert_latency_blocks", "blocks"),
-             row("veto inclusion: sent → included (automated, no human)", "veto_inclusion_s", "s"),
-             row("veto inclusion in blocks (veto block − head when sent)", "veto_inclusion_blocks", "blocks"),
+             row("veto inclusion: veto signed → seen in a block (automated, no human)", "veto_inclusion_s", "s"),
+             row("veto inclusion in blocks (veto block − head just before signing)", "veto_inclusion_blocks", "blocks"),
              row("announce → veto, on-chain timestamps", "announce_to_veto_s", "s"),
              row("announce → veto in blocks", "announce_to_veto_blocks", "blocks")]
     if a:
         lines += ["", f"**Ablation (`--ablate`, one control drain):** the same thief script with `--direct` against a "
                       f"control vault whose hot key has delay 0 moved {a['moved_fmt']} ({a['moved']} planck) of the "
                       f"control vault's {a['control_total_before_fmt']} in {a['extrinsics']} extrinsic (`{a['id']}`, "
-                      f"outcome {a['outcome']}), {a['blocks_after_head']} block after the head it was sent at."]
+                      f"outcome {a['outcome']}), {a['blocks_after_head']} block after the head it was sent at. The "
+                      f"rest stays because a keep-alive transfer cannot take it: the existential deposit and the "
+                      f"reserved proxy deposit."]
     return "\n".join(lines)
 
 

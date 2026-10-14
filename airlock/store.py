@@ -78,7 +78,8 @@ CREATE TABLE IF NOT EXISTS intent (
   summary TEXT,                      -- the decoded call, as the alert shows it
   registered_head INTEGER NOT NULL,  -- best block when it was registered: it vouches only for a LATER announcement
   registered_at REAL NOT NULL,
-  used_by TEXT                       -- "<delegate key>@<block>": the one announcement it vouched for
+  used_by TEXT,                      -- "<delegate key>@<block>": the one announcement it vouched for
+  used_block INTEGER                 -- that announcement's block: a rewind past it releases the intent (reorg)
 );
 CREATE INDEX IF NOT EXISTS intent_by_hash ON intent (vault_key, call_hash);
 """
@@ -142,6 +143,7 @@ class Store:
 
     # columns added after the first release of the schema: (table, column, definition)
     ADDED_COLUMNS = (
+        ("intent", "used_block", "INTEGER"),
         ("announcement", "alert_json", "TEXT"),
         ("announcement", "attempts", "INTEGER NOT NULL DEFAULT 0"),
         ("announcement", "first_attempt_at", "REAL"),
@@ -192,8 +194,10 @@ class Store:
         self.db.commit()
 
     def rewind(self, number: int) -> None:
-        """Forget processed blocks above `number` (they were reorged out); the cursor moves back to `number`."""
+        """Forget processed blocks above `number` (they were reorged out); the cursor moves back to `number`. An intent
+        claimed by an announcement in a forgotten block is released: re-included elsewhere, it is still the owner's."""
         self.db.execute("DELETE FROM processed_block WHERE number > ?", (number,))
+        self.db.execute("UPDATE intent SET used_by = NULL, used_block = NULL WHERE used_block > ?", (number,))
         self._set("last_block", str(number))
         self.db.commit()
 
@@ -314,7 +318,8 @@ class Store:
                 return Intent(*row[:6])
         for row in rows:
             if row[6] is None:
-                cur = self.db.execute("UPDATE intent SET used_by = ? WHERE id = ? AND used_by IS NULL", (tag, row[0]))
+                cur = self.db.execute("UPDATE intent SET used_by = ?, used_block = ? WHERE id = ? AND used_by IS NULL",
+                                      (tag, announced_block, row[0]))
                 self.db.commit()
                 if cur.rowcount:
                     return Intent(*row[:6])

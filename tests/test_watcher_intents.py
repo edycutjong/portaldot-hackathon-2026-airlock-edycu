@@ -92,3 +92,26 @@ def test_yours_text_has_no_veto_deadline_language():
               extra={"intent_id": 7, "registered_head": 99, "call": "Balances.transfer_keep_alive(…)"})
     text = format_text(a)
     assert "intent 7" in text and "executable from #105 (5 blocks (≈ 15 s)" in text and "Veto must land" not in text
+
+
+def test_reorg_moving_the_owner_announcement_keeps_it_yours(tmp_path):
+    """The owner's announce lands in #100, is reorged out and re-included in #101: still the owner's spend."""
+    fake, registry, out, w = make(tmp_path)
+    registry.add_intent(VAULT, H1, CALL_HEX, "x", 99)
+    fake.events[100] = [announced(VAULT, HOT, H1)]
+    assert w.catch_up(100, from_block=98)[0].verdict == YOURS
+    fake.fork[100] = "0x" + "fe" * 32  # #100 replaced: the announcement is no longer in it
+    fake.events[101] = [announced(VAULT, HOT, H1)]
+    fake.head = 101
+    again = w.catch_up(101)
+    assert [(a.announced_block, a.verdict) for a in again] == [(101, YOURS)]
+
+
+def test_rewind_releases_only_claims_above_the_rewind_point(tmp_path):
+    store = Store(tmp_path / "s.db")
+    store.add_intent(VAULT, H1, CALL_HEX, "x", 90)
+    store.add_intent(VAULT, H2, CALL_HEX, "y", 90)
+    assert store.match_intent(VAULT, H1, HOT, 95) and store.match_intent(VAULT, H2, HOT, 99)
+    store.rewind(97)
+    assert store.match_intent(VAULT, H2, HOT, 98) is not None  # released, re-claimed by the re-included one
+    assert store.match_intent(VAULT, H1, HOT, 98) is None  # #95 is still canonical: its claim stands

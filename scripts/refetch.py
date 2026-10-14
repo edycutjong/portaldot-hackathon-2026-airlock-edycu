@@ -100,10 +100,11 @@ def main(argv=None) -> int:
     if bad:
         return 1
     if args.proof and recorded:
-        lines = [f"#### re-fetched by extrinsic id — {started} — over {transport(chain.url)} (`{chain.url}`), "
-                 f"fresh process, head #{head}",
+        lines = [f"### re-fetch — {started} — the {recorded['started']} {chain.profile.id} run, by extrinsic id",
                  "",
-                 f"Source: `{shown(out)}` · every row: same block hash, tx hash and outcome as recorded.",
+                 f"Fresh process over {transport(chain.url)} (`{chain.url}`; the run itself was sent over "
+                 f"{transport(recorded['endpoint'])}) at head #{head} · `{shown(out)}` · every row: same block hash, "
+                 f"tx hash and outcome as recorded.",
                  "",
                  "| extrinsic id | call | outcome | tx hash | profile |",
                  "|---|---|---|---|---|"]

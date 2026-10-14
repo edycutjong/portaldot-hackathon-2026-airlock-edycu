@@ -6,6 +6,7 @@ from airlock.chain_profile import (
     V3,
     UnknownChain,
     identify,
+    median_block_time_ms,
     missing_proxy_calls,
     event_field,
     pure_address,
@@ -19,6 +20,18 @@ def test_identify_interim_sdk():
 
 def test_identify_interim_1002_is_case_insensitive():
     assert identify(INTERIM_1002.genesis_hash.upper().replace("0X", "0x"), INTERIM_1002.code_hashes[0]) is INTERIM_1002
+
+
+def test_missing_hashes_fail_loudly():
+    with pytest.raises(UnknownChain, match="did not report"):
+        identify(None, INTERIM_SDK.code_hashes[0])
+    with pytest.raises(UnknownChain, match="did not report"):
+        identify(INTERIM_SDK.genesis_hash, None)
+
+
+def test_median_block_time():
+    assert median_block_time_ms([0, 3000, 6000, 9500, 12000]) == 3000
+    assert median_block_time_ms([5]) is None
 
 
 def test_unknown_genesis_fails_loudly():
@@ -69,6 +82,16 @@ def test_transferable_modern_account_data():
 def test_transferable_1002_account_data():
     data = {"free": 1_000, "reserved": 0, "misc_frozen": 200, "fee_frozen": 400}
     assert transferable(data) == 600
+    # keep-alive: ED is covered by the 400 already locked, so nothing more is held back
+    assert transferable(data, existential_deposit=10, keep_alive=True) == 600
+
+
+def test_transferable_1002_keep_alive_counts_reserved_toward_ed():
+    # 2021 pallet_balances: must_remain = ED - (total - liquid); reserved 50 already exceeds ED 10
+    assert transferable({"free": 100, "reserved": 50, "misc_frozen": 0, "fee_frozen": 0},
+                        existential_deposit=10, keep_alive=True) == 100
+    assert transferable({"free": 100, "reserved": 0, "misc_frozen": 0, "fee_frozen": 0},
+                        existential_deposit=10, keep_alive=True) == 90
 
 
 def test_transferable_never_negative():

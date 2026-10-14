@@ -9,7 +9,9 @@ genesis running different code, is refused rather than guessed at.
 from __future__ import annotations
 
 import os
+import statistics
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Any, Mapping
 
 CODE_KEY = "0x3a636f6465"  # the well-known storage key ":code" (the runtime wasm)
@@ -48,6 +50,8 @@ class Profile:
     is_interim: bool = True
 
 
+# Everything below except the label is UNVERIFIED until gate G2 runs against the live chain: endpoint (baseline V1),
+# 14 decimals / tPOTv3 (V2, documented), runtime portaldotV3/3000 (V4, third-party measurement).
 V3 = Profile(
     id="v3",
     label="Portaldot V3 testnet",
@@ -103,6 +107,8 @@ REQUIRED_PROXY_CALLS = ("proxy", "add_proxy", "remove_proxy", "announce", "remov
 
 def identify(genesis_hash: str, code_hash: str) -> Profile:
     """Map a chain's genesis hash + runtime code hash to its profile, or raise UnknownChain."""
+    if not genesis_hash or not code_hash:
+        raise UnknownChain(f"chain did not report a genesis hash ({genesis_hash!r}) and runtime code hash ({code_hash!r})")
     genesis_hash, code_hash = genesis_hash.lower(), code_hash.lower()
     for profile in PROFILES.values():
         if profile.genesis_hash is None or profile.genesis_hash != genesis_hash:
@@ -126,20 +132,25 @@ def missing_proxy_calls(profile: Profile, call_names: list[str] | set[str]) -> l
 def transferable(account_data: Mapping[str, int], existential_deposit: int = 0, keep_alive: bool = False) -> int:
     """Balance that can leave the account: the amount at risk if a delegate key is stolen.
 
-    Handles both AccountData layouts:
-      - modern (`frozen`, `flags`): untouchable = max(frozen - reserved, 0), and at least ED when keeping alive
-      - 1002-era (`misc_frozen`, `fee_frozen`): untouchable = max(misc_frozen, fee_frozen)
+    Mirrors pallet_balances' `reducible_balance` for both AccountData layouts:
+      - modern (`frozen`, `flags`): untouchable = max(frozen - reserved, 0), raised to ED when keeping alive
+      - 1002-era (`misc_frozen`, `fee_frozen`): liquid = free - max(misc_frozen, fee_frozen); when keeping alive,
+        ED is satisfied first by what is already locked or reserved: liquid - max(ED - (total - liquid), 0)
     """
     free = int(account_data["free"])
+    reserved = int(account_data.get("reserved", 0))
     if "frozen" in account_data:
-        untouchable = max(int(account_data["frozen"]) - int(account_data.get("reserved", 0)), 0)
-    elif "misc_frozen" in account_data:
-        untouchable = max(int(account_data["misc_frozen"]), int(account_data["fee_frozen"]))
-    else:
-        raise ValueError(f"unrecognised AccountData layout: {sorted(account_data)}")
-    if keep_alive:
-        untouchable = max(untouchable, existential_deposit)
-    return max(free - untouchable, 0)
+        untouchable = max(int(account_data["frozen"]) - reserved, 0)
+        if keep_alive:
+            untouchable = max(untouchable, existential_deposit)
+        return max(free - untouchable, 0)
+    if "misc_frozen" in account_data:
+        liquid = max(free - max(int(account_data["misc_frozen"]), int(account_data["fee_frozen"])), 0)
+        if keep_alive:
+            must_remain = max(existential_deposit - (free + reserved - liquid), 0)
+            liquid = max(liquid - must_remain, 0)
+        return liquid
+    raise ValueError(f"unrecognised AccountData layout: {sorted(account_data)}")
 
 
 def event_field(attributes: Any, name: str, position: int) -> Any:
@@ -178,26 +189,43 @@ class Chain:
     decimals: int
     symbol: str
     block_time_ms: int | None
+    block_time_source: str  # "consensus constant" | "measured (median Timestamp.Now delta)" | "unknown"
     has_revive: bool
     existential_deposit: int
 
-    def units(self, amount: float | int) -> int:
-        return int(round(amount * 10**self.decimals))
+    def units(self, amount: float | int | str | Decimal) -> int:
+        """Whole tokens -> planck, exactly (no float rounding); refuses amounts finer than one planck."""
+        planck = Decimal(str(amount)).scaleb(self.decimals)
+        if planck != planck.to_integral_value():
+            raise ValueError(f"{amount} has more than {self.decimals} decimal places")
+        return int(planck)
 
     def fmt(self, planck: int) -> str:
         return f"{planck / 10**self.decimals:,.4f} {self.symbol}"
 
 
-def _block_time_ms(substrate) -> int | None:
-    for pallet, const, factor in (("Babe", "ExpectedBlockTime", 1), ("Aura", "SlotDuration", 1),
-                                  ("Timestamp", "MinimumPeriod", 2)):
+def median_block_time_ms(timestamps_ms: list[int]) -> int | None:
+    """Median gap between consecutive block timestamps."""
+    gaps = [b - a for a, b in zip(timestamps_ms, timestamps_ms[1:]) if b > a]
+    return int(statistics.median(gaps)) if gaps else None
+
+
+def _block_time(substrate, span: int = 10) -> tuple[int | None, str]:
+    """Consensus constant if the runtime exposes one, else measured from the last `span` blocks."""
+    for pallet, const in (("Babe", "ExpectedBlockTime"), ("Aura", "SlotDuration")):
         try:
             c = substrate.get_constant(pallet, const)
         except Exception:
             c = None
         if c is not None and c.value:
-            return int(c.value) * factor
-    return None
+            return int(c.value), "consensus constant"
+    head = substrate.get_block_number(None)
+    stamps = []
+    for n in range(max(head - span, 1), head + 1):
+        now = substrate.query("Timestamp", "Now", block_hash=substrate.get_block_hash(n))
+        stamps.append(int(now.value))
+    measured = median_block_time_ms(stamps)
+    return (measured, "measured (median Timestamp.Now delta)") if measured else (None, "unknown")
 
 
 def connect(url: str | None = None, profile_id: str | None = None) -> Chain:
@@ -216,11 +244,18 @@ def connect(url: str | None = None, profile_id: str | None = None) -> Chain:
 
     # Identify with raw RPC first: decoding needs the right preset, and the preset depends on the chain.
     probe = SubstrateInterface(url=url)
-    genesis = probe.rpc_request("chain_getBlockHash", [0])["result"]
-    code_hash = probe.rpc_request("state_getStorageHash", [CODE_KEY])["result"]
-    profile = identify(genesis, code_hash)
-    if profile_id is not None and profile.id != profile_id:
-        raise ProfileMismatch(f"{url} is {profile.id} ({profile.label}), not the requested {profile_id}")
+    try:
+        genesis = probe.rpc_request("chain_getBlockHash", [0]).get("result")
+        code_hash = probe.rpc_request("state_getStorageHash", [CODE_KEY]).get("result")
+        profile = identify(genesis, code_hash)
+        if profile_id is not None and profile.id != profile_id:
+            raise ProfileMismatch(f"{url} is {profile.id} ({profile.label}), not the requested {profile_id}")
+    except (UnknownChain, ProfileMismatch):
+        probe.close()
+        raise
+    except Exception as e:
+        probe.close()
+        raise UnknownChain(f"could not identify the chain at {url}: {type(e).__name__}: {e}") from e
 
     if profile.type_registry_preset:
         probe.close()
@@ -255,6 +290,7 @@ def connect(url: str | None = None, profile_id: str | None = None) -> Chain:
     if isinstance(symbol, list):
         symbol = symbol[0]
 
+    block_time_ms, block_time_source = _block_time(substrate)
     return Chain(
         substrate=substrate,
         profile=profile,
@@ -265,7 +301,8 @@ def connect(url: str | None = None, profile_id: str | None = None) -> Chain:
         spec_version=version["specVersion"],
         decimals=int(decimals),
         symbol=symbol,
-        block_time_ms=_block_time_ms(substrate),
+        block_time_ms=block_time_ms,
+        block_time_source=block_time_source,
         has_revive="Revive" in pallets,
         existential_deposit=int(substrate.get_constant("Balances", "ExistentialDeposit").value),
     )

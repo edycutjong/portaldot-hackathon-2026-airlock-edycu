@@ -22,3 +22,4 @@ brag-output/
 # local chain data and run logs
 .chain/
 *.log
+*.db

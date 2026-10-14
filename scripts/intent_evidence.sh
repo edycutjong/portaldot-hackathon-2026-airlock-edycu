@@ -33,6 +33,7 @@ TMP="$(mktemp -d)"; DB="$TMP/shared.db"; TOKEN="$TMP/owner.token"   # the token 
 export AIRLOCK_PROFILE="$P" AIRLOCK_COLD_KEY=//AirlockDemo//cold AIRLOCK_HOT_KEY=//AirlockDemo//hot
 APIPID=""; WATCHER=""
 cleanup() {
+  [[ -f "$LOG" ]] && python3 -c "import sys,pathlib;p=pathlib.Path(sys.argv[1]);p.write_text(p.read_text().replace(sys.argv[2],'<tmp>'))" "$LOG" "$TMP"
   [[ -n "$APIPID" ]] && { kill -CONT "$APIPID" 2>/dev/null; kill -9 "$APIPID" 2>/dev/null; } || true
   [[ -n "$WATCHER" ]] && kill "$WATCHER" 2>/dev/null || true
   rm -rf "$TMP" ".thief-intents-$P.json"

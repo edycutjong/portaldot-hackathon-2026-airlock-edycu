@@ -5,7 +5,7 @@
 **A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.**
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Tests: 340 passing](https://img.shields.io/badge/tests-340%20passing-brightgreen)
+![Tests: 341 passing](https://img.shields.io/badge/tests-341%20passing-brightgreen)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)
 ![Chain: interim, not V3](https://img.shields.io/badge/chain-interim%20%E2%80%94%20not%20V3-orange)
 
@@ -127,7 +127,8 @@ Airlock is **pallet-native**: there is no contract to deploy. The calls it uses,
 
 ### Requirements
 
-- Python 3.10+ (the test suite passes on 3.11.1 and 3.10.20)
+- Python 3.10+ (the test suite passes on 3.11.1 and 3.10.20: `evidence/pytest-py3.11.1-2026-10-14T170928Z.txt`,
+  `evidence/pytest-py3.10.20-2026-10-14T170928Z.txt`)
 - macOS on Apple Silicon for the pinned `interim-sdk` node binary (`scripts/interim_node.sh` exits with a message on
   other systems; build `substrate-node` from the same tag there). `interim-1002` needs the `portaldot_dev` binary from
   the Portaldot node repo, set as `PORTALDOT_DEV`.
@@ -143,7 +144,7 @@ cd portaldot-hackathon-2026-airlock-edycu
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'                 # also installs the `airlock` command
 
-pytest -q                               # 340 passed, 4 skipped: no chain or network needed (the 4 are the live-chain tests)
+pytest -q                               # 341 passed, 4 skipped: no chain or network needed (the 4 are the live-chain tests)
 
 scripts/interim_node.sh interim-sdk     # terminal 1: dev chain on ws://127.0.0.1:29944 (archive state)
 
@@ -186,7 +187,7 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
   vetoed, one executed after its veto and failing, one withdrawn announcement, a panic) — and the end-state checks of
   [fixtures/expected.json](fixtures/expected.json) all hold. Re-fetched 27/27 and 29/29 by extrinsic id.
 - **Proof:** [docs/PROOF.md](docs/PROOF.md) — every row with extrinsic id, block hash, tx hash and the profile label.
-- **Tests:** 340 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
+- **Tests:** 341 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
   I2: a vetoed announcement never executes, also after the delay; the control; panic) that pass on both interim chains
   (`evidence/integration-*.json`, `"status": "passed"`).
 - **Watcher:** [docs/WATCHER.md](docs/WATCHER.md) — also shown live after a watcher restart, a node restart and a node

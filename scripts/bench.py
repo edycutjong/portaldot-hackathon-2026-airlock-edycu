@@ -7,8 +7,9 @@ Per drain (scripts/thief.py, which imports no Airlock code, announces a sweep of
                     header delivery); in blocks: head when the alert was built - announce block. Telegram is not in
                     this path (its delivery time is not measured here).
   veto inclusion    the alert's own veto (its vault, delegate and hash) sent automatically — no human, so this measures
-                    the chain, not a person: from signing the veto extrinsic to the client seeing it in a block (the
-                    CLI's pre-checks and read-back are outside the timer); blocks = veto block - head just before
+                    the chain, not a person: the veto extrinsic's send, from signing until its receipt is read
+                    (submission, inclusion, and decoding the block's events for the outcome; the CLI operation's
+                    pre-checks and read-back are outside the timer); blocks = veto block - head just before signing
   announce -> veto  on-chain: veto block timestamp - announce block timestamp, and veto block - announce block,
                     against the delay D (blocks to spare = announce block + D - veto block)
 Then, once every drain's delay has passed, the thief executes each one (`--execute`): each must fail
@@ -293,7 +294,7 @@ def markdown(r: dict, out: Path) -> str:
              row("alert latency: announce block timestamp → alert written (incl. block import + delivery, one "
                  "machine)", "alert_latency_s", "s"),
              row("alert latency in blocks (head at alert − announce block)", "alert_latency_blocks", "blocks"),
-             row("veto inclusion: veto signed → seen in a block (automated, no human)", "veto_inclusion_s", "s"),
+             row("veto send: signing → included receipt read (automated, no human)", "veto_inclusion_s", "s"),
              row("veto inclusion in blocks (veto block − head just before signing)", "veto_inclusion_blocks", "blocks"),
              row("announce → veto, on-chain timestamps", "announce_to_veto_s", "s"),
              row("announce → veto in blocks", "announce_to_veto_blocks", "blocks")]
@@ -301,7 +302,8 @@ def markdown(r: dict, out: Path) -> str:
         lines += ["", f"**Ablation (`--ablate`, one control drain):** the same thief script with `--direct` against a "
                       f"control vault whose hot key has delay 0 moved {a['moved_fmt']} ({a['moved']} planck) of the "
                       f"control vault's {a['control_total_before_fmt']} in {a['extrinsics']} extrinsic (`{a['id']}`, "
-                      f"outcome {a['outcome']}), {a['blocks_after_head']} block after the head it was sent at. The "
+                      f"outcome {a['outcome']}), {a['blocks_after_head']} block{'' if a['blocks_after_head'] == 1 else 's'} after the "
+                      f"head it was sent at. The "
                       f"rest stays because a keep-alive transfer cannot take it: the existential deposit and the "
                       f"reserved proxy deposit."]
     return "\n".join(lines)

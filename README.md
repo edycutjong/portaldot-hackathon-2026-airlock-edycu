@@ -5,7 +5,7 @@
 **A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.**
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Tests: 173 passing](https://img.shields.io/badge/tests-173%20passing-brightgreen)
+![Tests: 179 passing](https://img.shields.io/badge/tests-179%20passing-brightgreen)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)
 ![Chain: interim, not V3](https://img.shields.io/badge/chain-interim%20%E2%80%94%20not%20V3-orange)
 
@@ -116,7 +116,7 @@ cd portaldot-hackathon-2026-airlock-edycu
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'
 
-pytest -q                          # 173 unit tests, no chain or network needed (metadata fixtures committed; Telegram mocked on localhost)
+pytest -q                          # 179 unit tests, no chain or network needed (metadata fixtures committed; Telegram mocked on localhost)
 
 scripts/interim_node.sh interim-sdk   # terminal 1: dev chain on ws://127.0.0.1:29944 (archive state)
 python scripts/spike_proxy.py --profile interim-sdk   # terminal 2: the 10-extrinsic flow, ~1 min
@@ -143,7 +143,8 @@ four vesting/at-risk steps, `--proof docs/PROOF.md` appends the rows of a passin
 - **Watcher:** [docs/WATCHER.md](docs/WATCHER.md) — NOT YOURS alerts (stdout + JSON lines) triggered by a
   `Proxy.announce` from [scripts/raw_announce.py](scripts/raw_announce.py), which imports nothing from Airlock: live on
   both interim chains, and on `interim-sdk` also after the watcher was stopped, after the node was restarted mid-watch,
-  and after the node was frozen (no headers) mid-watch. Reorg re-scan, reset-chain stop, retries and the pruned-state
+  and after the node was frozen (no headers) mid-watch — all five recorded by
+  [scripts/watcher_evidence.sh](scripts/watcher_evidence.sh). Reorg re-scan, reset-chain stop, retries and the pruned-state
   gap are covered by unit tests only. No alert has reached a phone yet (no Telegram bot token configured).
 - **Test accounts:** dev keys only (`//Alice` cold — `//Dave` on `interim-1002`, `//Bob` hot, `//Eve` thief's payee, `//Ferdie` legitimate payee; `//Charlie` is the delegate in the watcher runs) on the interim
   chains. `spike_proxy.py` refuses any chain whose genesis and runtime code hash are not a known interim profile, and
@@ -160,7 +161,7 @@ four vesting/at-risk steps, `--proof docs/PROOF.md` appends the rows of a passin
 - Watcher, shown live: header subscription, `Proxy.Announced` decoding, NOT YOURS alerts with the at-risk balance, veto
   deadline and veto command, catch-up after downtime, reconnect after a node restart, stall watchdog. Unit-tested only:
   pending sweep and NO LONGER PENDING alerts, reorg re-scan, reset-chain stop, retries and give-up, pruned or
-  undecodable blocks, the Telegram sender (against a mock Bot API).
+  undecodable blocks, alerts sent with an unreadable figure (at risk / delay), the Telegram sender (against a mock Bot API).
 
 **Next**
 

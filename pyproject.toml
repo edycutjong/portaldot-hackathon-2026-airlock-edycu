@@ -21,6 +21,7 @@ include = ["airlock*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-p no:asyncio"
 markers = [
   "chain: needs a running node at AIRLOCK_WSS (skipped otherwise)",
 ]

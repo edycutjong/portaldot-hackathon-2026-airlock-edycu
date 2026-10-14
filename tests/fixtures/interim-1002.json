@@ -1,0 +1,10 @@
+{
+  "profile": "interim-1002",
+  "label": "interim \u2014 not V3 (Portaldot dev node, runtime spec 1002)",
+  "genesis_hash": "0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22",
+  "code_hash": "0x8c0d4d9d638ad05e7d214e1496321cea00274698e4bcf5b2006c3eaf86b7fa80",
+  "spec_name": "portaldot",
+  "spec_version": 1002,
+  "metadata_sha256": "04d9ea739a8b44921044ca5410da180ec8bc0b0f6837a6116347c54f2dda4cbf",
+  "metadata_bytes": 153049
+}

@@ -1,0 +1,10 @@
+{
+  "profile": "interim-sdk",
+  "label": "interim \u2014 not V3 (upstream polkadot-sdk substrate-node dev chain)",
+  "genesis_hash": "0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2",
+  "code_hash": "0x72e84be232be151b059440f89710895de0cb6b71b6529f97e9c02340765f1ec0",
+  "spec_name": "node",
+  "spec_version": 268,
+  "metadata_sha256": "a8750520558b1c75021c18758fd602539d6e13871c27d71515491f438ef9c534",
+  "metadata_bytes": 726791
+}

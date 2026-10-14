@@ -5,8 +5,9 @@ labelled with the chain profile it ran on (`airlock/chain_profile.py`). Rows are
 produced them (`scripts/spike_proxy.py --proof docs/PROOF.md`, `scripts/refetch.py --proof docs/PROOF.md`), never added
 by hand (a stale row may be deleted by hand); each run names the commit that produced it; its JSON is in `evidence/`.
 
-**Profile labels.** The target is the Portaldot V3 testnet. At 2026-10-14 01:04 UTC and again at 11:30 UTC its RPC host
-`testnetv3-node.feso-apps.xyz` had no DNS record (`dig +short @1.1.1.1` returned nothing), so these rows come from
+**Profile labels.** The target is the Portaldot V3 testnet. Its RPC host `testnetv3-node.feso-apps.xyz` did not
+resolve in any check on 2026-10-14 (checks from 12:09 UTC on are logged in `evidence/v3-dns.txt`; at 12:44 UTC the
+resolver answered `NXDOMAIN`), so these rows come from
 **interim chains — not V3**:
 
 | Profile | Chain | Runtime | Genesis hash |
@@ -17,17 +18,17 @@ by hand (a stale row may be deleted by hand); each run names the commit that pro
 The dev genesis is deterministic, so a fresh `interim-sdk` chain has the same genesis hash; a row can be re-fetched only
 from the node that recorded it (`--base-path` keeps it across restarts, and both chains run as state archives so a
 receipt's events stay readable). `interim-1002` runs with `--tmp`, so its rows are a run log, not re-fetchable proof
-once that node stops. Signers are dev keys (`//Alice` cold, `//Bob` hot, `//Eve` thief's payee,
-`//Ferdie` legitimate payee).
+once that node stops. Signers are dev keys (`//Alice` cold — `//Dave` on `interim-1002`, `//Bob` hot, `//Eve`
+thief's payee, `//Ferdie` legitimate payee).
 
 **Reading a run.** Steps 4 (I1), 7 (I2) and 9 are expected failures: `Proxy.Unannounced` is the pallet refusing the
 call. Step 9 executes an announced payment before the delay has passed (the delay is enforced, not just stored); step 10
-is the control for step 7: the same delegate and delay, without a veto, and the payment executes. Steps 11–13
+is the control for step 7: the same delegate and delay, without a veto, and the payment executes. Steps 11–14
 (`--vesting`) send the vault a vested payout and claim it through the vault; the vesting-locked part is not counted as
-at risk (checked after steps 11 and 12), and step 13 is the on-chain check of that figure: moving one token more than
-the at-risk amount out of the vault fails on the lock (`Token.Frozen`; `Balances.LiquidityRestrictions` on 1002). The
-`interim-1002` run uses smaller amounts (fund 300, spend 50, vest 400 POT) because its dev `//Alice` has little
-unlocked balance left.
+at risk (checked after steps 11 and 12). Steps 13–14 check the at-risk figure against the chain itself: moving one
+planck more than it out of the vault fails on the lock (`Token.Frozen`; `Balances.LiquidityRestrictions` on 1002), and
+moving exactly it succeeds, after which the vault's at-risk is 0. On `interim-1002` the cold key is `//Dave` (`--cold`),
+because that dev chain's `//Alice` is a staking validator with little unlocked balance left.
 
 **Re-fetch.** Each run is then looked up again by extrinsic id alone (`scripts/refetch.py`), from a fresh process and
 over the node's HTTP endpoint instead of the websocket the run used; block hash, tx hash and outcome must all match.
@@ -35,82 +36,86 @@ Both endpoints are the same local node, so this is an independent process and tr
 
 ## Runs
 
-### spike_proxy — 2026-10-14T11:53:42Z — interim — not V3 (upstream polkadot-sdk substrate-node dev chain)
+### spike_proxy — 2026-10-14T12:40:31Z — interim — not V3 (upstream polkadot-sdk substrate-node dev chain)
 
-Runtime `node/268` · genesis `0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2` · vault `5EQBNzp9pRUqTZTL5puByBeruHjG5Aa45dsEoKVRgyjFqbFj` · delay D = 5 blocks · code `b381a70`
-
-| # | step | call | signer | expected | outcome | extrinsic id | block hash | tx hash | profile | note |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | create vault | `Proxy.create_pure` | cold | ok | ok | `12975-2` | `0x5bc61e3b9925cd8c42d3b1e74976ba1830190ddf319ff3badb7beff89bfda83b` | `0xf0da423c1f73908858d6eca73ca8836bff573ea9e5e3d4e8fb2b510fa76d84d1` | interim-sdk — not V3 |  |
-| 2 | fund vault | `Balances.transfer_keep_alive` | cold | ok | ok | `12976-2` | `0x2f9276e58e00394d8c957f5d2c7352119e2fb9b97965f19d888cbb76762d3593` | `0x89419f360c2849c3b8eb7f18bd3af90e2be99682a7104effb7d503f2c47aadce` | interim-sdk — not V3 |  |
-| 3 | add delayed hot key | `Proxy.proxy(Proxy.add_proxy)` | cold | ok | ok | `12977-2` | `0x692b4911285a7d4b5713054569a6a131d69f6655aa5ce72f709b0a606408503d` | `0x697cdb47c50e72ec26409bc1f971d5a688d94157b32937f7f767dcab783499e8` | interim-sdk — not V3 | delay 5 blocks |
-| 4 | hot spends unannounced | `Proxy.proxy(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `12978-2` | `0x225145ddf22107ef6ee838ebdcdd2b87f9b1ae61fc7e11352e4a087ada3b2c28` | `0x67da523ab55ed7924414e320887bdeb4d87a4e21d70270fdd446dc2325a343a2` | interim-sdk — not V3 | I1 |
-| 5 | hot announces theft | `Proxy.announce` | hot | ok | ok | `12979-2` | `0xdf23cf79bdc37109ca43a2904dc2a8e496d95bbaef49fb593e8ce8ebf37887d5` | `0x68d756437f8c06b4ffb42171fbe1af62810b22176a3ba6366c699837f227daf8` | interim-sdk — not V3 | `call hash 0xf4c3c3361dcfb6b8193c568bd42e6ab4d2731097b285f573e10e7d2f7e55478a` |
-| 6 | cold vetoes | `Proxy.proxy(Proxy.reject_announcement)` | cold | ok | ok | `12980-2` | `0x311818dea4adffc823bf5bf2e36e1e294344353b1eb9c7870d70de6101d7df6d` | `0xa59b3c56efd051a61b4e7a9a3bf2606f787cd0d0ddbdd419a63e2e0f9a76ddfb` | interim-sdk — not V3 |  |
-| 7 | vetoed theft after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `12986-2` | `0x13f1ba789123e0238d7717eea8e6c0d0c9dd673068573188bff8d793919ba76d` | `0xc3299d85226f45c18fa4113e04312f9f8e9896e11566a7d616ad99dd26f26a47` | interim-sdk — not V3 | I2 |
-| 8 | hot announces payment | `Proxy.announce` | hot | ok | ok | `12987-2` | `0x9a2f92f3e5b03098fa9c33de93828f1d04fae7db9b72ef66e5097d48a8840855` | `0x342abb33d1537fd94eb20055a853d234371c8ec61c602cbab2a6b84e30777f88` | interim-sdk — not V3 | `call hash 0x33aaaddcdcaeb538d590ead70a635c99a4d5a6adf61773ea5558f5c96291a385` |
-| 9 | payment before delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `12988-2` | `0x85aa648f49435f8a1aa3c7cd28fa14675ba1888b64dafc9ea703a99e660803d9` | `0x859bb7000b2e6d577e9c151bf8679d6f27b39e5239e22c02151274880ee9bfee` | interim-sdk — not V3 | delay enforced |
-| 10 | payment executes after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | ok | ok | `12994-2` | `0xe7171d38123f555d44e9e8c9ff97a220bc1d08eb42858a752af4f6eed7b23c50` | `0x25784312ea6a2bda35d6dbcb3c133619d69388e0accb6c30d574784eb4b5b2b3` | interim-sdk — not V3 | control for I2 |
-| 11 | vested payout to vault | `Vesting.vested_transfer` | cold | ok | ok | `12995-2` | `0x2f360c5c552190ba97ec8a493a57808581b572c21a0c3bcff734c31a9009085a` | `0x134ad93a435760ab152239a450c3d2d8db996cc98e5820ca108ce59ee5f47a1d` | interim-sdk — not V3 | 20000 locked, 20.0000 UNIT/block from #12994 |
-| 12 | vault claims vested | `Proxy.proxy(Vesting.vest)` | cold | ok | ok | `12998-2` | `0x3565ed1ab1badec09497864dfacdb740f91abd4d2441d92d049997790d111168` | `0xacd32888c843b5ee838f614bbabcf6b91549e500034a4fff10c976fd43a68d25` | interim-sdk — not V3 | vest through the vault |
-| 13 | move above at-risk | `Proxy.proxy(Balances.transfer_keep_alive)` | cold | inner:Token.Frozen | inner:Token.Frozen | `12999-2` | `0x37ffcd6fc2c0cece55ec916cb79674544bb3860a7d6715e9e1d4ee9b3bbe6b7b` | `0xa1fe7a67cb1bed502cd5c662e4181113ba9c5c3f1cbd5784cb02e40697dda2fd` | interim-sdk — not V3 | at-risk 980.0000 UNIT + 1 |
-
-### spike_proxy — 2026-10-14T11:54:58Z — interim — not V3 (Portaldot dev node, runtime spec 1002)
-
-Runtime `portaldot/1002` · genesis `0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22` · vault `5HLe29QVJDwg5aA7FZgRmiYqmEyFKJ8434u2pvn28nusy3Qh` · delay D = 5 blocks · code `b381a70`
+Runtime `node/268` · genesis `0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2` · vault `5DrJnHgeiXefWZRD493NfvM7Fms454EDRCFExSvYuBiLyge4` · delay D = 5 blocks · code `d5712c3`
 
 | # | step | call | signer | expected | outcome | extrinsic id | block hash | tx hash | profile | note |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | create vault | `Proxy.anonymous` | cold | ok | ok | `6504-1` | `0xb9c7b4cf1d35d235d967febe91f95b2bc1b7fa03eceee3c7cac4d650c3a3f994` | `0x04bb8689fade2bc73887645a4c69e56ace76bdca19fb55edc65562b40c5bc064` | interim-1002 — not V3 |  |
-| 2 | fund vault | `Balances.transfer_keep_alive` | cold | ok | ok | `6505-1` | `0x5479bafc9af66b4ac261b746c2faabe8fb8024e4379f92c2eb914a57f2c73de0` | `0x6af80798dcb3dd14a9e35d3619a29efce8ee0ccdcc84918bb3cb83cfa14532e4` | interim-1002 — not V3 |  |
-| 3 | add delayed hot key | `Proxy.proxy(Proxy.add_proxy)` | cold | ok | ok | `6506-1` | `0xccd8a88a43119c3fae292233baa8d493463872e1d225e225b149766dc4b4c05a` | `0x5701a84a8691d3fb5ef1bce2bb7483a86f17599b773d287ed10f66b7144725a5` | interim-1002 — not V3 | delay 5 blocks |
-| 4 | hot spends unannounced | `Proxy.proxy(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `6507-1` | `0x6e87f114ab49d08c843b2537e00243a572a33e990fbab59e07d87160505f9ffe` | `0x5c5ebb7a42af724bb59bb72f747482b1f93f22361caa188ef1aeb0388812ffc6` | interim-1002 — not V3 | I1 |
-| 5 | hot announces theft | `Proxy.announce` | hot | ok | ok | `6508-1` | `0xc21b51dd027e7ba5fabfe309808c770ae24138b4a5d677dc8f55862a01d0507e` | `0xaf0b74da45f3146a4be720b78a940f971893b918241cdbe5cdabfd6d2a0b73e5` | interim-1002 — not V3 | `call hash 0xbc2bf7a3d174cc486bd6da760525b7274a57b027fd400804325bb0c590d73a7f` |
-| 6 | cold vetoes | `Proxy.proxy(Proxy.reject_announcement)` | cold | ok | ok | `6509-1` | `0x80e92dffb0227eeaac98d74f1baccf4514d673a968d62c4bec721ffd04d98784` | `0xecbfa57e4650e6a7c5833f029ab40a2a8e20687d4b3ce7e8a87cb21ed3b7c8bc` | interim-1002 — not V3 |  |
-| 7 | vetoed theft after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `6515-1` | `0x004ae072fcd7eeff0c11e8db96c970e08c113e4581b8e4e3001c1997595896f5` | `0x5d29e88025c66d9f85628abcc247f3cbb05b9db80260dbe1c1dd11b0e302b954` | interim-1002 — not V3 | I2 |
-| 8 | hot announces payment | `Proxy.announce` | hot | ok | ok | `6516-1` | `0xce58ec25b5c5cba404e75d7eb0712cefa306c097399dcdc5836f6663bd34405b` | `0xd300a89628dc4e535d7ac0293a93e96cef84ec61204e1d4a23bdfd9b8dda733f` | interim-1002 — not V3 | `call hash 0x899f4616ad308c3d59fde7a85dc38edb9832607f70f87f80a6e8e9b3e5c73440` |
-| 9 | payment before delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `6517-1` | `0x0dd490cf630a10eb83cc1cb376fc0f919ea70df59e921afd480f86763d95d4e0` | `0x85beb7acf65ceac4f66ab651f0019878b2fbf3d8f8962e2bd07a43f50a31f4d2` | interim-1002 — not V3 | delay enforced |
-| 10 | payment executes after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | ok | ok | `6523-1` | `0x22b01f4be1bc93f93de6933de9abb16d1acd6d72480c1a08bccfb1932104c9e2` | `0x0fe9501dec5f0627f23ae8bf566d9db5dcd24822dc6e97fb6b9769c355f9560f` | interim-1002 — not V3 | control for I2 |
-| 11 | vested payout to vault | `Vesting.vested_transfer` | cold | ok | ok | `6524-1` | `0x6598059bab9ff74d79a9916d05b7516f02023b88a545357b3619afa445646aeb` | `0x545913689ce13245396447417c9415c34b62a8ad6b0191acbb6aa906bd85b427` | interim-1002 — not V3 | 400 locked, 0.4000 POT/block from #6523 |
-| 12 | vault claims vested | `Proxy.proxy(Vesting.vest)` | cold | ok | ok | `6527-1` | `0x219dffba067aacc3bf57a391b083f5f2c671421028ba3ba0cdcd2b90a593e656` | `0x486f6850c634950bda8251de8b2966a95c445bc60a3a58347523cc4972c5977b` | interim-1002 — not V3 | vest through the vault |
-| 13 | move above at-risk | `Proxy.proxy(Balances.transfer_keep_alive)` | cold | inner:Balances.LiquidityRestrictions | inner:Balances.LiquidityRestrictions | `6528-1` | `0xecdaad58d9e17d3d7825a189327e41e23ed753cf866d020f8535320a1d44152b` | `0x3261e06e97fce7012c7f7e41e838a79955636393f0af154669b5bf581d19503e` | interim-1002 — not V3 | at-risk 249.6200 POT + 1 |
+| 1 | create vault | `Proxy.create_pure` | cold | ok | ok | `13907-2` | `0x10d50f2a98c84c697302f05278efe52dd3d433813fb778cb090753991ea6ef21` | `0x17b08bc3fbd990c020295c91a40566209774d2dec890c1c5e2016f2e28c9c2e2` | interim-sdk — not V3 |  |
+| 2 | fund vault | `Balances.transfer_keep_alive` | cold | ok | ok | `13908-2` | `0x5e2fffa55d67971f54da48f95a371fb29f866aab7e5bde2a8c14a4e596cd028b` | `0xed71081647c138d9759da6f21e9dd80db0aae98d2fc8e8919e88cd075571f234` | interim-sdk — not V3 |  |
+| 3 | add delayed hot key | `Proxy.proxy(Proxy.add_proxy)` | cold | ok | ok | `13909-2` | `0xa8bde4d0e1dabfe99a32f9172455728db9de9e1ff8798a267cd2b53f8fd0b70a` | `0x3c6e59964f75046a197d0bdf4c748d893c72a175eb5ed214de4542c7fbe4c0ba` | interim-sdk — not V3 | delay 5 blocks |
+| 4 | hot spends unannounced | `Proxy.proxy(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `13910-2` | `0x5c9f905e4885ec4b24b376f460950cf96d909f4f7f91ec8c22c21dc64c2afda0` | `0x1b70c807cb4ffa76d006805ceb5ba7ef015ad0c3840209468a858f98ae129a3b` | interim-sdk — not V3 | I1 |
+| 5 | hot announces theft | `Proxy.announce` | hot | ok | ok | `13911-2` | `0x9a30cb124d90d40d8308be4500739585e9b5416e31b8d46576070f497a489042` | `0x46f654765737335680de48a00437b111e8a5f18118da842b2bf73b3ed0331253` | interim-sdk — not V3 | `call hash 0xf4c3c3361dcfb6b8193c568bd42e6ab4d2731097b285f573e10e7d2f7e55478a` |
+| 6 | cold vetoes | `Proxy.proxy(Proxy.reject_announcement)` | cold | ok | ok | `13912-2` | `0x282fb82d9319b4519f62e332967fb4120db430b9d9a55052b4c95affb3a8a48c` | `0xb632cbb5f46b26d78a4a6545eb0b544d80a85e866ebaff071ca00d6bdba7d41c` | interim-sdk — not V3 |  |
+| 7 | vetoed theft after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `13918-2` | `0xfade7646c5328f5713873830c1ae409adef58d1029374922566cc877840feae3` | `0xb0fd0945235cf133574761dc03f2f1dd6f08295238335d78a12b92e15b70b816` | interim-sdk — not V3 | I2 |
+| 8 | hot announces payment | `Proxy.announce` | hot | ok | ok | `13919-2` | `0xd0db0d2d32c07f5eecfea16d67f67f99bbb66cecfb290c9771b59be23fa44d5c` | `0xabd8de55c07e91c413dbb9827764bb01dcd7d93fca49c82e1204495da91e9baf` | interim-sdk — not V3 | `call hash 0x33aaaddcdcaeb538d590ead70a635c99a4d5a6adf61773ea5558f5c96291a385` |
+| 9 | payment before delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `13920-2` | `0x7ac1d6b30b97c92b6e96cf0512bd534bad80533a92fa0fd14e1a44034c90b168` | `0x3ee1943d599af5cb1f2eba7f3d80b166e0547feda0fef304ee2d40279ad6efeb` | interim-sdk — not V3 | delay enforced |
+| 10 | payment executes after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | ok | ok | `13926-2` | `0x884ced0a617231b716c9e27a0d02bea3119095a81099abe1db62759750828927` | `0x1a5ded8b1535303dc74db900d63e8b84691b774bc963c7acc4f5835fc566b3e4` | interim-sdk — not V3 | control for I2 |
+| 11 | vested payout to vault | `Vesting.vested_transfer` | cold | ok | ok | `13927-2` | `0x581d70dcc72e3d30c1f53e345d3445dc02161c570c029d736f297054ae445fb7` | `0xac822b38484996551f169daea4f8aee5ddc2b4a205f795829185007e6f1ac117` | interim-sdk — not V3 | 20000 locked, 20.0000 UNIT/block from #13926 |
+| 12 | vault claims vested | `Proxy.proxy(Vesting.vest)` | cold | ok | ok | `13930-2` | `0x3de389de8548d8a1cc021e95b731a3db91534e80f5a11dc128df3651ec6b6e9b` | `0x19df6cab994777c058a9aeb3a2bb1b48689145f361749b9cf0430dbca2991e4d` | interim-sdk — not V3 | vest through the vault |
+| 13 | move at-risk + 1 planck | `Proxy.proxy(Balances.transfer_allow_death)` | cold | inner:Token.Frozen | inner:Token.Frozen | `13931-2` | `0x54c98c18d94bfcd2c2377ba63569d4d893216c15fdcfd87faf783caad34b7b4b` | `0x04e07e88df51d4a9f634d80bfd868b4b8212a64b143810e53deba0aac8611108` | interim-sdk — not V3 | at-risk 980.0000 UNIT + 1 planck |
+| 14 | move exactly at-risk | `Proxy.proxy(Balances.transfer_allow_death)` | cold | ok | ok | `13932-2` | `0xcab8ef757e93923dcce44a02e037fecf7779e4799869fe65791822815a251e86` | `0x211bacfad74551de4c1d0631e14d28b4d391ba4d1f2a6c8331f757b45f0c3962` | interim-sdk — not V3 | 980000000000000 planck |
 
-### re-fetch — 2026-10-14T11:57:29Z — the 2026-10-14T11:53:42Z interim-sdk run, by extrinsic id
+### spike_proxy — 2026-10-14T12:41:49Z — interim — not V3 (Portaldot dev node, runtime spec 1002)
 
-Fresh process over http (`http://127.0.0.1:29944`; the run itself was sent over ws) at head #13049 · `evidence/refetch-interim-sdk-2026-10-14T115729Z.json` · every row: same block hash, tx hash and outcome as recorded.
+Runtime `portaldot/1002` · genesis `0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22` · vault `5FYeHKThqoYya1Pqi49pcddNLxhUK9NwSZxJ1FXCvRVFYRoy` · delay D = 5 blocks · code `d5712c3`
+
+| # | step | call | signer | expected | outcome | extrinsic id | block hash | tx hash | profile | note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | create vault | `Proxy.anonymous` | cold | ok | ok | `6973-1` | `0xf90613edfea57f604653dbafd876b6e912537f0b4e587b24e97ab0d6effdb5ba` | `0x8d67d8839c9a2d683d6059a7308319def1d70529afe6b7575188b6b028e40e39` | interim-1002 — not V3 |  |
+| 2 | fund vault | `Balances.transfer_keep_alive` | cold | ok | ok | `6974-1` | `0xb507236cdd7aff9eb21f636152002bb6aed0623ebf1c7f464c5ab09bc32554cd` | `0xba3fbdce4d1817b741c10e0cb84c533646990d7d5b03e69b6ea25d1c161c57b7` | interim-1002 — not V3 |  |
+| 3 | add delayed hot key | `Proxy.proxy(Proxy.add_proxy)` | cold | ok | ok | `6975-1` | `0x0743aa84ad180ed1573fbb95b5af9b9a6c6e097027aa0621341ddc4efb2d6480` | `0x84d272ba519675fb45416d40f8e96a2ecbf39443bb3d0eddedbf9eec2a9aab3f` | interim-1002 — not V3 | delay 5 blocks |
+| 4 | hot spends unannounced | `Proxy.proxy(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `6976-1` | `0x7b5b8e26bc6aa34041de6b5b6a382ee23d81e99351696c7886011497a2f8a12d` | `0x8836c688cb6c361de8759a043a00da070b2808c1d5dc3c21d5032404d55faf5b` | interim-1002 — not V3 | I1 |
+| 5 | hot announces theft | `Proxy.announce` | hot | ok | ok | `6977-1` | `0x8d9f91c403c90bb965dd0f31d92f434bfbc0060a45970c5725d8a8433dd89225` | `0xdc1b388ba397b770abd7c81357ca18c7ad23af11023a1347c753e50253671dc9` | interim-1002 — not V3 | `call hash 0x5b11231612a3699c8009e8abb7b35314a73a8f28088221aa1a5d1a92bd2222fa` |
+| 6 | cold vetoes | `Proxy.proxy(Proxy.reject_announcement)` | cold | ok | ok | `6978-1` | `0xb3e192d94a003ee6d03bb16743a0fd1aa03328005b067479028eb4b0114f3609` | `0x34bca803f41e3f9159f769ff2b6b835a08d543a6cd4ffd5fbd321f67b16cba41` | interim-1002 — not V3 |  |
+| 7 | vetoed theft after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `6984-1` | `0x6004967a0c651a81a0cf65e74df967e382c53e2c210a41283af9c57c7e4c67b1` | `0x127e1058bece0a8ff5c09a65e38c959b6ad4ae35f4f53902b78995528148f40d` | interim-1002 — not V3 | I2 |
+| 8 | hot announces payment | `Proxy.announce` | hot | ok | ok | `6985-1` | `0x082f29a90633f3ea731892212b8ea7584dc8504e1ac46a15d0ce3a81da2507e0` | `0xf67e5d237a8ec3c2783fd48b9f9933ab9db1b67fc3a6fd5d71215eb918499024` | interim-1002 — not V3 | `call hash 0xa4369adc5768a0261ef223e7fa5da14b9ca90da9f10717df38bfae9768ec2748` |
+| 9 | payment before delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | Proxy.Unannounced | Proxy.Unannounced | `6986-1` | `0x1ab449aeee54d71c16d2e4724f1e74e6bdb5a30d066603057437bcab737897f9` | `0x4250576f8c5d601dc68be64dcd393e9e2276d20fb1f34edc543df6c466676e9d` | interim-1002 — not V3 | delay enforced |
+| 10 | payment executes after delay | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | ok | ok | `6992-1` | `0x4e414816da9412c88529943fd4572dbe12dfc13af1c1c8c70bc1003aabcab0ba` | `0xd3c3e2f421e1a5c3acf5d6ee04c5469d3344078fc532695c3e4a0522c251ba4b` | interim-1002 — not V3 | control for I2 |
+| 11 | vested payout to vault | `Vesting.vested_transfer` | cold | ok | ok | `6993-1` | `0x4a37fd74165a39db9dce2ca35eba124b60059aec4d094d19bf48c6948081730b` | `0x3026ea535bedb6c3e758eab67bcb02267e3aa950679e14b2c12ba9270657c692` | interim-1002 — not V3 | 1000 locked, 1.0000 POT/block from #6992 |
+| 12 | vault claims vested | `Proxy.proxy(Vesting.vest)` | cold | ok | ok | `6996-1` | `0x64b2d1c8115be4e14eefb81cfe0170b668858cebf6f8306e8895d3db84aa1ffc` | `0x364df8a0f90ff0203eb743d0e6ee15fde9a63ab10f10c11cff5e5b2e8b08b408` | interim-1002 — not V3 | vest through the vault |
+| 13 | move at-risk + 1 planck | `Proxy.proxy(Balances.transfer)` | cold | inner:Balances.LiquidityRestrictions | inner:Balances.LiquidityRestrictions | `6997-1` | `0xb5f8c60ace0f6b84c4686afba3753f762cb11341b26b5b2d2723e2e4111fe276` | `0xc73dfbfb5215adb05debd51dce310295ec30f7eff85a55c4f62e30cea1e6ecfc` | interim-1002 — not V3 | at-risk 902.0200 POT + 1 planck |
+| 14 | move exactly at-risk | `Proxy.proxy(Balances.transfer)` | cold | ok | ok | `6998-1` | `0x47d9feade73158228a79458fc48cfd392033c7cedf19573fd98dda814577fab9` | `0x42e8eb4597fa2978fd4baec9467afadc62a6d43ea711aa75596327bfc1b5dd4f` | interim-1002 — not V3 | 90202000000000000 planck |
+
+### re-fetch — 2026-10-14T12:44:30Z — the 2026-10-14T12:40:31Z interim-sdk run, by extrinsic id
+
+Fresh process over http (`http://127.0.0.1:29944`; the run itself was sent over ws) at head #13986 · `evidence/refetch-interim-sdk-2026-10-14T124430Z.json` · every row: same block hash, tx hash and outcome as recorded.
 
 | extrinsic id | call | outcome | tx hash | profile |
 |---|---|---|---|---|
-| `12975-2` | `Proxy.create_pure` | ok | `0xf0da423c1f73908858d6eca73ca8836bff573ea9e5e3d4e8fb2b510fa76d84d1` | interim-sdk — not V3 |
-| `12976-2` | `Balances.transfer_keep_alive` | ok | `0x89419f360c2849c3b8eb7f18bd3af90e2be99682a7104effb7d503f2c47aadce` | interim-sdk — not V3 |
-| `12977-2` | `Proxy.proxy(Proxy.add_proxy)` | ok | `0x697cdb47c50e72ec26409bc1f971d5a688d94157b32937f7f767dcab783499e8` | interim-sdk — not V3 |
-| `12978-2` | `Proxy.proxy(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x67da523ab55ed7924414e320887bdeb4d87a4e21d70270fdd446dc2325a343a2` | interim-sdk — not V3 |
-| `12979-2` | `Proxy.announce` | ok | `0x68d756437f8c06b4ffb42171fbe1af62810b22176a3ba6366c699837f227daf8` | interim-sdk — not V3 |
-| `12980-2` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0xa59b3c56efd051a61b4e7a9a3bf2606f787cd0d0ddbdd419a63e2e0f9a76ddfb` | interim-sdk — not V3 |
-| `12986-2` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0xc3299d85226f45c18fa4113e04312f9f8e9896e11566a7d616ad99dd26f26a47` | interim-sdk — not V3 |
-| `12987-2` | `Proxy.announce` | ok | `0x342abb33d1537fd94eb20055a853d234371c8ec61c602cbab2a6b84e30777f88` | interim-sdk — not V3 |
-| `12988-2` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x859bb7000b2e6d577e9c151bf8679d6f27b39e5239e22c02151274880ee9bfee` | interim-sdk — not V3 |
-| `12994-2` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0x25784312ea6a2bda35d6dbcb3c133619d69388e0accb6c30d574784eb4b5b2b3` | interim-sdk — not V3 |
-| `12995-2` | `Vesting.vested_transfer` | ok | `0x134ad93a435760ab152239a450c3d2d8db996cc98e5820ca108ce59ee5f47a1d` | interim-sdk — not V3 |
-| `12998-2` | `Proxy.proxy(Vesting.vest)` | ok | `0xacd32888c843b5ee838f614bbabcf6b91549e500034a4fff10c976fd43a68d25` | interim-sdk — not V3 |
-| `12999-2` | `Proxy.proxy(Balances.transfer_keep_alive)` | inner:Token.Frozen | `0xa1fe7a67cb1bed502cd5c662e4181113ba9c5c3f1cbd5784cb02e40697dda2fd` | interim-sdk — not V3 |
+| `13907-2` | `Proxy.create_pure` | ok | `0x17b08bc3fbd990c020295c91a40566209774d2dec890c1c5e2016f2e28c9c2e2` | interim-sdk — not V3 |
+| `13908-2` | `Balances.transfer_keep_alive` | ok | `0xed71081647c138d9759da6f21e9dd80db0aae98d2fc8e8919e88cd075571f234` | interim-sdk — not V3 |
+| `13909-2` | `Proxy.proxy(Proxy.add_proxy)` | ok | `0x3c6e59964f75046a197d0bdf4c748d893c72a175eb5ed214de4542c7fbe4c0ba` | interim-sdk — not V3 |
+| `13910-2` | `Proxy.proxy(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x1b70c807cb4ffa76d006805ceb5ba7ef015ad0c3840209468a858f98ae129a3b` | interim-sdk — not V3 |
+| `13911-2` | `Proxy.announce` | ok | `0x46f654765737335680de48a00437b111e8a5f18118da842b2bf73b3ed0331253` | interim-sdk — not V3 |
+| `13912-2` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0xb632cbb5f46b26d78a4a6545eb0b544d80a85e866ebaff071ca00d6bdba7d41c` | interim-sdk — not V3 |
+| `13918-2` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0xb0fd0945235cf133574761dc03f2f1dd6f08295238335d78a12b92e15b70b816` | interim-sdk — not V3 |
+| `13919-2` | `Proxy.announce` | ok | `0xabd8de55c07e91c413dbb9827764bb01dcd7d93fca49c82e1204495da91e9baf` | interim-sdk — not V3 |
+| `13920-2` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x3ee1943d599af5cb1f2eba7f3d80b166e0547feda0fef304ee2d40279ad6efeb` | interim-sdk — not V3 |
+| `13926-2` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0x1a5ded8b1535303dc74db900d63e8b84691b774bc963c7acc4f5835fc566b3e4` | interim-sdk — not V3 |
+| `13927-2` | `Vesting.vested_transfer` | ok | `0xac822b38484996551f169daea4f8aee5ddc2b4a205f795829185007e6f1ac117` | interim-sdk — not V3 |
+| `13930-2` | `Proxy.proxy(Vesting.vest)` | ok | `0x19df6cab994777c058a9aeb3a2bb1b48689145f361749b9cf0430dbca2991e4d` | interim-sdk — not V3 |
+| `13931-2` | `Proxy.proxy(Balances.transfer_allow_death)` | inner:Token.Frozen | `0x04e07e88df51d4a9f634d80bfd868b4b8212a64b143810e53deba0aac8611108` | interim-sdk — not V3 |
+| `13932-2` | `Proxy.proxy(Balances.transfer_allow_death)` | ok | `0x211bacfad74551de4c1d0631e14d28b4d391ba4d1f2a6c8331f757b45f0c3962` | interim-sdk — not V3 |
 
-### re-fetch — 2026-10-14T11:57:31Z — the 2026-10-14T11:54:58Z interim-1002 run, by extrinsic id
+### re-fetch — 2026-10-14T12:44:32Z — the 2026-10-14T12:41:49Z interim-1002 run, by extrinsic id
 
-Fresh process over http (`http://127.0.0.1:19933`; the run itself was sent over ws) at head #6529 · `evidence/refetch-interim-1002-2026-10-14T115731Z.json` · every row: same block hash, tx hash and outcome as recorded.
+Fresh process over http (`http://127.0.0.1:19933`; the run itself was sent over ws) at head #6999 · `evidence/refetch-interim-1002-2026-10-14T124432Z.json` · every row: same block hash, tx hash and outcome as recorded.
 
 | extrinsic id | call | outcome | tx hash | profile |
 |---|---|---|---|---|
-| `6504-1` | `Proxy.anonymous` | ok | `0x04bb8689fade2bc73887645a4c69e56ace76bdca19fb55edc65562b40c5bc064` | interim-1002 — not V3 |
-| `6505-1` | `Balances.transfer_keep_alive` | ok | `0x6af80798dcb3dd14a9e35d3619a29efce8ee0ccdcc84918bb3cb83cfa14532e4` | interim-1002 — not V3 |
-| `6506-1` | `Proxy.proxy(Proxy.add_proxy)` | ok | `0x5701a84a8691d3fb5ef1bce2bb7483a86f17599b773d287ed10f66b7144725a5` | interim-1002 — not V3 |
-| `6507-1` | `Proxy.proxy(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x5c5ebb7a42af724bb59bb72f747482b1f93f22361caa188ef1aeb0388812ffc6` | interim-1002 — not V3 |
-| `6508-1` | `Proxy.announce` | ok | `0xaf0b74da45f3146a4be720b78a940f971893b918241cdbe5cdabfd6d2a0b73e5` | interim-1002 — not V3 |
-| `6509-1` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0xecbfa57e4650e6a7c5833f029ab40a2a8e20687d4b3ce7e8a87cb21ed3b7c8bc` | interim-1002 — not V3 |
-| `6515-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x5d29e88025c66d9f85628abcc247f3cbb05b9db80260dbe1c1dd11b0e302b954` | interim-1002 — not V3 |
-| `6516-1` | `Proxy.announce` | ok | `0xd300a89628dc4e535d7ac0293a93e96cef84ec61204e1d4a23bdfd9b8dda733f` | interim-1002 — not V3 |
-| `6517-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x85beb7acf65ceac4f66ab651f0019878b2fbf3d8f8962e2bd07a43f50a31f4d2` | interim-1002 — not V3 |
-| `6523-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0x0fe9501dec5f0627f23ae8bf566d9db5dcd24822dc6e97fb6b9769c355f9560f` | interim-1002 — not V3 |
-| `6524-1` | `Vesting.vested_transfer` | ok | `0x545913689ce13245396447417c9415c34b62a8ad6b0191acbb6aa906bd85b427` | interim-1002 — not V3 |
-| `6527-1` | `Proxy.proxy(Vesting.vest)` | ok | `0x486f6850c634950bda8251de8b2966a95c445bc60a3a58347523cc4972c5977b` | interim-1002 — not V3 |
-| `6528-1` | `Proxy.proxy(Balances.transfer_keep_alive)` | inner:Balances.LiquidityRestrictions | `0x3261e06e97fce7012c7f7e41e838a79955636393f0af154669b5bf581d19503e` | interim-1002 — not V3 |
+| `6973-1` | `Proxy.anonymous` | ok | `0x8d67d8839c9a2d683d6059a7308319def1d70529afe6b7575188b6b028e40e39` | interim-1002 — not V3 |
+| `6974-1` | `Balances.transfer_keep_alive` | ok | `0xba3fbdce4d1817b741c10e0cb84c533646990d7d5b03e69b6ea25d1c161c57b7` | interim-1002 — not V3 |
+| `6975-1` | `Proxy.proxy(Proxy.add_proxy)` | ok | `0x84d272ba519675fb45416d40f8e96a2ecbf39443bb3d0eddedbf9eec2a9aab3f` | interim-1002 — not V3 |
+| `6976-1` | `Proxy.proxy(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x8836c688cb6c361de8759a043a00da070b2808c1d5dc3c21d5032404d55faf5b` | interim-1002 — not V3 |
+| `6977-1` | `Proxy.announce` | ok | `0xdc1b388ba397b770abd7c81357ca18c7ad23af11023a1347c753e50253671dc9` | interim-1002 — not V3 |
+| `6978-1` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0x34bca803f41e3f9159f769ff2b6b835a08d543a6cd4ffd5fbd321f67b16cba41` | interim-1002 — not V3 |
+| `6984-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x127e1058bece0a8ff5c09a65e38c959b6ad4ae35f4f53902b78995528148f40d` | interim-1002 — not V3 |
+| `6985-1` | `Proxy.announce` | ok | `0xf67e5d237a8ec3c2783fd48b9f9933ab9db1b67fc3a6fd5d71215eb918499024` | interim-1002 — not V3 |
+| `6986-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x4250576f8c5d601dc68be64dcd393e9e2276d20fb1f34edc543df6c466676e9d` | interim-1002 — not V3 |
+| `6992-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0xd3c3e2f421e1a5c3acf5d6ee04c5469d3344078fc532695c3e4a0522c251ba4b` | interim-1002 — not V3 |
+| `6993-1` | `Vesting.vested_transfer` | ok | `0x3026ea535bedb6c3e758eab67bcb02267e3aa950679e14b2c12ba9270657c692` | interim-1002 — not V3 |
+| `6996-1` | `Proxy.proxy(Vesting.vest)` | ok | `0x364df8a0f90ff0203eb743d0e6ee15fde9a63ab10f10c11cff5e5b2e8b08b408` | interim-1002 — not V3 |
+| `6997-1` | `Proxy.proxy(Balances.transfer)` | inner:Balances.LiquidityRestrictions | `0xc73dfbfb5215adb05debd51dce310295ec30f7eff85a55c4f62e30cea1e6ecfc` | interim-1002 — not V3 |
+| `6998-1` | `Proxy.proxy(Balances.transfer)` | ok | `0x42e8eb4597fa2978fd4baec9467afadc62a6d43ea711aa75596327bfc1b5dd4f` | interim-1002 — not V3 |

@@ -1,0 +1,17 @@
+{
+  "description": [
+    "demo vault total (free + reserved) = vault fund - sum of the 5 legitimate spends, exactly",
+    "each payee received exactly the sum of its spends",
+    "attacker-1..3 hold 0 (both drains vetoed)",
+    "no announcement pending on the demo vault",
+    "demo vault delegates: cold delay 0 + hot delay D; throwaway vault: cold only (hot removed by panic)"
+  ],
+  "vault_total": "fund - sum(spends)",
+  "payees_received": "sum of their spends",
+  "attackers_hold_zero": [
+    "attacker-1",
+    "attacker-2",
+    "attacker-3"
+  ],
+  "pending_on_vault": 0
+}

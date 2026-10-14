@@ -1,0 +1,33 @@
+{
+  "note": "Demo accounts: each key = <root> + path. On interim dev chains the root is the public Substrate dev phrase, so these addresses are the ones the seed uses there; on any other chain the root is a private mnemonic kept in ~/.config/airlock/ (never in this repo) and the addresses differ.",
+  "accounts": {
+    "cold": {
+      "path": "//AirlockDemo//cold",
+      "address_dev_root": "5DytMgngbd6x8q6CswTVDktPKCVKTBSyryiweYDEw4dvheEU"
+    },
+    "hot": {
+      "path": "//AirlockDemo//hot",
+      "address_dev_root": "5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7"
+    },
+    "payee-rent": {
+      "path": "//AirlockDemo//payee-rent",
+      "address_dev_root": "5C5vdpsPjL7KwZySdTNBxVRJ5os7qQBwrkU7mu4fA61jCryJ"
+    },
+    "payee-coffee": {
+      "path": "//AirlockDemo//payee-coffee",
+      "address_dev_root": "5Hm7xTSt5X6gN1voGi8hXDfUdCAhaepSrCdAzXV3LgpgWUg7"
+    },
+    "attacker-1": {
+      "path": "//AirlockDemo//attacker-1",
+      "address_dev_root": "5FZh8gpF7AD6rcA7GJpa4Z1UC3AAPWBFZe9GtTEu1C3g4b2b"
+    },
+    "attacker-2": {
+      "path": "//AirlockDemo//attacker-2",
+      "address_dev_root": "5ChW5TMWZVzDYDTHVnt59WKv3TQEQmxnLgo1cxnzk284LZ82"
+    },
+    "attacker-3": {
+      "path": "//AirlockDemo//attacker-3",
+      "address_dev_root": "5DaU7TgNgbAPGF59Zu8yQLrEHwQv85FkckXtNHzEj48xGUJg"
+    }
+  }
+}

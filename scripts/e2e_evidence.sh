@@ -32,7 +32,14 @@ waitfor() {
 }
 echo "code $CODE · profile $P · vault $VAULT · delay $DELAY blocks · thief payee attacker-3 $TO" > "$LOG"
 
+balances() { python3 -c "
+import json,sys
+from airlock.chain_profile import connect
+c=connect(None,'$P'); a=[c.substrate.query('System','Account',[x]).value['data'] for x in sys.argv[1:]]
+print(json.dumps({'vault_total': int(a[0]['free'])+int(a[0]['reserved']), 'payee_total': int(a[1]['free'])+int(a[1]['reserved'])}))
+c.substrate.close()" "$VAULT" "$TO"; }
 say "airlock status before"; airlock status --vault "$VAULT" >> "$LOG" 2>&1
+BEFORE="$(balances)"; say "balances before $BEFORE"
 python3 -u -m airlock.watcher --db "$DB" --jsonl "$J" --max-alerts 1 --vault "$VAULT" >> "$LOG" 2>&1 &
 WATCHER=$!
 waitfor "$LOG" "watching"
@@ -59,13 +66,16 @@ python3 scripts/thief.py --url "$WS" --vault "$VAULT" --to "$TO" --amount all --
 say "thief tries proxy.proxy directly (no announcement)"
 python3 scripts/thief.py --url "$WS" --vault "$VAULT" --to "$TO" --amount 1 --direct | tee -a "$T" "$LOG"
 say "airlock status after"; airlock status --vault "$VAULT" >> "$LOG" 2>&1
-python3 - "$T" "$LOG" <<'EOF' | tee -a "$LOG"
+AFTER="$(balances)"; say "balances after $AFTER"
+python3 - "$T" "$BEFORE" "$AFTER" <<'EOF' | tee -a "$LOG"
 import json, sys
 rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
 got = [(r["step"], r["outcome"]) for r in rows]
 want = [("announce", "ok"), ("execute", "Proxy.Unannounced"), ("direct", "Proxy.Unannounced")]
-print("E2E", "PASS" if got == want else "FAIL", got)
-sys.exit(0 if got == want else 1)
+before, after = json.loads(sys.argv[2]), json.loads(sys.argv[3])
+ok = got == want and before == after
+print("E2E", "PASS" if ok else "FAIL", got, "· vault total and thief payee total unchanged:", before == after)
+sys.exit(0 if ok else 1)
 EOF
 rm -f "$DB" ".thief-$P.json"
 say "re-fetching the thief's extrinsics by id over HTTP"

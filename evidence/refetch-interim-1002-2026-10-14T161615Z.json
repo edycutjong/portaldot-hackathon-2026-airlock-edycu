@@ -1,0 +1,24 @@
+{
+  "started": "2026-10-14T16:16:15Z",
+  "endpoint": "http://127.0.0.1:19933",
+  "transport": "http",
+  "profile": "interim-1002",
+  "label": "interim \u2014 not V3 (Portaldot dev node, runtime spec 1002)",
+  "genesis_hash": "0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22",
+  "head_at_refetch": 9116,
+  "source": "evidence/thief-intents-interim-1002-2026-10-14T161455Z.jsonl",
+  "matched": 1,
+  "total": 1,
+  "rows": [
+    {
+      "extrinsic_id": "9105-1",
+      "block_number": 9105,
+      "block_hash": "0xcfbed41bed1dfaf652878a650c6c986b276781e2664458d711b696faa51815d5",
+      "extrinsic_hash": "0x6ee7429e57d4cf50ff74f5ddf23b44b4d31f2679241b086554134e80f7e66a11",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    }
+  ]
+}

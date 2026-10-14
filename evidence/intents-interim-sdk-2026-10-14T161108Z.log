@@ -1,0 +1,12 @@
+code ce2e7a1 · profile interim-sdk · vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG · delay 20 blocks · registry http://127.0.0.1:18787 · payee payee-rent 5C5vdpsPjL7KwZySdTNBxVRJ5os7qQBwrkU7mu4fA61jCryJ · thief payee attacker-2 5ChW5TMWZVzDYDTHVnt59WKv3TQEQmxnLgo1cxnzk284LZ82
+intent registry on http://127.0.0.1:18787 · interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · db <tmp>/shared.db
+telegram: not configured (no token) — alerts go to stdout and the JSON-lines log
+watching 1 vault(s) on interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944 · block 3000 ms · notifiers: stdout, jsonl · db <tmp>/shared.db
+[driver 16:11:13] 1. enrol: the cold key signs the owner token's digest
+127.0.0.1 "POST /api/vaults/5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG/owner HTTP/1.1" 200 -
+chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · node/268 · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944
+enrolled: owner token for 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG saved to <tmp>/owner.token (mode 600); the registry at http://127.0.0.1:18787 keeps only its sha256. `airlock announce` reads it from there.
+[driver 16:11:16] 2. owner announces a spend: register first, then proxy.announce
+chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · node/268 · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944
+127.0.0.1 "POST /api/intents HTTP/1.1" 400 -
+airlock: refused, nothing sent: intent not registered, so not announcing (it would alert NOT YOURS): registry answered HTTP 400: call_hex is not a call this runtime can decode (AttributeError)

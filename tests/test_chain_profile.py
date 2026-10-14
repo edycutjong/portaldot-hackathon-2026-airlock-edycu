@@ -116,3 +116,118 @@ def test_event_field_unwraps_legacy_and_reports_missing():
     assert event_field([{"type": "DispatchResult", "value": {"Ok": None}}], "result", 0) == {"Ok": None}
     with pytest.raises(ValueError):
         event_field([], "result", 0)
+
+
+# --- exact token units -------------------------------------------------------------------------------------------
+
+def test_to_planck_is_exact():
+    from airlock.chain_profile import to_planck
+
+    assert to_planck(100, 12) == 100 * 10**12
+    assert to_planck("0.5", 14) == 5 * 10**13
+    big = "123456789012345678901234567890.5"
+    assert to_planck(big, 12) == 1234567890123456789012345678905 * 10**11
+
+
+@pytest.mark.parametrize("bad", ["1e-20", "-1", "inf", "nan", "abc"])
+def test_to_planck_refuses_bad_amounts(bad):
+    from airlock.chain_profile import to_planck
+
+    with pytest.raises(ValueError):
+        to_planck(bad, 14)
+
+
+# --- block time: measured fallback when the runtime has no consensus constant ------------------------------------
+
+class _NoConstantChain:
+    """Fake substrate: no Babe/Aura constant, blocks 3 s apart with one 9 s gap."""
+
+    stamps = [0, 3000, 6000, 15000, 18000, 21000]
+
+    def get_constant(self, pallet, const):
+        return None
+
+    def get_block_number(self, _):
+        return len(self.stamps)
+
+    def get_block_hash(self, n):
+        return n
+
+    def query(self, pallet, item, block_hash):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(value=self.stamps[block_hash - 1])
+
+
+def test_block_time_measured_when_no_constant():
+    from airlock.chain_profile import _block_time
+
+    assert _block_time(_NoConstantChain()) == (3000, "measured (median Timestamp.Now delta)")
+
+
+# --- connect(): failures are loud, typed, and never leak the socket ---------------------------------------------
+
+class _FakeSubstrate:
+    instances: list = []
+
+    def __init__(self, url, **kwargs):
+        if url == "ws://down":
+            raise ConnectionRefusedError("refused")
+        self.url, self.closed = url, False
+        _FakeSubstrate.instances.append(self)
+
+    def rpc_request(self, method, params):
+        result = {
+            "chain_getBlockHash": INTERIM_SDK.genesis_hash if self.url != "ws://other" else "0x" + "ab" * 32,
+            "state_getStorageHash": INTERIM_SDK.code_hashes[0],
+            "state_getRuntimeVersion": {"specName": "node", "specVersion": 999},  # not the verified 268
+        }[method]
+        return {"result": result}
+
+    def init_runtime(self):
+        pass
+
+    def close(self):
+        self.closed = True
+
+
+@pytest.fixture
+def fake_substrate(monkeypatch):
+    import substrateinterface
+
+    _FakeSubstrate.instances = []
+    monkeypatch.setattr(substrateinterface, "SubstrateInterface", _FakeSubstrate)
+    monkeypatch.delenv("AIRLOCK_PROFILE", raising=False)
+    monkeypatch.delenv("AIRLOCK_WSS", raising=False)
+    return _FakeSubstrate
+
+
+def test_connect_unreachable_is_typed(fake_substrate):
+    from airlock.chain_profile import ChainUnreachable, connect
+
+    with pytest.raises(ChainUnreachable):
+        connect("ws://down")
+
+
+def test_connect_unknown_chain_closes_probe(fake_substrate):
+    from airlock.chain_profile import connect
+
+    with pytest.raises(UnknownChain):
+        connect("ws://other")
+    assert all(s.closed for s in fake_substrate.instances)
+
+
+def test_connect_wrong_profile_closes_probe(fake_substrate):
+    from airlock.chain_profile import ProfileMismatch, connect
+
+    with pytest.raises(ProfileMismatch, match="not the requested interim-1002"):
+        connect("ws://sdk", "interim-1002")
+    assert all(s.closed for s in fake_substrate.instances)
+
+
+def test_connect_runtime_spec_mismatch_closes_connection(fake_substrate):
+    from airlock.chain_profile import connect
+
+    with pytest.raises(UnknownChain, match="expects runtime"):
+        connect("ws://sdk", "interim-sdk")
+    assert fake_substrate.instances and all(s.closed for s in fake_substrate.instances)

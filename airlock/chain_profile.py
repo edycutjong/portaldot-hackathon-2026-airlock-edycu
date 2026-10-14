@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 import statistics
 from dataclasses import dataclass, field
-from decimal import Decimal
+from decimal import Context, Decimal, InvalidOperation
 from typing import Any, Mapping
 
 CODE_KEY = "0x3a636f6465"  # the well-known storage key ":code" (the runtime wasm)
@@ -19,6 +19,10 @@ CODE_KEY = "0x3a636f6465"  # the well-known storage key ":code" (the runtime was
 
 class UnknownChain(RuntimeError):
     """The endpoint's genesis/code hash matches no known profile."""
+
+
+class ChainUnreachable(UnknownChain):
+    """Nothing answered at the endpoint, so the chain cannot be identified (e.g. V3 while its RPC is offline)."""
 
 
 class ProfileMismatch(RuntimeError):
@@ -194,14 +198,27 @@ class Chain:
     existential_deposit: int
 
     def units(self, amount: float | int | str | Decimal) -> int:
-        """Whole tokens -> planck, exactly (no float rounding); refuses amounts finer than one planck."""
-        planck = Decimal(str(amount)).scaleb(self.decimals)
-        if planck != planck.to_integral_value():
-            raise ValueError(f"{amount} has more than {self.decimals} decimal places")
-        return int(planck)
+        """Whole tokens -> planck, exactly; refuses negative, non-finite and sub-planck amounts."""
+        return to_planck(amount, self.decimals)
 
     def fmt(self, planck: int) -> str:
         return f"{planck / 10**self.decimals:,.4f} {self.symbol}"
+
+
+_EXACT = Context(prec=100)  # far beyond any u128 balance, so no rounding ever happens
+
+
+def to_planck(amount: float | int | str | Decimal, decimals: int) -> int:
+    try:
+        value = Decimal(str(amount))
+    except InvalidOperation:
+        raise ValueError(f"not a number: {amount!r}") from None
+    if not value.is_finite() or value < 0:
+        raise ValueError(f"amount must be a finite, non-negative number: {amount!r}")
+    planck = value.scaleb(decimals, context=_EXACT)
+    if planck != planck.to_integral_value(context=_EXACT):
+        raise ValueError(f"{amount} has more than {decimals} decimal places")
+    return int(planck)
 
 
 def median_block_time_ms(timestamps_ms: list[int]) -> int | None:
@@ -243,7 +260,10 @@ def connect(url: str | None = None, profile_id: str | None = None) -> Chain:
         raise ProfileMismatch("no endpoint: pass url, set AIRLOCK_WSS, or pick a profile with a default endpoint")
 
     # Identify with raw RPC first: decoding needs the right preset, and the preset depends on the chain.
-    probe = SubstrateInterface(url=url)
+    try:
+        probe = SubstrateInterface(url=url)
+    except Exception as e:
+        raise ChainUnreachable(f"no node answered at {url}: {type(e).__name__}: {e}") from e
     try:
         genesis = probe.rpc_request("chain_getBlockHash", [0]).get("result")
         code_hash = probe.rpc_request("state_getStorageHash", [CODE_KEY]).get("result")
@@ -263,8 +283,16 @@ def connect(url: str | None = None, profile_id: str | None = None) -> Chain:
                                        type_registry={"types": dict(profile.type_registry_types)})
     else:
         substrate = probe
-    substrate.init_runtime()
+    try:
+        return _resolve(substrate, profile, url, genesis, code_hash)
+    except Exception:
+        substrate.close()
+        raise
 
+
+def _resolve(substrate, profile: Profile, url: str, genesis: str, code_hash: str) -> Chain:
+    """Check the identified runtime has what Airlock needs and read its parameters."""
+    substrate.init_runtime()
     version = substrate.rpc_request("state_getRuntimeVersion", [])["result"]
     if profile.spec and (version["specName"], version["specVersion"]) != profile.spec:
         raise UnknownChain(f"{profile.id} expects runtime {profile.spec}, chain reports "

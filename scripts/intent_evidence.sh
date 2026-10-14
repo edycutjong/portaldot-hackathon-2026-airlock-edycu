@@ -2,7 +2,7 @@
 # Live evidence for the owner intent registry on the seeded demo vault (run scripts/seed.py first), at the current
 # commit. Real processes on a local interim chain: the registry API (python -m airlock.api) and the watcher share one
 # SQLite file.
-#   1. airlock enroll (cold key signs the owner token's digest; the registry checks it is the vault's delay-0 delegate)
+#   1. airlock enroll (cold key signs the enrolment message containing the owner token's digest; the registry checks it is the vault's delay-0 delegate)
 #   2. owner: airlock announce -> intent registered first, then proxy.announce -> watcher alert YOURS (decoded)
 #   3. thief: scripts/thief.py --post-intent (preimage, no token) -> HTTP 401; its announce -> watcher alert NOT YOURS;
 #      the cold key vetoes it
@@ -62,7 +62,7 @@ python3 -u -m airlock.watcher --db "$DB" --jsonl "$J" --vault "$VAULT" >> "$LOG"
 WATCHER=$!
 waitfor "$LOG" "watching"
 
-say "1. enrol: the cold key signs the owner token's digest"
+say "1. enrol: the cold key signs the enrolment message containing the owner token's digest"
 airlock enroll --vault "$VAULT" --api "$API" --token-file "$TOKEN" 2>&1 | sed "s#$TMP#<tmp>#g" | tee -a "$LOG"
 
 say "2. owner announces a spend: register first, then proxy.announce"

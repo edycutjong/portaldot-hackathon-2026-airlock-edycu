@@ -47,7 +47,8 @@ one JSON object per line instead (`{"tx": …}` per extrinsic, then `{"result": 
 
 ## Owner intents (register before announce)
 
-`airlock enroll --vault V` creates an owner token, has the cold key sign its sha256 digest, and enrols it with the intent
+`airlock enroll --vault V` creates an owner token, has the cold key sign an enrolment message that contains its sha256 digest
+(`airlock-enroll:v1:<genesis>:<vault key>:<sha256(token)>:<issued_at>`), and enrols it with the intent
 registry (`python -m airlock.api`, `$AIRLOCK_API`, default `http://127.0.0.1:8787`); the token is kept in
 `~/.config/airlock/owner-tokens/<vault>.token` (or `--token-file`), the registry keeps only the digest.
 `airlock announce` then registers the exact call with that token **before** it signs `proxy.announce`, and only after

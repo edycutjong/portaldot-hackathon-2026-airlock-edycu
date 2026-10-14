@@ -22,7 +22,7 @@ There is no other way to put a preimage on the server, so a thief's call stays h
 - **Foreign preimage** — the same call bytes registered for another vault, or POSTed without the token (`thief.py
   --post-intent` → 401): NOT YOURS. This is the registry's core rule: an announcement whose call hash is not in the
   owner's intent registry is NOT YOURS even when its preimage is known.
-- **Replay** — an intent vouches for one announcement only. The owner paid Bob 1.5 once; a thief re-announcing the very
+- **Replay** — an intent vouches for one announcement only. The owner paid Bob once; a thief re-announcing the very
   same call later is NOT YOURS.
 - **Order** — an intent registered at or after the announcement's block does not count; nor does one older than 50
   blocks.

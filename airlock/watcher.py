@@ -1,14 +1,16 @@
 """The Airlock watcher: follow new blocks, catch every `Proxy.Announced` on a watched vault, alert the owner.
 
-  new header (subscription) -> process every block since the last one processed (no gaps, even after downtime)
+  new header (subscription) -> process every block since the last one processed (also after downtime; a block the
+                               watcher processed that is no longer canonical is re-scanned — reorg check by hash)
     -> System.Events -> Proxy.Announced { real, proxy, call_hash } with real ∈ watched vaults
     -> delay of that delegate from Proxy.Proxies(vault) -> executable-from block
     -> at-risk = transferable balance of the vault (chain_profile, per AccountData layout)
     -> verdict (NOT YOURS until the owner intent registry exists) -> SQLite -> notifiers
 
 It never signs anything. Two connections: one carries the header subscription, the other the reads, so a read never
-interleaves with subscription traffic. On a dropped connection it reconnects, re-checks the genesis hash, and rescans
-from the last processed block; a different genesis stops it (the database belongs to another chain).
+interleaves with subscription traffic. On a dropped or silent connection (no header for a few block times) it
+reconnects, re-checks the genesis hash, and rescans from the last processed block; a different genesis, or a chain
+whose processed blocks are gone (a reset dev chain), stops it.
 
 usage: python -m airlock.watcher --vault <address> [--vault …] [--profile interim-sdk] [--url ws://…]
                                  [--db path] [--from-block N] [--jsonl evidence/alerts.jsonl] [--once] [--max-alerts N]
@@ -21,7 +23,7 @@ import json
 import os
 import sys
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, replace
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -29,14 +31,16 @@ from .alerts import (NOT_YOURS, Alert, JsonlNotifier, Notifier, StdoutNotifier, 
                      telegram_from_config)
 from .callhash import same_account
 from .chain_profile import Chain, ChainUnreachable, ProfileMismatch, UnknownChain, connect, event_field
-from .store import GenesisChanged, Store
+from .store import ChainReset, GenesisChanged, Store
 
-MAX_ATTEMPTS = 20  # an undelivered alert is retried once per new block, this many times at most
+RETRY_WINDOW_S = 30 * 60  # an undelivered alert is retried on every new block for this long, then given up (logged)
+READ_TIMEOUT_S = 30  # a read the node does not answer in this time counts as a lost connection
+STALL_BLOCK_TIMES = 5  # no new header for this many block times (at least 30 s): reconnect
 
 try:  # the websocket client substrate-interface uses; its errors mean "connection lost", not a bug
-    from websocket import WebSocketException
+    from websocket import WebSocketException, WebSocketTimeoutException
 except ImportError:  # pragma: no cover
-    WebSocketException = ConnectionError
+    WebSocketException = WebSocketTimeoutException = ConnectionError
 CONNECTION_ERRORS = (ChainUnreachable, WebSocketException, ConnectionError, TimeoutError, OSError)
 
 
@@ -109,11 +113,24 @@ class Watcher:
         return self.store.vaults(self.chain.profile.id)
 
     def start_from(self, head: int, from_block: int | None) -> int:
-        """First block to process: resume after the last processed one, else --from-block, else the head."""
+        """First block to process. Resuming: the block after the newest processed block that is still canonical
+        (a reorg rewinds the cursor); none still canonical -> ChainReset. First run: --from-block, else the head."""
         last = self.store.last_block
-        if last is not None:
+        if last is None:
+            return head if from_block is None else from_block
+        kept = self.store.processed_hashes()
+        if not kept:  # a cursor without hashes: trust it unless the chain is now shorter
+            if last > head:
+                raise ChainReset(f"processed up to #{last}, but the chain's head is #{head}")
             return last + 1
-        return head if from_block is None else from_block
+        for number, block_hash in kept:
+            if number <= head and self.s.get_block_hash(number) == block_hash:
+                if number != last:
+                    self.log(f"reorg: processed blocks after #{number} are no longer canonical; re-scanning")
+                    self.store.rewind(number)
+                return number + 1
+        raise ChainReset(f"none of the last {len(kept)} processed blocks (up to #{last}) is on this chain any more "
+                         f"(head #{head}): reset or replaced chain")
 
     def process_block(self, number: int, head: int) -> list[Alert]:
         block_hash = self.s.get_block_hash(number)
@@ -126,7 +143,7 @@ class Watcher:
             if vault is None:
                 continue
             alerts.append(self._alert(ann, vault, vaults[vault], number, block_hash, head))
-        self.store.set_last_block(number)
+        self.store.set_last_block(number, block_hash)
         return alerts
 
     def _alert(self, ann: Announced, vault: str, chat_id: str | None, number: int, block_hash: str, head: int) -> Alert:
@@ -139,7 +156,7 @@ class Watcher:
             announced_block=number, block_hash=block_hash,
             release_block=None if delay is None else number + delay, head=head,
             block_time_ms=self.chain.block_time_ms, at_risk=self.chain.fmt(risk.transferable),
-            locked=self.chain.fmt(risk.frozen) if risk.frozen else None, late_by=head - number, chat_id=chat_id,
+            locked=self.chain.fmt(risk.held_back) if risk.held_back else None, late_by=head - number, chat_id=chat_id,
             extra={"delay_blocks": delay, "extrinsic_index": ann.extrinsic_index})
         text = format_text(alert)
         stored = self.store.record(vault=vault, delegate=ann.delegate, call_hash=ann.call_hash, announced_block=number,
@@ -153,19 +170,27 @@ class Watcher:
         return alert
 
     def retry_unsent(self, head: int) -> int:
-        """Re-send undelivered alerts to the channels that missed them, countdown recomputed for the current head."""
+        """Re-send undelivered alerts to the channels that missed them, countdown recomputed for the current head.
+        After RETRY_WINDOW_S without success an alert is given up on — loudly, never silently."""
         resent = 0
-        for stored, raw in self.store.unsent(MAX_ATTEMPTS):
-            data = {k: v for k, v in json.loads(raw).items() if k not in ("blocks_left", "veto_command")}
+        names = {f.name for f in fields(Alert)}
+        for stored, raw, first in self.store.unsent():
+            if first is not None and self.clock() - first > RETRY_WINDOW_S:
+                missing = sorted({n.name for n in self.notifiers} - self.store.delivered_via(stored) - {"jsonl"})
+                self.log(f"GAVE UP after {RETRY_WINDOW_S // 60} min: alert for {stored.vault} {stored.call_hash} "
+                         f"(#{stored.announced_block}) never reached {', '.join(missing)}")
+                self.store.give_up(stored)
+                continue
+            data = {k: v for k, v in json.loads(raw).items() if k in names}
             alert = replace(Alert(**data), head=head, late_by=head - stored.announced_block)
             if self.deliver(stored, alert, format_text(alert)):
                 resent += 1
         return resent
 
     def deliver(self, stored, alert: Alert, text: str) -> list[str]:
-        """Send through every notifier that does not have this alert yet. It is delivered once every owner-facing
-        channel (all but the JSON-lines log) has it; until then the watcher retries the missing ones each block."""
-        self.store.note_attempt(stored)
+        """Send through every notifier that does not have this alert yet, recording each success at once. It is
+        delivered once every owner-facing channel (all but the JSON-lines log) has it; until then it is retried."""
+        self.store.note_attempt(stored, self.clock())
         have = self.store.delivered_via(stored)
         sent = []
         for n in self.notifiers:
@@ -173,18 +198,19 @@ class Watcher:
                 continue
             try:
                 n.send(alert, text)
-                sent.append(n.name)
             except (TelegramError, OSError) as e:
                 self.log(f"notifier {n.name} failed: {e}")
-        have |= set(sent)
-        complete = all(n.name in have for n in self.notifiers if n.name != "jsonl")
-        self.store.mark_delivery(stored, sorted(have), complete, self.clock())
-        if complete:
+                continue
+            self.store.add_delivery(stored, n.name)
+            have.add(n.name)
+            sent.append(n.name)
+        if all(n.name in have for n in self.notifiers if n.name != "jsonl"):
+            self.store.mark_sent(stored, self.clock())
             self.alerts_sent += 1
         return sent
 
     def catch_up(self, head: int, from_block: int | None = None) -> list[Alert]:
-        """Process every block from where the watcher stopped up to `head`."""
+        """Process every block from where the watcher stopped (after a reorg check) up to `head`."""
         start = self.start_from(head, from_block)
         if head - start >= 1:
             self.log(f"catching up {head - start + 1} blocks: #{start}..#{head}")
@@ -200,9 +226,26 @@ def default_db(profile_id: str) -> Path:
     return Path(env) if env else Path.home() / ".local" / "share" / "airlock" / f"watcher-{profile_id}.db"
 
 
+def _arm_timeout(chain: Chain, seconds: float) -> None:
+    """A socket timeout on a websocket connection (no-op over HTTP): a silent node raises instead of hanging."""
+    websocket = getattr(chain.substrate, "websocket", None)
+    if websocket is not None:
+        websocket.settimeout(seconds)
+
+
+def stall_seconds(block_time_ms: int | None) -> float:
+    return max(STALL_BLOCK_TIMES * (block_time_ms or 6000) / 1000, 30.0)
+
+
+def _open_reads(args) -> Chain:
+    chain = connect(args.url, args.profile, auto_reconnect=False)
+    _arm_timeout(chain, READ_TIMEOUT_S)
+    return chain
+
+
 def run(args, notifiers: list[Notifier], log=None) -> int:
     log = log or (lambda m: print(m, file=sys.stderr, flush=True))
-    reads = connect(args.url, args.profile)
+    reads = _open_reads(args)
     store = Store(args.db or default_db(reads.profile.id))
     watcher = None
     try:
@@ -224,7 +267,7 @@ def run(args, notifiers: list[Notifier], log=None) -> int:
         log(f"STOPPED: {e}")
         return 3
     finally:
-        reads.substrate.close()
+        (watcher.chain if watcher else reads).substrate.close()
         store.close()
 
 
@@ -233,33 +276,37 @@ def _done(watcher: Watcher, args) -> bool:
 
 
 def follow(watcher: Watcher, args, log) -> int:
-    """Header subscription with reconnect: any dropped connection -> reconnect, re-identify, rescan from the cursor."""
-    backoff = 1.0
+    """Header subscription with reconnect: a dropped or silent connection -> reconnect, re-identify, rescan from the
+    cursor. The backoff resets only once a header has been processed again, so a flapping node is not hammered."""
+    state = {"backoff": 1.0}
+    stall = stall_seconds(watcher.chain.block_time_ms)
     while True:
         sub = None
         try:
-            sub = connect(args.url, args.profile)
+            sub = connect(args.url, args.profile, auto_reconnect=False)
             if sub.genesis_hash != watcher.chain.genesis_hash:
                 raise GenesisChanged(f"chain at {sub.url} now has genesis {sub.genesis_hash}, "
                                      f"was {watcher.chain.genesis_hash}")
+            _arm_timeout(sub, stall)
 
             def on_header(obj, update_nr, subscription_id):
-                head = int(obj["header"]["number"])
-                if watcher.store.last_block is None or head > watcher.store.last_block:
-                    watcher.catch_up(head)
+                watcher.catch_up(int(obj["header"]["number"]))  # also re-checks the processed tip's hash
+                state["backoff"] = 1.0
                 if _done(watcher, args):
-                    return head  # a non-None return ends the subscription
+                    return True  # a non-None return ends the subscription
                 return None
 
             sub.substrate.subscribe_block_headers(on_header, finalized_only=args.finalized)
             return 0
         except CONNECTION_ERRORS as e:
-            log(f"connection lost ({type(e).__name__}: {e}); reconnecting in {backoff:.0f} s")
+            reason = f"no new header for {stall:.0f} s" if isinstance(e, WebSocketTimeoutException) else \
+                f"{type(e).__name__}: {e}"
+            backoff = state["backoff"]
+            log(f"connection lost ({reason}); reconnecting in {backoff:.0f} s")
             time.sleep(backoff)
-            backoff = min(backoff * 2, 30)
+            state["backoff"] = min(backoff * 2, 30)
             try:
                 watcher.chain = _reconnect(watcher, args)
-                backoff = 1.0
                 log(f"reconnected to {watcher.chain.url} (same genesis); resuming after #{watcher.store.last_block}")
             except CONNECTION_ERRORS as e2:  # still down: loop and retry
                 log(f"reconnect failed: {type(e2).__name__}: {e2}")
@@ -273,7 +320,7 @@ def _reconnect(watcher: Watcher, args) -> Chain:
         watcher.chain.substrate.close()
     except Exception:
         pass
-    chain = connect(args.url, args.profile)
+    chain = _open_reads(args)
     if chain.genesis_hash != watcher.chain.genesis_hash:
         chain.substrate.close()
         raise GenesisChanged(f"chain now has genesis {chain.genesis_hash}, was {watcher.chain.genesis_hash}")
@@ -287,7 +334,8 @@ def main(argv=None) -> int:
     ap.add_argument("--url", default=None, help="node endpoint (default $AIRLOCK_WSS, else the profile default)")
     ap.add_argument("--db", type=Path, default=None, help="SQLite file (default $AIRLOCK_DB, else ~/.local/share/airlock)")
     ap.add_argument("--from-block", type=int, default=None, help="first run only: scan from this block, not the head")
-    ap.add_argument("--finalized", action="store_true", help="follow finalized heads (slower, reorg-proof)")
+    ap.add_argument("--finalized", action="store_true",
+                    help="follow finalized heads (slower; best heads are the default, with a reorg re-scan by hash)")
     ap.add_argument("--jsonl", type=Path, default=None, help="also append every alert to this JSON-lines file")
     ap.add_argument("--no-telegram", action="store_true", help="do not send to Telegram even if configured")
     ap.add_argument("--once", action="store_true", help="catch up to the current head, then exit")
@@ -295,10 +343,15 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     notifiers: list[Notifier] = [StdoutNotifier()]
-    telegram = None if args.no_telegram else telegram_from_config()
+    try:
+        telegram = None if args.no_telegram else telegram_from_config()
+    except ValueError as e:  # malformed token or button URL: say so loudly, keep alerting on the other channels
+        print(f"telegram: MISCONFIGURED — {e}; alerts go to stdout"
+              + (" and the JSON-lines log" if args.jsonl else ""), file=sys.stderr)
+        telegram = False
     if telegram:
         notifiers.append(telegram)
-    else:
+    elif telegram is None:
         print("telegram: not configured (no token) — alerts go to stdout"
               + (" and the JSON-lines log" if args.jsonl else ""), file=sys.stderr)
     if args.jsonl:

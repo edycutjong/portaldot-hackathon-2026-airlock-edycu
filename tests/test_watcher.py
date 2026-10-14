@@ -30,18 +30,21 @@ def other_event():
 class FakeSubstrate:
     def __init__(self, head=100):
         self.head = head
+        self.fork = {}  # block number -> replacement hash (a reorg or a reset chain)
         self.events = {}
         self.proxies = {VAULT: ([{"delegate": HOT, "proxy_type": "Any", "delay": 5},
                                  {"delegate": OTHER, "proxy_type": "Any", "delay": 0}], 198)}
         self.account = {"free": 1_000_000, "reserved": 0, "frozen": 0, "flags": 0}
 
     def get_block_hash(self, n):
-        return None if n > self.head else f"0x{n:064x}"
+        return None if n > self.head else self.fork.get(n, f"0x{n:064x}")
 
     def get_block_number(self, _):
         return self.head
 
     def get_events(self, block_hash):
+        if block_hash in self.fork.values():
+            return self.events.get(block_hash, [])
         return self.events.get(int(block_hash, 16), [])
 
     def query(self, module, storage, params, block_hash=None):
@@ -206,19 +209,85 @@ def test_failed_channel_is_retried_next_block_without_repeating_the_others(tmp_p
     assert telegram.sent[0][0].head == 101 and telegram.sent[0][0].blocks_left == 4  # countdown recomputed
 
 
-def test_retries_stop_after_max_attempts(tmp_path, monkeypatch):
-    import airlock.watcher as watcher_mod
-    monkeypatch.setattr(watcher_mod, "MAX_ATTEMPTS", 2)
+def test_each_channel_is_recorded_as_soon_as_it_succeeds(tmp_path):
+    """A crash after stdout succeeded but before telegram was tried must not repeat stdout on restart."""
     fake = FakeSubstrate()
     store = Store(tmp_path / "w.db")
     store.watch(VAULT, "interim-sdk")
-    telegram = Recorder("telegram", fail_times=99)
-    w = Watcher(chain(fake), store, [telegram], log=lambda m: None)
+
+    class Crash(Exception):
+        pass
+
+    class Dies(Recorder):
+        def send(self, alert, text):
+            raise Crash()
+
+    w = Watcher(chain(fake), store, [Recorder("stdout"), Dies("telegram")], log=lambda m: None)
     fake.events[100] = [announced(VAULT, HOT, H1)]
-    for head in (100, 101, 102, 103):
+    with pytest.raises(Crash):
+        w.catch_up(100)
+    assert store.announcements()[0]["delivered_via"] == "stdout"
+    stdout2, telegram2 = Recorder("stdout"), Recorder("telegram")
+    w2 = Watcher(chain(fake), store, [stdout2, telegram2], log=lambda m: None)
+    w2.catch_up(100)  # restart: the block is re-scanned (cursor never moved) and the alert retried
+    assert stdout2.sent == [] and len(telegram2.sent) == 1 and w2.alerts_sent == 1
+
+
+def test_retries_give_up_loudly_after_the_window(tmp_path):
+    import airlock.watcher as watcher_mod
+    now = [1000.0]
+    logs = []
+    fake = FakeSubstrate()
+    store = Store(tmp_path / "w.db")
+    store.watch(VAULT, "interim-sdk")
+    telegram = Recorder("telegram", fail_times=10**6)
+    w = Watcher(chain(fake), store, [telegram], log=logs.append, clock=lambda: now[0])
+    fake.events[100] = [announced(VAULT, HOT, H1)]
+    w.catch_up(100)
+    for head in range(101, 106):
         fake.head = head
         w.catch_up(head)
-    assert store.announcements()[0]["attempts"] == 2 and telegram.fail_times == 97
+    assert store.announcements()[0]["attempts"] == 6
+    now[0] += watcher_mod.RETRY_WINDOW_S + 1
+    fake.head = 106
+    w.catch_up(106)
+    row = store.announcements()[0]
+    assert row["gave_up"] == 1 and row["attempts"] == 6 and row["alert_sent_at"] is None
+    assert any(m.startswith("GAVE UP") and "telegram" in m for m in logs)
+    fake.head = 107
+    w.catch_up(107)
+    assert store.announcements()[0]["attempts"] == 6  # no more retries
+
+
+def test_reorg_of_processed_blocks_is_rescanned(setup):
+    setup.w.catch_up(100)
+    setup.fake.head = 103
+    setup.w.catch_up(103)
+    # blocks 102-103 are replaced by a fork that carries an announcement in its #102
+    setup.fake.fork = {102: "0x" + "aa" * 32, 103: "0x" + "bb" * 32}
+    setup.fake.events["0x" + "aa" * 32] = [announced(VAULT, HOT, H2)]
+    setup.fake.head = 104
+    alerts = setup.w.catch_up(104)
+    assert [a.announced_block for a in alerts] == [102] and alerts[0].call_hash == H2
+    assert setup.store.last_block == 104
+
+
+def test_reset_chain_with_the_same_genesis_stops(setup):
+    """A --tmp dev chain restarted from genesis: same genesis hash, but the processed blocks are gone."""
+    from airlock.store import ChainReset
+    setup.w.catch_up(100)
+    setup.fake.head = 5
+    with pytest.raises(ChainReset):
+        setup.w.catch_up(5)
+
+
+def test_replaced_history_beyond_the_kept_hashes_stops(setup):
+    from airlock.store import ChainReset
+    setup.w.catch_up(100)
+    setup.fake.head = 120
+    setup.fake.fork = {n: "0x" + f"{n:064x}"[::-1] for n in range(0, 121)}
+    with pytest.raises(ChainReset):
+        setup.w.catch_up(120)
 
 
 def test_legacy_1002_profile_end_to_end(tmp_path):
@@ -238,3 +307,8 @@ def test_legacy_1002_profile_end_to_end(tmp_path):
     a, text = out.sent[0]
     assert a.at_risk == "6.0000 POT" and a.locked == "4.0000 POT" and a.release_block == 105
     assert "Chain: interim — not V3 (Portaldot dev node, runtime spec 1002)" in text
+
+
+def test_stall_timeout_scales_with_block_time():
+    from airlock.watcher import stall_seconds
+    assert stall_seconds(3000) == 30.0 and stall_seconds(12000) == 60.0 and stall_seconds(None) == 30.0

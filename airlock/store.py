@@ -2,8 +2,10 @@
 
 Columns follow the architecture's schema; the vault's spawner/hot/cold are filled by `airlock create` once the CLI
 ships and are nullable until then (a vault can be watched by address alone). One row per announcement
-(vault, delegate, call_hash, block) makes alerting idempotent: re-processing a block after a crash or reconnect never
-alerts twice (I4), and an alert that was not delivered is retried.
+(vault, delegate, call_hash, block) means re-processing a block after a reconnect or reorg check does not alert again
+(I4); each channel's delivery is recorded as soon as it succeeds, so a crash can repeat at most the channel that was
+mid-send (delivery is at-least-once, never silently zero). The hashes of recently processed blocks let the watcher
+notice a reorg or a reset chain instead of trusting a stale cursor.
 """
 
 from __future__ import annotations
@@ -13,10 +15,16 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+BLOCK_HASHES_KEPT = 512  # how far back a reorg can be detected and re-scanned
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS processed_block (
+  number INTEGER PRIMARY KEY,
+  hash TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS vault (
   address TEXT PRIMARY KEY,
@@ -39,6 +47,8 @@ CREATE TABLE IF NOT EXISTS announcement (
   alert_text TEXT,
   alert_json TEXT,
   attempts INTEGER NOT NULL DEFAULT 0,
+  first_attempt_at REAL,
+  gave_up INTEGER NOT NULL DEFAULT 0,
   alert_sent_at REAL,
   delivered_via TEXT,
   PRIMARY KEY (vault, delegate, call_hash, announced_block)
@@ -50,6 +60,11 @@ class GenesisChanged(RuntimeError):
     """The database belongs to another chain (or the chain was reset): stop instead of rescanning."""
 
 
+class ChainReset(GenesisChanged):
+    """Same genesis, but the blocks the watcher processed are gone (a dev chain restarted from genesis, or a reorg
+    deeper than the hashes kept): stop instead of trusting the cursor."""
+
+
 @dataclass(frozen=True)
 class Stored:
     vault: str
@@ -57,6 +72,13 @@ class Stored:
     call_hash: str
     announced_block: int
     alert_sent_at: float | None
+
+
+_KEY = "vault = ? AND delegate = ? AND call_hash = ? AND announced_block = ?"
+
+
+def _key(s: Stored) -> tuple:
+    return (s.vault, s.delegate, s.call_hash, s.announced_block)
 
 
 class Store:
@@ -96,9 +118,21 @@ class Store:
         value = self._get("last_block")
         return int(value) if value is not None else None
 
-    def set_last_block(self, number: int) -> None:
+    def set_last_block(self, number: int, block_hash: str) -> None:
+        self._set("last_block", str(number))
+        self.db.execute("INSERT OR REPLACE INTO processed_block (number, hash) VALUES (?, ?)", (number, block_hash))
+        self.db.execute("DELETE FROM processed_block WHERE number <= ?", (number - BLOCK_HASHES_KEPT,))
+        self.db.commit()
+
+    def rewind(self, number: int) -> None:
+        """Forget processed blocks above `number` (they were reorged out); the cursor moves back to `number`."""
+        self.db.execute("DELETE FROM processed_block WHERE number > ?", (number,))
         self._set("last_block", str(number))
         self.db.commit()
+
+    def processed_hashes(self) -> list[tuple[int, str]]:
+        """(number, hash) of the processed blocks still kept, newest first."""
+        return self.db.execute("SELECT number, hash FROM processed_block ORDER BY number DESC").fetchall()
 
     # -- vaults ----------------------------------------------------------------------------------------------------
     def watch(self, address: str, profile_id: str, telegram_chat_id: str | None = None) -> None:
@@ -126,38 +160,40 @@ class Store:
 
     def get(self, vault: str, delegate: str, call_hash: str, announced_block: int) -> Stored:
         row = self.db.execute(
-            "SELECT vault, delegate, call_hash, announced_block, alert_sent_at FROM announcement "
-            "WHERE vault = ? AND delegate = ? AND call_hash = ? AND announced_block = ?",
+            f"SELECT vault, delegate, call_hash, announced_block, alert_sent_at FROM announcement WHERE {_KEY}",
             (vault, delegate, call_hash.lower(), announced_block)).fetchone()
         return Stored(*row)
 
-    def note_attempt(self, stored: Stored) -> None:
-        self.db.execute("UPDATE announcement SET attempts = attempts + 1 "
-                        "WHERE vault = ? AND delegate = ? AND call_hash = ? AND announced_block = ?",
-                        (stored.vault, stored.delegate, stored.call_hash, stored.announced_block))
-        self.db.commit()
-
-    def mark_delivery(self, stored: Stored, via: list[str], complete: bool, at: float | None = None) -> None:
-        """Record which channels have the alert; `alert_sent_at` is set once every owner-facing channel has it."""
-        self.db.execute(
-            "UPDATE announcement SET delivered_via = ?, alert_sent_at = CASE WHEN ? THEN ? ELSE alert_sent_at END "
-            "WHERE vault = ? AND delegate = ? AND call_hash = ? AND announced_block = ?",
-            (",".join(via), int(complete), at or time.time(), stored.vault, stored.delegate, stored.call_hash,
-             stored.announced_block))
+    def note_attempt(self, stored: Stored, at: float) -> None:
+        self.db.execute(f"UPDATE announcement SET attempts = attempts + 1, "
+                        f"first_attempt_at = COALESCE(first_attempt_at, ?) WHERE {_KEY}", (at, *_key(stored)))
         self.db.commit()
 
     def delivered_via(self, stored: Stored) -> set[str]:
-        row = self.db.execute("SELECT delivered_via FROM announcement "
-                              "WHERE vault = ? AND delegate = ? AND call_hash = ? AND announced_block = ?",
-                              (stored.vault, stored.delegate, stored.call_hash, stored.announced_block)).fetchone()
+        row = self.db.execute(f"SELECT delivered_via FROM announcement WHERE {_KEY}", _key(stored)).fetchone()
         return set(filter(None, (row[0] or "").split(","))) if row else set()
 
-    def unsent(self, max_attempts: int) -> list[tuple[Stored, str]]:
-        """Undelivered alerts with retries left: (row, alert JSON)."""
+    def add_delivery(self, stored: Stored, channel: str) -> None:
+        """Record one channel's success immediately, so a crash right after a send does not repeat it."""
+        via = self.delivered_via(stored) | {channel}
+        self.db.execute(f"UPDATE announcement SET delivered_via = ? WHERE {_KEY}", (",".join(sorted(via)), *_key(stored)))
+        self.db.commit()
+
+    def mark_sent(self, stored: Stored, at: float) -> None:
+        """Every owner-facing channel has it."""
+        self.db.execute(f"UPDATE announcement SET alert_sent_at = ? WHERE {_KEY}", (at, *_key(stored)))
+        self.db.commit()
+
+    def unsent(self) -> list[tuple[Stored, str, float | None]]:
+        """Undelivered alerts not given up on: (row, alert JSON, first attempt time)."""
         rows = self.db.execute(
-            "SELECT vault, delegate, call_hash, announced_block, alert_sent_at, alert_json FROM announcement "
-            "WHERE alert_sent_at IS NULL AND attempts < ? ORDER BY announced_block", (max_attempts,)).fetchall()
-        return [(Stored(*r[:5]), r[5]) for r in rows]
+            "SELECT vault, delegate, call_hash, announced_block, alert_sent_at, alert_json, first_attempt_at "
+            "FROM announcement WHERE alert_sent_at IS NULL AND gave_up = 0 ORDER BY announced_block").fetchall()
+        return [(Stored(*r[:5]), r[5], r[6]) for r in rows]
+
+    def give_up(self, stored: Stored) -> None:
+        self.db.execute(f"UPDATE announcement SET gave_up = 1 WHERE {_KEY}", _key(stored))
+        self.db.commit()
 
     def announcements(self) -> list[dict]:
         cur = self.db.execute("SELECT * FROM announcement ORDER BY announced_block")

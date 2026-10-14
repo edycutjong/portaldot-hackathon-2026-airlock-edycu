@@ -15,8 +15,11 @@ from a watched vault. It never signs anything.
 3. **Pending sweep.** At start, after a reconnect, and after any block whose events could not be read (a pruned node,
    logged as `GAP`), it also reads `Proxy.Announcements` of every delegate of every watched vault and alerts any
    pending announcement it has not recorded — so an announcement made before the watcher's first run is not missed.
-4. **Verdict.** The owner intent registry does not exist yet, so nothing can vouch for an announcement: every one is
-   **NOT YOURS**. An announcement carries only the call hash; the alert does not need the call to be decoded. Each alert
+4. **Verdict.** An announcement carries only the call hash. It is **YOURS** only if the owner registered that exact call
+   with the owner token before it was announced (the owner intent registry, which shares the watcher's SQLite file —
+   [REGISTRY.md](REGISTRY.md)); the YOURS alert shows the decoded call and still the command to cancel it. Every other
+   announcement is **NOT YOURS** — including a call whose preimage someone else published, a replay of a call the owner
+   already made, or any announcement while the registry cannot be read (it fails closed). Each alert
    also checks that the announcement is still pending; one that was already vetoed, removed or executed (seen late,
    after downtime) is sent as **NOT YOURS — NO LONGER PENDING**, without a veto command, telling the owner to check the
    vault.

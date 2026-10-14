@@ -3,7 +3,8 @@
 Every row is a real extrinsic, identified by extrinsic id (`block-index`), block hash and transaction hash, and
 labelled with the chain profile it ran on (`airlock/chain_profile.py`). Rows are appended by the script that
 produced them (`scripts/spike_proxy.py`, `scripts/seed.py` and `scripts/refetch.py`, each with `--proof docs/PROOF.md`),
-never added by hand (a stale row may be deleted by hand); each run names the commit that produced it; its JSON is in `evidence/`.
+never added by hand (a stale row may be deleted by hand); each spike and seed run names the commit that produced it,
+each end-to-end log (`evidence/e2e-*.log`) names it on its first line, and every run's JSON or log is in `evidence/`.
 
 **Profile labels.** The target is the Portaldot V3 testnet. Its RPC host `testnetv3-node.feso-apps.xyz` did not
 resolve in the checks on 2026-10-14 logged in `evidence/v3-dns.txt` (at 12:44 UTC the
@@ -15,7 +16,7 @@ resolver answered `NXDOMAIN`), so these rows come from
 | `interim-sdk` | upstream polkadot-sdk `substrate-node` dev chain (`polkadot-stable2606-3`), run by `scripts/interim_node.sh` | `node/268` | `0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2` |
 | `interim-1002` | the `portaldot_dev` dev node from the Portaldot node repository (`portaldotVolunteer/Portaldot-node`), `--tmp` | `portaldot/1002` | `0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22` |
 
-The dev genesis is deterministic, so a fresh `interim-sdk` chain has the same genesis hash; a row can be re-fetched only
+The dev genesis is deterministic (`scripts/interim_node.sh --fresh` restarts the chain under the same genesis hash); a row can be re-fetched only
 from the node that recorded it (`--base-path` keeps it across restarts, and both chains run as state archives so a
 receipt's events stay readable). `interim-1002` runs with `--tmp`, so its rows are a run log, not re-fetchable proof
 once that node stops. Signers are public dev keys: in the spike runs `//Alice` cold (`//Dave` on `interim-1002`),
@@ -332,16 +333,6 @@ Fresh process over http (`http://127.0.0.1:29944`) at head #17517 · `evidence/r
 |---|---|---|---|---|---|
 | `17428-2` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0xa7cfad34ea7e1afe8ff483222b1650429c3f725f150a77f97894e6d250cd8cd3` | `0x49aaa7bf0eaa6db42cfa48273f78f661068d7bc9d7dfa16e4d5ac6a17589ddd7` | interim-sdk — not V3 |
 
-### re-fetch — 2026-10-14T15:43:56Z — the thief-interim-1002-2026-10-14T153904Z interim-1002 run, by extrinsic id
-
-Fresh process over http (`http://127.0.0.1:19933`; the run itself was sent over ws) at head #8793 · `evidence/refetch-interim-1002-2026-10-14T154356Z.json` · every row: same block hash, tx hash and outcome as recorded.
-
-| extrinsic id | call | outcome | block hash | tx hash | profile |
-|---|---|---|---|---|---|
-| `8746-1` | `Proxy.announce` | ok | `0x372a8fcce8a1c9c3886cda2180a716ea2e023a5c0651b0db33f517071b4548bc` | `0x24468ffc95cc4d6dcfe15e3eefde994d460e35ae8555d3fdccd13a0a7bd74c11` | interim-1002 — not V3 |
-| `8758-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x267eb9a6425bce50518f3b4378686fae04a4faea3645840f7b9de28832e5c015` | `0xdab01170656306e2f18ed44588c451f33b0000f106611e7d143905cea7585935` | interim-1002 — not V3 |
-| `8759-1` | `Proxy.proxy(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x33c52d4ca6bdec17a8a00e600013660f96f7348a606aa8a06f62cc5a9d1d4d20` | `0x5215ff1d80df506ba11c604f8908fbb19fcd42e3fcf801157f0806b9bfb87fc3` | interim-1002 — not V3 |
-
 ### re-fetch — 2026-10-14T15:43:56Z — 8747-1 on interim-1002, found by extrinsic id
 
 Fresh process over http (`http://127.0.0.1:19933`) at head #8793 · `evidence/refetch-interim-1002-2026-10-14T154356Z.json` · looked up by id alone: no recorded row to compare with — the block hash, call, outcome and tx hash below are what the chain returns.
@@ -349,3 +340,49 @@ Fresh process over http (`http://127.0.0.1:19933`) at head #8793 · `evidence/re
 | extrinsic id | call | outcome | block hash | tx hash | profile |
 |---|---|---|---|---|---|
 | `8747-1` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0x08bffc747a1a1f56349fdf7b41467c8faa55115c4716eefc1187c37f2ccabf0f` | `0x1c8858eb209ef626edea210fa737b1d2a13a4e9c69ab332b54cd1ddfbf825bc0` | interim-1002 — not V3 |
+
+### re-fetch — 2026-10-14T15:49:56Z — the thief-interim-1002-2026-10-14T153904Z interim-1002 run, by extrinsic id
+
+Fresh process over http (`http://127.0.0.1:19933`; the run itself was sent over ws) at head #8853 · `evidence/refetch-interim-1002-2026-10-14T154956Z.json` · every row: same block hash, tx hash and outcome as recorded.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile |
+|---|---|---|---|---|---|
+| `8746-1` | `Proxy.announce` | ok | `0x372a8fcce8a1c9c3886cda2180a716ea2e023a5c0651b0db33f517071b4548bc` | `0x24468ffc95cc4d6dcfe15e3eefde994d460e35ae8555d3fdccd13a0a7bd74c11` | interim-1002 — not V3 |
+| `8758-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x267eb9a6425bce50518f3b4378686fae04a4faea3645840f7b9de28832e5c015` | `0xdab01170656306e2f18ed44588c451f33b0000f106611e7d143905cea7585935` | interim-1002 — not V3 |
+| `8759-1` | `Proxy.proxy(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x33c52d4ca6bdec17a8a00e600013660f96f7348a606aa8a06f62cc5a9d1d4d20` | `0x5215ff1d80df506ba11c604f8908fbb19fcd42e3fcf801157f0806b9bfb87fc3` | interim-1002 — not V3 |
+
+### re-fetch — 2026-10-14T15:54:24Z — the thief-interim-sdk-2026-10-14T155007Z interim-sdk run, by extrinsic id
+
+Fresh process over http (`http://127.0.0.1:29944`; the run itself was sent over ws) at head #17727 · `evidence/refetch-interim-sdk-2026-10-14T155424Z.json` · every row: same block hash, tx hash and outcome as recorded.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile |
+|---|---|---|---|---|---|
+| `17645-2` | `Proxy.announce` | ok | `0x82de8d25f6a496414a67735e193f8b1325a1522827c9bc46fca4b24a0e2c38bc` | `0xdb7f2df54ce84cb203c465d3f86e25e6b3eef9435849c636a14cd54a22916371` | interim-sdk — not V3 |
+| `17668-2` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x44e36aff855b91f6c2ce84f386e1b0f79ab04ab3da14f2953903b36d9de6ef1f` | `0x7dcc24790a6560436a3b98dd7d41a74545333ab9343607a905cfce8396cd72a1` | interim-sdk — not V3 |
+| `17670-2` | `Proxy.proxy(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x038069e6451c2a15c45f677424621fe30b9a8f7d2ca09945dcd278bea703cf45` | `0x24e0e721b068ce3c6b465b53fa313998cf56fa00a69031ce8394615fd083e5a8` | interim-sdk — not V3 |
+
+### re-fetch — 2026-10-14T15:54:27Z — 17647-2 on interim-sdk, found by extrinsic id
+
+Fresh process over http (`http://127.0.0.1:29944`) at head #17728 · `evidence/refetch-interim-sdk-2026-10-14T155427Z.json` · looked up by id alone: no recorded row to compare with — the block hash, call, outcome and tx hash below are what the chain returns.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile |
+|---|---|---|---|---|---|
+| `17647-2` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0xed598f5dc314d400f8ef0d3e7a4f47e7a446cc26a754b567f6e118e7a02bacd3` | `0x4cd52589a19024fa43e334d94f72dca2bd8daca90ba3b3f32933d05aaf9bc890` | interim-sdk — not V3 |
+
+### re-fetch — 2026-10-14T15:54:29Z — the thief-interim-1002-2026-10-14T154956Z interim-1002 run, by extrinsic id
+
+Fresh process over http (`http://127.0.0.1:19933`; the run itself was sent over ws) at head #8898 · `evidence/refetch-interim-1002-2026-10-14T155429Z.json` · every row: same block hash, tx hash and outcome as recorded.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile |
+|---|---|---|---|---|---|
+| `8854-1` | `Proxy.announce` | ok | `0x11fbf8e55d160d7cd110e935435e68cbd3533fe9c7a124d2ae8d653b988c414c` | `0x4717188726f8efd9af6b9dea96c5cfa13da6835f0a24895b05bacf079b7381da` | interim-1002 — not V3 |
+| `8866-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x7816a87e40281f1f5ae5d2438a630605e55a26c450cf13e0648b5e823b9247c7` | `0x6b36e75940ec9df17fd053e2042d34d6daccf2eca2be05979b3cf52ec5449373` | interim-1002 — not V3 |
+| `8867-1` | `Proxy.proxy(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x55ce1eaaa14384b86621d4a1c3a9ac1321d747c0d735ed4aebfa3f1b3a2b7e29` | `0xa137e7c43e8f96ffe3102c84955ae9773831443855a5c98bfc710d45b4d6382f` | interim-1002 — not V3 |
+
+### re-fetch — 2026-10-14T15:54:29Z — 8855-1 on interim-1002, found by extrinsic id
+
+Fresh process over http (`http://127.0.0.1:19933`) at head #8898 · `evidence/refetch-interim-1002-2026-10-14T155429Z-2.json` · looked up by id alone: no recorded row to compare with — the block hash, call, outcome and tx hash below are what the chain returns.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile |
+|---|---|---|---|---|---|
+| `8855-1` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0x493f5379c6139d2b78ac2aec7f6229e4384dcacd2b05a90cad154050119e0004` | `0x3850632e3be73ae3335cca65c47fe6300fda90963aa3ca6392ee2aebf039e66b` | interim-1002 — not V3 |

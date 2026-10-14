@@ -5,7 +5,7 @@
 **A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.**
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Tests: 241 passing](https://img.shields.io/badge/tests-241%20passing-brightgreen)
+![Tests: 245 passing](https://img.shields.io/badge/tests-245%20passing-brightgreen)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)
 ![Chain: interim, not V3](https://img.shields.io/badge/chain-interim%20%E2%80%94%20not%20V3-orange)
 
@@ -26,7 +26,8 @@
 
 A POT holder who keeps funds on one hot key loses them in one block when that seed leaks. A multisig fixes this but
 needs a second signer for every payment, which is heavy for one person. The Substrate Proxy pallet already ships a
-better primitive, time-delayed proxies with announcements and a veto, but we did not find a product built around it.
+better primitive, time-delayed proxies with announcements and a veto, but in our search (not a market survey) we have
+not found a product built around it.
 
 ### Solution
 
@@ -141,7 +142,7 @@ cd portaldot-hackathon-2026-airlock-edycu
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'                 # also installs the `airlock` command
 
-pytest -q                               # 241 passed, 4 skipped: no chain or network needed (the 4 are the live-chain tests)
+pytest -q                               # 245 passed, 4 skipped: no chain or network needed (the 4 are the live-chain tests)
 
 scripts/interim_node.sh interim-sdk     # terminal 1: dev chain on ws://127.0.0.1:29944 (archive state)
 
@@ -171,7 +172,7 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
 - **Video:** coming at check-in.
 - **Live demo:** none yet (local chains only).
 - **End to end** ([scripts/e2e_evidence.sh](scripts/e2e_evidence.sh), logs in [evidence/](evidence/)), on both interim
-  chains at commit `c6acae1` (and earlier at `ab8a03d`): [scripts/thief.py](scripts/thief.py), which imports no
+  chains at commit `93c16fb` (and earlier at `c6acae1`, `ab8a03d`): [scripts/thief.py](scripts/thief.py), which imports no
   Airlock code, announces a sweep of everything `transfer_keep_alive` can take from the demo vault (4,670.15 UNIT on
   `interim-sdk`, 4,965.17 POT on `interim-1002`) → the watcher prints a NOT YOURS alert with the amount at risk and the
   veto deadline (19 blocks, ≈ 57 s, on `interim-sdk`) → the alert's own `airlock veto …` line, run as printed,
@@ -183,7 +184,7 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
   vetoed, one executed after its veto and failing, one withdrawn announcement, a panic) — and the end-state checks of
   [fixtures/expected.json](fixtures/expected.json) all hold. Re-fetched 27/27 and 29/29 by extrinsic id.
 - **Proof:** [docs/PROOF.md](docs/PROOF.md) — every row with extrinsic id, block hash, tx hash and the profile label.
-- **Tests:** 241 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
+- **Tests:** 245 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
   I2: a vetoed announcement never executes, also after the delay; the control; panic) that pass on both interim chains
   (`evidence/integration-*.json`, `"status": "passed"`).
 - **Watcher:** [docs/WATCHER.md](docs/WATCHER.md) — also shown live after a watcher restart, a node restart and a node

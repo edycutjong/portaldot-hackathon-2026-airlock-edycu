@@ -1,0 +1,44 @@
+{
+  "started": "2026-10-14T15:54:29Z",
+  "endpoint": "http://127.0.0.1:19933",
+  "transport": "http",
+  "profile": "interim-1002",
+  "label": "interim \u2014 not V3 (Portaldot dev node, runtime spec 1002)",
+  "genesis_hash": "0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22",
+  "head_at_refetch": 8898,
+  "source": "evidence/thief-interim-1002-2026-10-14T154956Z.jsonl",
+  "matched": 3,
+  "total": 3,
+  "rows": [
+    {
+      "extrinsic_id": "8854-1",
+      "block_number": 8854,
+      "block_hash": "0x11fbf8e55d160d7cd110e935435e68cbd3533fe9c7a124d2ae8d653b988c414c",
+      "extrinsic_hash": "0x4717188726f8efd9af6b9dea96c5cfa13da6835f0a24895b05bacf079b7381da",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8866-1",
+      "block_number": 8866,
+      "block_hash": "0x7816a87e40281f1f5ae5d2438a630605e55a26c450cf13e0648b5e823b9247c7",
+      "extrinsic_hash": "0x6b36e75940ec9df17fd053e2042d34d6daccf2eca2be05979b3cf52ec5449373",
+      "call": "Proxy.proxy_announced(Balances.transfer_keep_alive)",
+      "outcome": "Proxy.Unannounced",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8867-1",
+      "block_number": 8867,
+      "block_hash": "0x55ce1eaaa14384b86621d4a1c3a9ac1321d747c0d735ed4aebfa3f1b3a2b7e29",
+      "extrinsic_hash": "0xa137e7c43e8f96ffe3102c84955ae9773831443855a5c98bfc710d45b4d6382f",
+      "call": "Proxy.proxy(Balances.transfer_keep_alive)",
+      "outcome": "Proxy.Unannounced",
+      "match": true,
+      "diffs": []
+    }
+  ]
+}

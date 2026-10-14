@@ -1,0 +1,50 @@
+code 93c16fb · profile interim-sdk · vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG · delay 20 blocks · thief payee attacker-3 5DaU7TgNgbAPGF59Zu8yQLrEHwQv85FkckXtNHzEj48xGUJg
+[driver 15:50:07] airlock status before
+chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · node/268 · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944
+vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG on interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · head #17641
+  at risk 4,670.1500 UNIT (free 4,770.1500 UNIT, reserved 198.0000 UNIT, locked 0.0000 UNIT)
+  delegate 5DytMgngbd6x8q6CswTVDktPKCVKTBSyryiweYDEw4dvheEU Any delay 0  (cold: veto/panic)
+  delegate 5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7 Any delay 20
+  no pending announcements
+[driver 15:50:12] balances before {"vault_total": 4968150000000000, "payee_total": 0}
+telegram: not configured (no token) — alerts go to stdout and the JSON-lines log
+watching 1 vault(s) on interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944 · block 3000 ms · notifiers: stdout, jsonl · db .e2e-interim-sdk.db
+[driver 15:50:14] thief announces a sweep of the whole vault (scripts/thief.py, no airlock code, no intent registered)
+{"step": "announce", "script": "scripts/thief.py (no airlock imports)", "vault": "5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG", "delegate": "5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7", "to": "5DaU7TgNgbAPGF59Zu8yQLrEHwQv85FkckXtNHzEj48xGUJg", "planck": "4670150000000000", "call_hash": "0x285ba2cd29d122932dd3e136e1c2414205139b41f5d1a9b68b1f3354710d1cca", "outcome": "ok", "extrinsic_id": "17645-2", "block_hash": "0x82de8d25f6a496414a67735e193f8b1325a1522827c9bc46fca4b24a0e2c38bc", "extrinsic_hash": "0xdb7f2df54ce84cb203c465d3f86e25e6b3eef9435849c636a14cd54a22916371", "block": 17645, "genesis_hash": "0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2"}
+========================================================================
+NOT YOURS — VETO
+Vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG
+Chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain)
+Up to 4,670.1500 UNIT at risk (100.0000 UNIT of the free balance cannot move: locks, or the existential deposit a vault with deposits keeps)
+Announced by delegate 5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7 at block #17645; executable from #17665. Veto must land by #17664: 19 blocks (≈ 57 s) from head #17645
+Call hash 0x285ba2cd29d122932dd3e136e1c2414205139b41f5d1a9b68b1f3354710d1cca (an announcement publishes only the hash)
+Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY, e.g. file:~/.config/airlock/cold.seed):
+airlock veto --vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG --delegate 5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7 --hash 0x285ba2cd29d122932dd3e136e1c2414205139b41f5d1a9b68b1f3354710d1cca
+or in polkadot.js Apps > Developer > Extrinsics, signed by the cold key:
+proxy.proxy(real=5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG, forceProxyType=None, call=proxy.rejectAnnouncement(delegate=5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7, callHash=0x285ba2cd29d122932dd3e136e1c2414205139b41f5d1a9b68b1f3354710d1cca))
+========================================================================
+[driver 15:50:19] alert delivered; running the veto command exactly as the alert printed it
+$ airlock veto --vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG --delegate 5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7 --hash 0x285ba2cd29d122932dd3e136e1c2414205139b41f5d1a9b68b1f3354710d1cca
+chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · node/268 · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944
+[interim-sdk — not V3] ok     veto                 Proxy.proxy(Proxy.reject_announcement)       by cold #17647 id 17647-2 tx 0x4cd52589a19024fa43e334d94f72dca2bd8daca90ba3b3f32933d05aaf9bc890
+VETOED 0x285ba2cd29d122932dd3e136e1c2414205139b41f5d1a9b68b1f3354710d1cca — removed from Proxy.Announcements; proxy_announced for it now fails Proxy.Unannounced (veto tx 0x4cd52589a19024fa43e334d94f72dca2bd8daca90ba3b3f32933d05aaf9bc890, id 17647-2)
+[driver 15:50:25] waiting until the delay has passed (announced #17645 + 20)
+[driver 15:51:22] thief executes the announced sweep after the delay
+{"step": "execute", "script": "scripts/thief.py (no airlock imports)", "vault": "5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG", "delegate": "5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7", "to": "5DaU7TgNgbAPGF59Zu8yQLrEHwQv85FkckXtNHzEj48xGUJg", "planck": "4670150000000000", "call_hash": "0x285ba2cd29d122932dd3e136e1c2414205139b41f5d1a9b68b1f3354710d1cca", "outcome": "Proxy.Unannounced", "extrinsic_id": "17668-2", "block_hash": "0x44e36aff855b91f6c2ce84f386e1b0f79ab04ab3da14f2953903b36d9de6ef1f", "extrinsic_hash": "0x7dcc24790a6560436a3b98dd7d41a74545333ab9343607a905cfce8396cd72a1", "block": 17668, "genesis_hash": "0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2"}
+[driver 15:51:27] thief tries proxy.proxy directly (no announcement)
+{"step": "direct", "script": "scripts/thief.py (no airlock imports)", "vault": "5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG", "delegate": "5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7", "to": "5DaU7TgNgbAPGF59Zu8yQLrEHwQv85FkckXtNHzEj48xGUJg", "planck": "1000000000000", "call_hash": "0x1bef09d8e5ad847a5202430e035983b762e80c3b8d8e6f8c5c8cef1a94827572", "outcome": "Proxy.Unannounced", "extrinsic_id": "17670-2", "block_hash": "0x038069e6451c2a15c45f677424621fe30b9a8f7d2ca09945dcd278bea703cf45", "extrinsic_hash": "0x24e0e721b068ce3c6b465b53fa313998cf56fa00a69031ce8394615fd083e5a8", "block": 17670, "genesis_hash": "0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2"}
+[driver 15:51:33] airlock status after
+chain: interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · node/268 · genesis 0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2 · ws://127.0.0.1:29944
+vault 5DMivfmqPLLaJHrkckLMK3dnPpvqUuuCdwo4AnsbcqF4czTG on interim — not V3 (upstream polkadot-sdk substrate-node dev chain) · head #17670
+  at risk 4,670.1500 UNIT (free 4,770.1500 UNIT, reserved 198.0000 UNIT, locked 0.0000 UNIT)
+  delegate 5DytMgngbd6x8q6CswTVDktPKCVKTBSyryiweYDEw4dvheEU Any delay 0  (cold: veto/panic)
+  delegate 5HdfJYRCQbFsqCQvVnAVao5KztkgrkZjSgne7bWYsfwqsNa7 Any delay 20
+  no pending announcements
+[driver 15:51:39] balances after {"vault_total": 4968150000000000, "payee_total": 0}
+E2E PASS [('announce', 'ok'), ('execute', 'Proxy.Unannounced'), ('direct', 'Proxy.Unannounced')] · vault total and thief payee total unchanged: True
+[driver 15:51:39] re-fetching the thief's extrinsics by id over HTTP
+3/3 re-fetched and matched by extrinsic id over http (interim-sdk — not V3)
+-> evidence/refetch-interim-sdk-2026-10-14T155141Z.json
+FOUND 17647-2  Proxy.proxy(Proxy.reject_announcement)               outcome=ok                 tx=0x4cd52589a19024fa43e334d94f72dca2bd8daca90ba3b3f32933d05aaf9bc890
+1/1 found by extrinsic id over http (interim-sdk — not V3)
+-> evidence/refetch-interim-sdk-2026-10-14T155144Z.json

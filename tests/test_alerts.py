@@ -33,8 +33,16 @@ def test_text_leads_with_the_verdict_and_ends_with_the_veto_command():
 def test_text_names_the_chain_and_the_countdown():
     text = format_text(alert())
     assert "Chain: interim — not V3" in text
-    assert "executable from #105: 4 blocks left (≈ 12 s)" in text
-    assert f"Proxy.reject_announcement({HOT}, {HASH})" in text
+    assert "executable from #105. Veto must land by #104: 3 blocks (≈ 9 s) from head #101" in text
+    assert f"call=proxy.rejectAnnouncement(delegate={HOT}, callHash={HASH})" in text
+    assert "Airlock CLI (ships with the CLI step)" in text
+
+
+def test_veto_deadline_is_one_block_before_the_call_can_execute():
+    """proxy_announced passes once now - announced >= delay, so the call can land IN release_block."""
+    a = alert(announced_block=100, release_block=105, head=104)
+    assert (a.blocks_left, a.veto_by, a.blocks_to_veto) == (1, 104, 0)
+    assert "veto immediately" in format_text(a)
 
 
 def test_text_shows_locked_funds_apart():
@@ -43,7 +51,7 @@ def test_text_shows_locked_funds_apart():
 
 def test_text_when_the_delay_has_already_elapsed():
     text = format_text(alert(head=110, late_by=10))
-    assert "executable since #105 — veto immediately" in text
+    assert "executable from #105 (head #110) — veto immediately" in text
     assert "Seen 10 blocks late" in text
 
 
@@ -57,7 +65,7 @@ def test_v3_chain_is_named_with_its_profile_id():
 
 
 def test_long_countdowns_are_in_minutes():
-    assert "(≈ 50 min)" in format_text(alert(release_block=1101, block_time_ms=3000))
+    assert "(≈ 50 min)" in format_text(alert(release_block=1102, block_time_ms=3000))
 
 
 def test_jsonl_notifier_appends_one_line_per_alert(tmp_path):
@@ -67,7 +75,8 @@ def test_jsonl_notifier_appends_one_line_per_alert(tmp_path):
     n.send(alert(announced_block=101), "t2")
     rows = [json.loads(line) for line in out.read_text().splitlines()]
     assert [r["announced_block"] for r in rows] == [100, 101]
-    assert rows[0]["sent_at"] == 42.0 and rows[0]["blocks_left"] == 4 and rows[0]["veto_command"].startswith("airlock")
+    assert rows[0]["sent_at"] == 42.0 and rows[0]["blocks_left"] == 4 and rows[0]["blocks_to_veto"] == 3
+    assert rows[0]["veto_by"] == 104 and rows[0]["veto_command"].startswith("airlock")
 
 
 class MockBotApi:
@@ -154,14 +163,40 @@ def test_telegram_unreachable_is_raised_without_the_token():
     assert TOKEN not in str(e.value)
 
 
+def test_telegram_http_stack_errors_are_contained(monkeypatch):
+    import http.client
+    import urllib.request
+
+    def broken(*args, **kwargs):
+        raise http.client.IncompleteRead(b"partial")
+    monkeypatch.setattr(urllib.request, "urlopen", broken)
+    with pytest.raises(TelegramError) as e:
+        TelegramNotifier(TOKEN, "777", api_base="http://127.0.0.1:9").send(alert(), "x")
+    assert TOKEN not in str(e.value)
+
+
+@pytest.mark.parametrize("bad", ["", "abc", "123:abc def", "123:abc #comment", ":abc"])
+def test_malformed_tokens_are_refused_without_echoing_them(bad):
+    with pytest.raises(ValueError) as e:
+        TelegramNotifier(bad, "777")
+    assert not bad or bad not in str(e.value)
+
+
+def test_veto_url_base_must_be_https():
+    with pytest.raises(ValueError, match="https"):
+        TelegramNotifier(TOKEN, "777", veto_url_base="http://localhost:3000")
+
+
 def test_telegram_repr_hides_the_token():
     assert TOKEN not in repr(TelegramNotifier(TOKEN, "777"))
 
 
 def test_env_file_parsing(tmp_path):
     f = tmp_path / "telegram.env"
-    f.write_text("# bot\nexport TELEGRAM_BOT_TOKEN='abc:def'\n\nTELEGRAM_CHAT_ID=\"42\"\nnoise\n")
-    assert read_env_file(f) == {"TELEGRAM_BOT_TOKEN": "abc:def", "TELEGRAM_CHAT_ID": "42"}
+    f.write_text("# bot\nexport TELEGRAM_BOT_TOKEN='abc:def' # quoted\n\nTELEGRAM_CHAT_ID=\"42\"\nnoise\n"
+                 "AIRLOCK_VETO_URL_BASE=https://x.example  # later\n")
+    assert read_env_file(f) == {"TELEGRAM_BOT_TOKEN": "abc:def", "TELEGRAM_CHAT_ID": "42",
+                                "AIRLOCK_VETO_URL_BASE": "https://x.example"}
 
 
 def test_telegram_config_absent_means_stdout_only(tmp_path):
@@ -170,7 +205,7 @@ def test_telegram_config_absent_means_stdout_only(tmp_path):
 
 def test_telegram_config_from_file_and_env_override(tmp_path):
     f = tmp_path / "telegram.env"
-    f.write_text("TELEGRAM_BOT_TOKEN=file-token\nTELEGRAM_CHAT_ID=1\n")
+    f.write_text("TELEGRAM_BOT_TOKEN=111:file-token  # from BotFather\nTELEGRAM_CHAT_ID=1\n")
     n = telegram_from_config(f, environ={"AIRLOCK_TELEGRAM_CHAT_ID": "2"})
-    assert n.default_chat_id == "2" and n.veto_url_base is None
-    assert telegram_from_config(f, environ={"AIRLOCK_TELEGRAM_TOKEN": "env-token"})._token == "env-token"
+    assert n._token == "111:file-token" and n.default_chat_id == "2" and n.veto_url_base is None
+    assert telegram_from_config(f, environ={"AIRLOCK_TELEGRAM_TOKEN": "222:env-token"})._token == "222:env-token"

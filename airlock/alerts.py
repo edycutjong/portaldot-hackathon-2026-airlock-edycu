@@ -11,8 +11,10 @@ retried by the watcher, never raised into the block loop. The bot token never ap
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -23,6 +25,7 @@ from typing import Callable, Protocol
 NOT_YOURS = "NOT YOURS"
 TELEGRAM_API = "https://api.telegram.org"
 TELEGRAM_ENV = Path.home() / ".config" / "airlock" / "telegram.env"
+TOKEN_SHAPE = re.compile(r"^\d+:[A-Za-z0-9_-]+$")  # what @BotFather issues: <bot id>:<secret>
 
 
 @dataclass(frozen=True)
@@ -40,20 +43,32 @@ class Alert:
     head: int
     block_time_ms: int | None
     at_risk: str  # formatted transferable balance
-    locked: str | None  # formatted locked balance, shown apart; None when nothing is locked
+    locked: str | None  # formatted free balance a transfer cannot touch (locks), shown apart; None when nothing
     late_by: int = 0  # blocks between the announcement and the head when the alert was built (catch-up)
     chat_id: str | None = None
     extra: dict = field(default_factory=dict)
 
     @property
     def blocks_left(self) -> int | None:
+        """Blocks until the announced call can execute: `proxy_announced` passes once now - announced >= delay."""
         return None if self.release_block is None else self.release_block - self.head
+
+    @property
+    def veto_by(self) -> int | None:
+        """Last block a veto can land in and be sure to win: the call itself can be included in `release_block`."""
+        return None if self.release_block is None else self.release_block - 1
+
+    @property
+    def blocks_to_veto(self) -> int | None:
+        """Blocks still to be produced up to and including `veto_by` (a veto sent now lands at head + 1 at best)."""
+        return None if self.veto_by is None else self.veto_by - self.head
 
     def veto_command(self) -> str:
         return f"airlock veto --vault {self.vault} --delegate {self.delegate} --hash {self.call_hash}"
 
     def as_json(self) -> dict:
-        return {**asdict(self), "blocks_left": self.blocks_left, "veto_command": self.veto_command()}
+        return {**asdict(self), "blocks_left": self.blocks_left, "veto_by": self.veto_by,
+                "blocks_to_veto": self.blocks_to_veto, "veto_command": self.veto_command()}
 
 
 def _seconds(blocks: int, block_time_ms: int | None) -> str:
@@ -73,18 +88,21 @@ def format_text(a: Alert) -> str:
     announced = f"Announced by delegate {a.delegate} at block #{a.announced_block}"
     if a.release_block is None:
         lines.append(f"{announced}; its delay could not be read — veto now")
-    elif a.blocks_left > 0:
-        lines.append(f"{announced}; executable from #{a.release_block}: "
-                     f"{a.blocks_left} blocks left{_seconds(a.blocks_left, a.block_time_ms)}")
+    elif a.blocks_to_veto > 0:
+        lines.append(f"{announced}; executable from #{a.release_block}. "
+                     f"Veto must land by #{a.veto_by}: {a.blocks_to_veto} blocks"
+                     f"{_seconds(a.blocks_to_veto, a.block_time_ms)} from head #{a.head}")
     else:
-        lines.append(f"{announced}; executable since #{a.release_block} — veto immediately "
-                     f"(it can still be rejected until it executes)")
+        lines.append(f"{announced}; executable from #{a.release_block} (head #{a.head}) — veto immediately: "
+                     f"a veto still works until the call executes, but the thief can now execute it")
     if a.late_by > 1:
         lines.append(f"Seen {a.late_by} blocks late: the watcher was offline or catching up")
     lines += [f"Call hash {a.call_hash} (an announcement publishes only the hash)",
-              "Veto with the cold key:",
+              "Veto with the cold key — Airlock CLI (ships with the CLI step):",
               a.veto_command(),
-              f"(= Proxy.proxy(vault, Proxy.reject_announcement({a.delegate}, {a.call_hash})) signed by the cold key)"]
+              "or today in polkadot.js Apps > Developer > Extrinsics, signed by the cold key:",
+              f"proxy.proxy(real={a.vault}, forceProxyType=None, "
+              f"call=proxy.rejectAnnouncement(delegate={a.delegate}, callHash={a.call_hash}))"]
     return "\n".join(lines)
 
 
@@ -133,8 +151,10 @@ class TelegramNotifier:
 
     def __init__(self, token: str, default_chat_id: str | None, api_base: str = TELEGRAM_API,
                  veto_url_base: str | None = None, timeout_s: float = 10):
-        if not token:
-            raise ValueError("Telegram bot token is empty")
+        if not token or not TOKEN_SHAPE.match(token):
+            raise ValueError("Telegram bot token is empty or not shaped like <digits>:<secret> (value not shown)")
+        if veto_url_base and not veto_url_base.startswith("https://"):
+            raise ValueError("AIRLOCK_VETO_URL_BASE must be an https:// URL (Telegram rejects other button URLs)")
         self._token = token
         self.default_chat_id = default_chat_id
         self.api_base = api_base.rstrip("/")
@@ -167,21 +187,28 @@ class TelegramNotifier:
         except urllib.error.HTTPError as e:
             detail = e.read().decode(errors="replace")[:300]
             raise TelegramError(self._redact(f"Telegram HTTP {e.code}: {detail}")) from None
-        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as e:
+        except (urllib.error.URLError, http.client.HTTPException, TimeoutError, OSError, ValueError) as e:
             raise TelegramError(self._redact(f"Telegram unreachable: {type(e).__name__}: {e}")) from None
+        except Exception as e:  # anything else from the HTTP stack: still a delivery failure, never a crash or a leak
+            raise TelegramError(self._redact(f"Telegram send failed: {type(e).__name__}: {e}")) from None
         if not reply.get("ok"):
             raise TelegramError(self._redact(f"Telegram refused the message: {reply.get('description', reply)}"))
 
 
 def read_env_file(path: Path) -> dict[str, str]:
-    """KEY=VALUE lines; blank lines and # comments ignored; surrounding quotes stripped."""
+    """KEY=VALUE lines; blank lines, # comment lines and trailing ` # comments` ignored; surrounding quotes stripped."""
     values = {}
     for line in path.read_text().splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        values[key.strip().removeprefix("export ").strip()] = value.strip().strip("'\"")
+        value = value.strip()
+        if value[:1] in ("'", '"') and value[0] in value[1:]:
+            value = value[1:value.index(value[0], 1)]  # quoted: take what is inside the quotes
+        else:
+            value = re.split(r"\s+#", value, maxsplit=1)[0].strip()
+        values[key.strip().removeprefix("export ").strip()] = value
     return values
 
 

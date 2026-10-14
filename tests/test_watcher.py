@@ -278,11 +278,29 @@ def test_retries_give_up_loudly_after_the_window(tmp_path):
     fake.head = 106
     w.catch_up(106)
     row = store.announcements()[0]
-    assert row["gave_up"] == 1 and row["attempts"] == 6 and row["alert_sent_at"] is None
+    assert row["gave_up"] == 1 and row["attempts"] == 7 and row["alert_sent_at"] is None  # one last try, then give up
     assert any(m.startswith("GAVE UP") and "telegram" in m for m in logs)
     fake.head = 107
     w.catch_up(107)
-    assert store.announcements()[0]["attempts"] == 6  # no more retries
+    assert store.announcements()[0]["attempts"] == 7  # no more retries
+
+
+def test_a_last_attempt_after_the_window_can_still_deliver(tmp_path):
+    """A forward clock jump (laptop sleep) must not give up an alert without one more try."""
+    import airlock.watcher as watcher_mod
+    now = [1000.0]
+    fake = FakeSubstrate()
+    store = Store(tmp_path / "w.db")
+    store.watch(VAULT, "interim-sdk")
+    telegram = Recorder("telegram", fail_times=1)
+    w = Watcher(chain(fake), store, [telegram], log=lambda m: None, clock=lambda: now[0])
+    fake.events[100] = [announced(VAULT, HOT, H1)]
+    w.catch_up(100)
+    now[0] += watcher_mod.RETRY_WINDOW_S + 10
+    fake.head = 101
+    w.catch_up(101)
+    row = store.announcements()[0]
+    assert row["alert_sent_at"] is not None and row["gave_up"] == 0 and len(telegram.sent) == 1
 
 
 def test_reorg_of_processed_blocks_is_rescanned(setup):
@@ -402,6 +420,54 @@ def test_unreadable_events_are_a_logged_gap_covered_by_the_sweep(tmp_path):
     assert store.last_block == 103
 
 
+def test_a_decoder_bug_is_not_mistaken_for_a_lagging_node(setup):
+    """A KeyError inside decoding must surface, not be swallowed as 'block not available yet' (it is a LookupError)."""
+    setup.w.catch_up(100)
+    setup.fake.events[101] = [SimpleNamespace(value={"module_id": "Proxy", "event_id": "Announced",
+                                                     "attributes": {"real": VAULT}})]  # fields missing
+    setup.fake.head = 101
+    with pytest.raises(KeyError):
+        setup.w.catch_up(101)
+    assert setup.store.last_block == 100
+
+
+def test_an_undecodable_block_is_a_gap_not_a_wedge(tmp_path):
+    class Undecodable(FakeSubstrate):
+        def get_events(self, block_hash):
+            if int(block_hash, 16) == 101:
+                raise NotImplementedError("decoder cannot read this event type")
+            return super().get_events(block_hash)
+
+    logs = []
+    fake = Undecodable()
+    store = Store(tmp_path / "w.db")
+    store.watch(VAULT, "interim-sdk")
+    w = Watcher(chain(fake), store, [Recorder()], log=logs.append)
+    w.catch_up(100)
+    fake.head = 102
+    w.catch_up(102)
+    assert store.last_block == 102 and any(m.startswith("GAP: events of #101") for m in logs)
+
+
+def test_old_databases_are_migrated(tmp_path):
+    import sqlite3
+    db = tmp_path / "old.db"
+    old = sqlite3.connect(db)
+    old.executescript("""CREATE TABLE announcement (vault TEXT NOT NULL, delegate TEXT NOT NULL, call_hash TEXT NOT NULL,
+        announced_block INTEGER NOT NULL, block_hash TEXT NOT NULL, extrinsic_index INTEGER, release_block INTEGER,
+        verdict TEXT NOT NULL, at_risk TEXT, state TEXT NOT NULL DEFAULT 'held', alert_text TEXT, alert_sent_at REAL,
+        PRIMARY KEY (vault, delegate, call_hash, announced_block));""")
+    old.commit()
+    old.close()
+    store = Store(db)
+    store.watch(VAULT, "interim-sdk")
+    out = Recorder()
+    fake = FakeSubstrate()
+    fake.events[100] = [announced(VAULT, HOT, H1)]
+    Watcher(chain(fake), store, [out], log=lambda m: None).catch_up(100)
+    assert len(out.sent) == 1 and store.announcements()[0]["attempts"] == 1
+
+
 def test_reads_node_lagging_the_subscription_stops_the_pass_without_moving_the_cursor(setup):
     setup.w.catch_up(100)
     logs = []
@@ -420,6 +486,7 @@ def test_retries_respect_the_time_budget(tmp_path):
     fake.events[100] = [announced(VAULT, HOT, H1)]
     w.catch_up(100)
     fake.head = 101
+    w._attempted = set()  # a new pass
     assert w.retry_unsent(101, budget_s=-1) == 0  # budget already spent: nothing started
     assert w.retry_unsent(101) == 1
 
@@ -430,3 +497,11 @@ def test_validate_vaults_refuses_typos_and_warns_on_vaults_without_delegates():
     bad = validate_vaults(chain(FakeSubstrate()), [VAULT, OTHER, "5Hb37Sqm-typo"], logs.append)
     assert bad == ["5Hb37Sqm-typo"]
     assert any(OTHER in m and "no proxy delegates" in m for m in logs) and not any(VAULT in m for m in logs)
+
+
+def test_misconfigured_telegram_refuses_to_start(monkeypatch, capsys):
+    from airlock import watcher as watcher_mod
+    monkeypatch.setenv("AIRLOCK_TELEGRAM_TOKEN", "not-a-token")
+    monkeypatch.setattr(watcher_mod, "run", lambda *a, **k: pytest.fail("must not connect"))
+    assert watcher_mod.main(["--vault", VAULT]) == 2
+    assert "MISCONFIGURED" in capsys.readouterr().err

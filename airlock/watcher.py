@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import socket
 import sys
 import threading
 import time
@@ -51,7 +52,14 @@ try:
     from substrateinterface.exceptions import SubstrateRequestException
 except ImportError:  # pragma: no cover
     SubstrateRequestException = RuntimeError
-CONNECTION_ERRORS = (ChainUnreachable, WebSocketException, ConnectionError, TimeoutError, OSError)
+# transport trouble -> reconnect and resume. A graceful websocket close makes the library parse an empty frame
+# (JSONDecodeError); a node refusing a request (rate limit, overload) raises SubstrateRequestException.
+CONNECTION_ERRORS = (ChainUnreachable, WebSocketException, ConnectionError, TimeoutError, OSError,
+                     json.JSONDecodeError, SubstrateRequestException)
+
+
+class BlockNotYetAvailable(Exception):
+    """The subscription announced a block the reads connection cannot serve yet."""
 
 
 @dataclass(frozen=True)
@@ -148,6 +156,7 @@ class Watcher:
         self.clock = clock
         self.alerts_sent = 0
         self.on_progress: Callable[[], None] = lambda: None  # called per processed block (feeds the watchdog)
+        self._attempted: set[tuple] = set()  # alerts attempted in the current pass
         store.bind_chain(chain.genesis_hash, chain.profile.id)
 
     @property
@@ -181,11 +190,14 @@ class Watcher:
         """Alerts for one block, and whether its events were readable (False = a gap the sweep must cover)."""
         block_hash = self.s.get_block_hash(number)
         if block_hash is None:
-            raise LookupError(f"no block #{number} on the reads node yet")
+            raise BlockNotYetAvailable(f"no block #{number} on the reads node yet")
         try:
             events = self.s.get_events(block_hash)
-        except SubstrateRequestException as e:  # e.g. a pruned node no longer has this block's state
-            self.log(f"GAP: events of #{number} unreadable ({e}); pending announcements will be swept instead")
+        except (WebSocketException, ConnectionError, TimeoutError, OSError, json.JSONDecodeError):
+            raise  # transport trouble: reconnect and retry this block
+        except Exception as e:  # pruned state, or an event this decoder cannot read: never wedge on one block
+            self.log(f"GAP: events of #{number} unreadable ({type(e).__name__}: {e}); "
+                     f"pending announcements will be swept instead")
             self.store.set_last_block(number, block_hash)
             return [], False
         vaults = self.watched()
@@ -204,8 +216,10 @@ class Watcher:
         except SubstrateRequestException:  # state at that block pruned: the current delegates are the best guess
             return self.s.query("Proxy", "Proxies", [vault]).value
 
-    def is_pending(self, vault: str, delegate: str, call_hash: str) -> bool:
-        return any(a.call_hash == call_hash.lower() and same_account(a.real, vault) for a in pending(self.s, delegate))
+    def is_pending(self, vault: str, delegate: str, call_hash: str, height: int) -> bool:
+        """This very announcement (same hash AND block) is still in Proxy.Announcements."""
+        return any(a.call_hash == call_hash.lower() and a.height == height and same_account(a.real, vault)
+                   for a in pending(self.s, delegate))
 
     def _alert(self, ann: Announced, vault: str, chat_id: str | None, number: int, block_hash: str, head: int,
                source: str = "block scan") -> Alert:
@@ -218,7 +232,7 @@ class Watcher:
             release_block=None if delay is None else number + delay, head=head,
             block_time_ms=self.chain.block_time_ms, at_risk=self.chain.fmt(risk.transferable),
             locked=self.chain.fmt(risk.held_back) if risk.held_back else None, late_by=head - number, chat_id=chat_id,
-            pending=self.is_pending(vault, ann.delegate, ann.call_hash),
+            pending=self.is_pending(vault, ann.delegate, ann.call_hash, number),
             extra={"delay_blocks": delay, "extrinsic_index": ann.extrinsic_index, "source": source})
         text = format_text(alert)
         stored = self.store.record(vault=vault, delegate=ann.delegate, call_hash=ann.call_hash, announced_block=number,
@@ -243,34 +257,43 @@ class Watcher:
                     ann = Announced(real=vault, delegate=delegate, call_hash=a.call_hash, extrinsic_index=None)
                     block_hash = self.s.get_block_hash(a.height) or ""
                     alerts.append(self._alert(ann, vault, chat_id, a.height, block_hash, head, source="pending sweep"))
+                    self.on_progress()
         return alerts
 
-    def retry_unsent(self, head: int, budget_s: float = RETRY_BUDGET_S, pass_started: float | None = None) -> int:
+    def retry_unsent(self, head: int, budget_s: float = RETRY_BUDGET_S) -> int:
         """Re-send undelivered alerts to the channels that missed them, countdown and pending state recomputed.
-        After RETRY_WINDOW_S without success an alert is given up on — loudly, never silently."""
+        Rows already attempted in this pass are skipped (tracked in memory, so a wall-clock step cannot reorder them).
+        Once RETRY_WINDOW_S has passed, one last attempt is made; if that fails too the alert is given up on — loudly,
+        never silently."""
         resent = 0
         names = {f.name for f in fields(Alert)}
         started = time.monotonic()
-        for stored, raw, first in self.store.unsent(attempted_before=pass_started):
+        for stored, raw, first in self.store.unsent():
+            if (stored.vault, stored.delegate, stored.call_hash, stored.announced_block) in self._attempted:
+                continue
             if time.monotonic() - started > budget_s:
-                break  # the rest waits for the next header
-            if first is not None and self.clock() - first > RETRY_WINDOW_S:
+                break  # new retries stop being started; the rest waits for the next header
+            data = {k: v for k, v in json.loads(raw).items() if k in names}
+            alert = replace(Alert(**data), head=head, late_by=head - stored.announced_block,
+                            pending=self.is_pending(stored.vault, stored.delegate, stored.call_hash,
+                                                    stored.announced_block))
+            if self.deliver(stored, alert, format_text(alert)):
+                resent += 1
+            self.on_progress()
+            expired = first is not None and self.clock() - first > RETRY_WINDOW_S
+            if expired and self.store.get(stored.vault, stored.delegate, stored.call_hash,
+                                          stored.announced_block).alert_sent_at is None:
                 missing = sorted({n.name for n in self.notifiers} - self.store.delivered_via(stored) - {"jsonl"})
                 self.log(f"GAVE UP after {RETRY_WINDOW_S // 60} min: alert for {stored.vault} {stored.call_hash} "
                          f"(#{stored.announced_block}) never reached {', '.join(missing)}")
                 self.store.give_up(stored)
-                continue
-            data = {k: v for k, v in json.loads(raw).items() if k in names}
-            alert = replace(Alert(**data), head=head, late_by=head - stored.announced_block,
-                            pending=self.is_pending(stored.vault, stored.delegate, stored.call_hash))
-            if self.deliver(stored, alert, format_text(alert)):
-                resent += 1
         return resent
 
     def deliver(self, stored, alert: Alert, text: str) -> list[str]:
         """Send through every notifier that does not have this alert yet, recording each success at once. It is
         delivered once every owner-facing channel (all but the JSON-lines log) has it; until then it is retried."""
         self.store.note_attempt(stored, self.clock())
+        self._attempted.add((stored.vault, stored.delegate, stored.call_hash, stored.announced_block))
         have = self.store.delivered_via(stored)
         sent = []
         for n in self.notifiers:
@@ -292,7 +315,7 @@ class Watcher:
     def catch_up(self, head: int, from_block: int | None = None, sweep: bool = False) -> list[Alert]:
         """Process every block from where the watcher stopped (after a reorg check) up to `head`; then sweep pending
         announcements if asked or if a block's events were unreadable; then retry undelivered alerts (new first)."""
-        pass_started = self.clock()
+        self._attempted = set()
         start = self.start_from(head, from_block)
         if head - start >= 1:
             self.log(f"catching up {head - start + 1} blocks: #{start}..#{head}")
@@ -300,7 +323,7 @@ class Watcher:
         for n in range(start, head + 1):
             try:
                 block_alerts, readable = self.process_block(n, head)
-            except LookupError as e:  # the reads node lags the subscription: pick it up on the next header
+            except BlockNotYetAvailable as e:  # the reads node lags the subscription: pick it up on the next header
                 self.log(f"{e}; retrying on the next header")
                 break
             alerts += block_alerts
@@ -308,7 +331,7 @@ class Watcher:
             self.on_progress()
         if sweep:
             alerts += self.sweep_pending(head)
-        self.retry_unsent(head, pass_started=pass_started)  # never re-tries what this pass just attempted
+        self.retry_unsent(head)  # never re-tries what this pass just attempted
         return alerts
 
 
@@ -375,15 +398,17 @@ def run(args, notifiers: list[Notifier], log=None) -> int:
             return 2
         log(f"watching {len(vaults)} vault(s) on {reads.profile.label} · genesis {reads.genesis_hash} · {reads.url} · "
             f"block {reads.block_time_ms} ms · notifiers: {', '.join(n.name for n in notifiers)} · db {store.path}")
+        sweep_owed = False
         try:
             watcher.catch_up(_head(reads, args.finalized), args.from_block, sweep=True)
-        except CONNECTION_ERRORS as e:  # the follow loop reconnects and resumes from the cursor
+        except CONNECTION_ERRORS as e:  # the follow loop reconnects, resumes from the cursor, and still sweeps
             log(f"initial catch-up interrupted ({type(e).__name__}: {e})")
             if args.once:
                 return 1
+            sweep_owed = True
         if args.once or _done(watcher, args):
             return 0
-        return follow(watcher, args, log)
+        return follow(watcher, args, log, sweep_first=sweep_owed)
     except GenesisChanged as e:
         log(f"STOPPED: {e}")
         return 3
@@ -397,18 +422,26 @@ def _done(watcher: Watcher, args) -> bool:
 
 
 def _shutdown(chain: Chain) -> None:
-    """Called from the watchdog thread: break the subscription's blocking recv()."""
+    """Called from the watchdog thread: break the subscription's blocking recv(). A plain close() does not wake a recv
+    blocked in another thread on Linux; shutting the raw socket down (SHUT_RDWR) does, on Linux and macOS."""
     websocket = getattr(chain.substrate, "websocket", None)
+    raw = getattr(websocket, "sock", None)
+    try:
+        if raw is not None:
+            raw.shutdown(socket.SHUT_RDWR)
+    except OSError:
+        pass
     try:
         (getattr(websocket, "shutdown", None) or websocket.close)()
     except Exception:
         pass
 
 
-def follow(watcher: Watcher, args, log) -> int:
+def follow(watcher: Watcher, args, log, sweep_first: bool = False) -> int:
     """Header subscription with reconnect: a dropped or stalled connection -> reconnect, re-identify, rescan from the
-    cursor. The backoff resets only once a header has been processed again, so a flapping node is not hammered."""
-    state = {"backoff": 1.0, "first": True}
+    cursor. The backoff resets only once a header has been processed again, so a flapping node is not hammered.
+    `sweep_first`: the start-up sweep did not complete, so the first header pass owes one."""
+    state = {"backoff": 1.0, "first": not sweep_first}
     stall = stall_seconds(watcher.chain.block_time_ms)
     while True:
         sub, dog = None, None
@@ -486,15 +519,16 @@ def main(argv=None) -> int:
     notifiers: list[Notifier] = [StdoutNotifier()]
     try:
         telegram = None if args.no_telegram else telegram_from_config()
-    except ValueError as e:  # malformed token, missing chat id, bad button URL: say so loudly, keep the other channels
-        print(f"telegram: MISCONFIGURED — {e}; alerts go to stdout"
-              + (" and the JSON-lines log" if args.jsonl else ""), file=sys.stderr)
-        telegram = False
+    except ValueError as e:  # malformed token, missing chat id, bad button URL: refuse rather than alert half-blind
+        print(f"telegram: MISCONFIGURED — {e}. Fix ~/.config/airlock/telegram.env, or run with --no-telegram to alert "
+              f"on stdout only.", file=sys.stderr)
+        return 2
     if telegram:
         notifiers.append(telegram)
-    elif telegram is None:
-        print("telegram: not configured (no token) — alerts go to stdout"
-              + (" and the JSON-lines log" if args.jsonl else ""), file=sys.stderr)
+    else:
+        why = "disabled (--no-telegram)" if args.no_telegram else "not configured (no token)"
+        print(f"telegram: {why} — alerts go to stdout" + (" and the JSON-lines log" if args.jsonl else ""),
+              file=sys.stderr)
     if args.jsonl:
         notifiers.append(JsonlNotifier(args.jsonl))
     try:

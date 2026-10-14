@@ -292,3 +292,21 @@ def test_connect_times_out_on_a_silent_endpoint(monkeypatch):
         cp.connect(f"ws://127.0.0.1:{srv.getsockname()[1]}")
     assert time.monotonic() - started < 10
     srv.close()
+
+
+def test_fmt_amount_is_exact_for_large_balances():
+    from airlock.chain_profile import fmt_amount
+    assert fmt_amount(999_996_197_339_160_444_122, 12, "UNIT") == "999,996,197.3391 UNIT"
+    assert fmt_amount(2**128 - 1, 14, "POT").startswith("3,402,823,669,209,384,634,633,746")
+    assert fmt_amount(5, 0, "X") == "5.0000 X"
+    assert fmt_amount(1, 12, "UNIT") == "0.0000 UNIT"
+
+
+def test_at_risk_excludes_locks_for_both_layouts():
+    from airlock.chain_profile import at_risk, frozen
+    modern = {"free": 1_000, "reserved": 100, "frozen": 300, "flags": 0}
+    assert at_risk(modern).transferable == 800 and at_risk(modern).frozen == 300
+    legacy = {"free": 1_000, "reserved": 0, "misc_frozen": 400, "fee_frozen": 250}
+    assert frozen(legacy) == 400 and at_risk(legacy).transferable == 600
+    with pytest.raises(ValueError):
+        frozen({"free": 1})

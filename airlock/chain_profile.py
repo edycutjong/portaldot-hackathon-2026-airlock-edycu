@@ -159,6 +159,31 @@ def transferable(account_data: Mapping[str, int], existential_deposit: int = 0, 
     raise ValueError(f"unrecognised AccountData layout: {sorted(account_data)}")
 
 
+def frozen(account_data: Mapping[str, int]) -> int:
+    """Funds held by locks (vesting, staking, …) for either AccountData layout; shown beside at-risk, never in it."""
+    if "frozen" in account_data:
+        return int(account_data["frozen"])
+    if "misc_frozen" in account_data:
+        return max(int(account_data["misc_frozen"]), int(account_data["fee_frozen"]))
+    raise ValueError(f"unrecognised AccountData layout: {sorted(account_data)}")
+
+
+@dataclass(frozen=True)
+class AtRisk:
+    """What a stolen delegate key could move out of an account right now, and what locks keep out of reach."""
+
+    transferable: int
+    free: int
+    reserved: int
+    frozen: int
+
+
+def at_risk(account_data: Mapping[str, int]) -> AtRisk:
+    """Worst case: everything reducible without keeping the account alive (a thief would not keep it alive)."""
+    return AtRisk(transferable=transferable(account_data), free=int(account_data["free"]),
+                  reserved=int(account_data.get("reserved", 0)), frozen=frozen(account_data))
+
+
 def event_field(attributes: Any, name: str, position: int) -> Any:
     """Read one event field whatever the decoder produced.
 
@@ -204,7 +229,19 @@ class Chain:
         return to_planck(amount, self.decimals)
 
     def fmt(self, planck: int) -> str:
-        return f"{planck / 10**self.decimals:,.4f} {self.symbol}"
+        return fmt_amount(planck, self.decimals, self.symbol)
+
+    def at_risk(self, address: str, block_hash: str | None = None) -> AtRisk:
+        """At-risk balance of `address` (per this profile's AccountData layout), at a block or the best head."""
+        account = self.substrate.query("System", "Account", [address], block_hash=block_hash).value
+        return at_risk(account["data"])
+
+
+def fmt_amount(planck: int, decimals: int, symbol: str) -> str:
+    """Exact integer arithmetic (no float rounding of u128 balances), 4 decimals shown, truncated."""
+    whole, frac = divmod(int(planck), 10**decimals)
+    frac_text = (f"{frac:0{decimals}d}" if decimals else "")[:4].ljust(4, "0")
+    return f"{whole:,}.{frac_text} {symbol}"
 
 
 _EXACT = Context(prec=100)  # far beyond any u128 balance, so no rounding ever happens

@@ -161,7 +161,8 @@ def cmd_announce(chain: Chain, tx: Sender, out: Out, args) -> int:
     hot = load_key(args.hot, chain.profile, "hot")
     vault = address(args.vault, "--vault")
     call = spend_call(chain, args)
-    register, registered = None, {}
+    registered: dict = {}
+    token = None
     if not args.no_intent:
         try:
             token = load_token(args.token, vault)
@@ -169,14 +170,15 @@ def cmd_announce(chain: Chain, tx: Sender, out: Out, args) -> int:
             raise Refused(f"{e} — or pass --no-intent to announce unregistered (the watcher will say NOT YOURS)") \
                 from None
 
-        def register(raw: bytes, h: str) -> None:
-            try:
-                registered.update(register_intent(args.api, token, vault, raw, timeout_s=REGISTER_TIMEOUT_S))
-            except RegistryError as e:
-                raise Refused(f"intent not registered, so not announcing (it would alert NOT YOURS): {e}") from None
-            out.say(f"intent registered at {args.api}: {h} (#{registered.get('registered_head')}, intent "
-                    f"{registered.get('intent_id')})")
-    p = announce(tx, hot, vault, call, register=register)
+    def register_first(raw: bytes, h: str) -> None:
+        try:
+            registered.update(register_intent(args.api, token, vault, raw, timeout_s=REGISTER_TIMEOUT_S))
+        except RegistryError as e:
+            raise Refused(f"intent not registered, so not announcing (it would alert NOT YOURS): {e}") from None
+        out.say(f"intent registered at {args.api}: {h} (#{registered.get('registered_head')}, intent "
+                f"{registered.get('intent_id')})")
+
+    p = announce(tx, hot, vault, call, register=None if args.no_intent else register_first)
     left = p.release_block - p.height
     encoded = "0x" + call_bytes(call).hex()
     out.say(f"announced {p.call_hash} at #{p.height}: executable from #{p.release_block} ({left} blocks"

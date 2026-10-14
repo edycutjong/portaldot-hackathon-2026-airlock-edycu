@@ -49,9 +49,13 @@ def main(argv=None) -> int:
     recorded = json.loads(args.evidence.read_text()) if args.evidence else None
     if recorded is None and not args.id:
         ap.error("give an evidence file or at least one --id")
+    if recorded is not None and args.id:
+        ap.error("give an evidence file or --id, not both")
     if recorded is not None and recorded.get("status") != "passed":
         ap.error(f"{args.evidence} is a {recorded.get('status')} run; re-fetch passing runs only")
     rows = recorded["rows"] if recorded else [{"extrinsic_id": i} for i in args.id]
+    if not rows:
+        ap.error("nothing to re-fetch: the evidence file has no rows")
     profile = args.profile or (recorded or {}).get("profile")
 
     try:

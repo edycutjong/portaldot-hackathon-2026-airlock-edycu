@@ -14,6 +14,7 @@
  --vesting N (optional, chains with a Vesting pallet):
  11. cold   vesting.vested_transfer(vault, N locked)               -> locked funds are NOT counted as at risk
  12. cold   proxy.proxy(vault, vesting.vest())                     -> claimed through the vault; at-risk = transferable
+ 13. cold   proxy.proxy(vault, transfer(payee, at-risk + 1 token)) -> must FAIL: the lock, not the formula, is the limit
 
 Step 10 is the control for step 7: the same delegate and delay, and the only difference is the veto. Step 9 shows the
 delay itself is enforced, not just stored.
@@ -210,8 +211,8 @@ def run(sp: Spike, delay: int, index: int, fund: str, amount: str) -> None:
 
 
 def run_vesting(sp: Spike, amount: str) -> None:
-    """Optional steps 11–12: a vested payout lands in the vault; locked funds are not at risk, vesting is claimed
-    through the vault, and at-risk stays equal to the transferable balance throughout."""
+    """Optional steps 11–13: a vested payout lands in the vault; locked funds are not at risk, vesting is claimed
+    through the vault, at-risk stays equal to the transferable balance, and moving one token more than at-risk fails."""
     chain, s = sp.chain, sp.s
     cold = Keypair.create_from_uri("//Alice")
     vault = sp.vault
@@ -255,6 +256,25 @@ def run_vesting(sp: Spike, amount: str) -> None:
         raise StepFailed(f"vest through the vault did not release anything: lock {lock_before} -> {lock_after}")
     print(f"vest PASS lock {chain.fmt(lock_before)} -> {chain.fmt(lock_after)}")
 
+    # 13. the chain itself refuses to move more than the at-risk figure: one token above it fails on the lock
+    payee = Keypair.create_from_uri("//Ferdie")
+    risk = chain.at_risk(vault)
+    over = s.compose_call("Balances", "transfer_keep_alive",
+                          {"dest": payee.ss58_address, "value": risk.transferable + chain.units(1)})
+    sp.submit("move above at-risk", "cold", cold, as_vault(s, vault, over), LOCK_ERROR[p_layout(s, vault)],
+              note=f"at-risk {chain.fmt(risk.transferable)} + 1")
+    if chain.at_risk(vault).free != risk.free:
+        raise StepFailed("the over-limit transfer moved funds")
+    print(f"limit PASS moving at-risk + 1 fails on the lock; vault unchanged")
+
+
+# What a transfer that would dip into locked funds fails with, per AccountData layout (pallet_balances of that era).
+LOCK_ERROR = {"modern": "inner:Token.Frozen", "1002": "inner:Balances.LiquidityRestrictions"}
+
+
+def p_layout(s, account: str) -> str:
+    return "modern" if "frozen" in s.query("System", "Account", [account]).value["data"] else "1002"
+
 
 def proof_markdown(chain: Chain, sp: Spike, started: str, version: str, delay: int) -> str:
     lines = [
@@ -281,7 +301,7 @@ def main(argv=None) -> int:
     ap.add_argument("--index", type=int, default=0, help="create_pure disambiguation index")
     ap.add_argument("--fund", default="1000", help="tokens sent to the vault")
     ap.add_argument("--amount", default="100", help="tokens each spend tries to move")
-    ap.add_argument("--vesting", default=None, help="also run steps 11-12 with this many tokens vested to the vault")
+    ap.add_argument("--vesting", default=None, help="also run steps 11-13 with this many tokens vested to the vault")
     ap.add_argument("--proof", type=Path, default=None, help="append the run's rows to this PROOF.md (passing runs only)")
     args = ap.parse_args(argv)
     if args.delay < 1:

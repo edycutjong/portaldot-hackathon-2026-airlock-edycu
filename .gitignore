@@ -24,3 +24,5 @@ brag-output/
 *.log
 *.db
 !evidence/*.log
+.e2e-*.db
+.thief-*.json

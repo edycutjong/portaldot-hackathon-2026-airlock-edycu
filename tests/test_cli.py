@@ -122,8 +122,9 @@ def test_bad_fund_is_refused_not_a_traceback(monkeypatch, capsys):
 
 
 @pytest.mark.parametrize("exc, code, text", [
-    ("node", 1, "node rejected"),
+    ("node", 1, "node rejected the transaction, it was not included"),
     ("socket", 1, "outcome unknown"),
+    ("read", 1, "outcome unknown"),
     ("ctrl-c", 130, "interrupted"),
 ])
 def test_node_and_connection_failures_map_to_exit_codes(monkeypatch, capsys, exc, code, text):
@@ -131,8 +132,13 @@ def test_node_and_connection_failures_map_to_exit_codes(monkeypatch, capsys, exc
 
     from tests.test_ops import HOT, VAULT, spend
     error = {"node": SubstrateRequestException({"code": 1010, "message": "Invalid Transaction"}),
-             "socket": BrokenPipeError(32, "Broken pipe"), "ctrl-c": KeyboardInterrupt()}[exc]
-    s = fake_connect(monkeypatch, raise_on_submit=error)
+             "socket": BrokenPipeError(32, "Broken pipe"), "ctrl-c": KeyboardInterrupt(),
+             "read": SubstrateRequestException({"code": -32000, "message": "state unavailable"})}[exc]
+    s = fake_connect(monkeypatch, raise_on_submit=None if exc == "read" else error)
+    if exc == "read":  # a read failing AFTER inclusion must not be reported as "not included"
+        def failing_read(*a, **k):
+            raise error
+        s.get_block_number = failing_read
     s.announcements[HOT.ss58_address] = [{"real": VAULT, "call_hash": cli.call_hash(spend(s)), "height": 99}]
     rc = cli.main(["veto", "--cold", "//Alice", "--vault", VAULT, "--delegate", HOT.ss58_address,
                    "--hash", cli.call_hash(spend(s))])

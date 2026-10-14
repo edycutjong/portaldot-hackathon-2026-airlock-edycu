@@ -111,6 +111,10 @@ def main(argv=None) -> int:
     summary = f"{len(results) - bad}/{len(results)} {verb} by extrinsic id over {transport(chain.url)} ({label})"
     print(summary)
     out = ROOT / "evidence" / f"refetch-{chain.profile.id}-{started.replace(':', '')}.json"
+    n = 1
+    while out.exists():  # two re-fetches in the same second must not overwrite each other's evidence
+        n += 1
+        out = out.with_name(f"refetch-{chain.profile.id}-{started.replace(':', '')}-{n}.json")
     out.parent.mkdir(exist_ok=True)
     out.write_text(json.dumps({"started": started, "endpoint": chain.url, "transport": transport(chain.url),
                                "profile": chain.profile.id, "label": chain.profile.label,

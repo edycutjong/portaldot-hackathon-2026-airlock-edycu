@@ -29,7 +29,7 @@ from typing import Any, Callable
 from substrateinterface import Keypair
 
 from .callhash import Announcement, call_hash, pending, same_account
-from .chain_profile import Chain, pure_address
+from .chain_profile import Chain, at_risk, pure_address
 from .dispatch import OK, error_namer, find_event, outcome
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -50,6 +50,10 @@ class TxFailed(RuntimeError):
 
 class NotConfirmed(RuntimeError):
     """The extrinsic succeeded but the state read afterwards does not show its effect."""
+
+
+class SubmitRejected(RuntimeError):
+    """The node refused the extrinsic at submission (invalid, or dropped from the pool): it was not included."""
 
 
 class VaultIncomplete(NotConfirmed):
@@ -175,8 +179,13 @@ class Sender:
         self.echo = echo
 
     def send(self, step: str, signer_name: str, signer: Keypair, call: Any, expect: str = OK, note: str = "") -> Any:
+        from substrateinterface.exceptions import SubstrateRequestException
+
         xt = self.s.create_signed_extrinsic(call=call, keypair=signer)
-        receipt = self.s.submit_extrinsic(xt, wait_for_inclusion=True)
+        try:
+            receipt = self.s.submit_extrinsic(xt, wait_for_inclusion=True)
+        except SubstrateRequestException as e:  # only errors raised by the submission itself mean "not included"
+            raise SubmitRejected(f"{step}: {e}") from e
         got = outcome(receipt, self.name_error)
         row = {
             "step": step,
@@ -287,9 +296,16 @@ def create_vault(tx: Sender, cold: Keypair, hot: str, delay: int, index: int = 0
         defs = tx.delegates(vault)
         if delay_of(defs, hot) != delay or delay_of(defs, cold.ss58_address) != 0:
             raise NotConfirmed(f"Proxy.Proxies should hold hot with delay {delay} and cold with delay 0: {defs}")
-    except (TxFailed, NotConfirmed) as e:
+    except (Exception, KeyboardInterrupt) as e:  # whatever stops the setup, the user must learn the vault's address
         raise VaultIncomplete(vault, e) from e
     return vault
+
+
+def keep_alive_limit(chain: Chain, address: str) -> int:
+    """What a `transfer_keep_alive` out of `address` can move: free − locks − existential deposit, whatever the
+    account's reference counts (the watcher's at-risk figure can be one ED higher: a plain transfer may take it)."""
+    account = chain.substrate.query("System", "Account", [address]).value
+    return at_risk(account["data"], chain.existential_deposit, must_stay_alive=True).transferable
 
 
 def announce(tx: Sender, hot: Keypair, vault: str, call: Any, step: str = "announce") -> Pending:
@@ -300,7 +316,7 @@ def announce(tx: Sender, hot: Keypair, vault: str, call: Any, step: str = "annou
     h = call_hash(call)
     if matching(pending(tx.s, hot.ss58_address), vault, h):
         raise Refused(f"an identical call ({h}) is already pending on {vault}: one execution clears every mature copy, "
-                      f"so a second identical spend would be lost — execute or withdraw the first, or change the amount")
+                      f"so a second identical spend would be lost — execute the first (or veto it), or change the amount")
     r = tx.send(step, "hot", hot, tx.s.compose_call("Proxy", "announce", {"real": vault, "call_hash": h}),
                 note=f"call hash {h}")
     included = tx.s.get_block_number(r.block_hash)
@@ -340,11 +356,15 @@ def execute(tx: Sender, hot: Keypair, vault: str, call: Any, wait: bool = True,
                       f"or vetoed — proxy_announced would fail Proxy.Unannounced")
     if p.delay is None:
         raise Refused(f"{hot.ss58_address} is no longer a delegate of {vault} (panic?): it can never execute")
-    if needs is not None:
-        can = tx.chain.at_risk(vault).transferable
+    def can_pay() -> None:
+        if needs is None:
+            return
+        can = keep_alive_limit(tx.chain, vault)
         if can < needs:
-            raise Refused(f"the vault can move {tx.chain.fmt(can)}, the call moves {tx.chain.fmt(needs)}: it would fail "
-                          f"inside proxy_announced and use up the announcement")
+            raise Refused(f"the vault can move {tx.chain.fmt(can)} with transfer_keep_alive, the call moves "
+                          f"{tx.chain.fmt(needs)}: it would fail inside proxy_announced and use up the announcement")
+
+    can_pay()
     head = tx.head()
     # the extrinsic lands in a block after the head; waiting for head >= release keeps one block of margin
     if head < p.release_block:
@@ -353,6 +373,7 @@ def execute(tx: Sender, hot: Keypair, vault: str, call: Any, wait: bool = True,
                           f"#{head} — not sending now (it could land before #{p.release_block} and fail "
                           f"Proxy.Unannounced)")
         tx.wait_until_block(p.release_block, on_tick)
+        can_pay()  # the balance may have changed during the wait
     executed = tx.s.compose_call("Proxy", "proxy_announced",
                                  {"delegate": hot.ss58_address, "real": vault, "force_proxy_type": None, "call": call})
     r = tx.send(step, "hot", hot, executed, note=f"call hash {h}, announced #{p.height}")

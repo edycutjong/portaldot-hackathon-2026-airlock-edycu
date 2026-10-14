@@ -28,7 +28,7 @@ from substrateinterface.utils.ss58 import ss58_decode
 from .callhash import call_bytes, call_hash, same_account
 from .chain_profile import Chain, ChainUnreachable, ProfileMismatch, UnknownChain, _is_connection_error, connect
 from .keys import KeyRefused, load_key
-from .ops import (NotConfirmed, Refused, Sender, TxFailed, announce, blocks_for, create_vault, deposits, execute,
+from .ops import (NotConfirmed, Refused, Sender, SubmitRejected, TxFailed, VaultIncomplete, announce, blocks_for, create_vault, deposits, execute,
                   panic, pending_for, transfer, veto)
 
 PROG = "airlock"
@@ -290,6 +290,12 @@ def main(argv: list[str] | None = None) -> int:
                 and e.row["call"].startswith("Proxy.proxy_announced") else "")
         print(f"{PROG}: FAILED on chain: {e}{hint}", file=sys.stderr)
         return 1
+    except SubmitRejected as e:
+        print(f"{PROG}: the node rejected the transaction, it was not included: {e}", file=sys.stderr)
+        return 1
+    except VaultIncomplete as e:
+        print(f"{PROG}: INCOMPLETE: {e}", file=sys.stderr)
+        return 130 if isinstance(e.__cause__, KeyboardInterrupt) else 1
     except NotConfirmed as e:
         print(f"{PROG}: NOT CONFIRMED: {e}", file=sys.stderr)
         return 1
@@ -300,14 +306,9 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as e:
         if not _is_connection_error(e):
             raise
-        from substrateinterface.exceptions import SubstrateRequestException
-
-        if isinstance(e, SubstrateRequestException):  # e.g. 1010 Invalid Transaction: the pool refused it
-            print(f"{PROG}: the node rejected the request: {e} — a rejected transaction is not included; check with "
-                  f"`airlock status`", file=sys.stderr)
-        else:
-            print(f"{PROG}: connection lost ({type(e).__name__}: {e}) — outcome unknown: check with `airlock status`",
-                  file=sys.stderr)
+        # a read failed or the connection dropped — possibly after a transaction was included
+        print(f"{PROG}: node or connection error ({type(e).__name__}: {e}) — outcome unknown: check with "
+              f"`airlock status`", file=sys.stderr)
         return 1
     finally:
         try:

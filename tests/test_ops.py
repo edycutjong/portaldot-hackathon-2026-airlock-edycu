@@ -26,7 +26,10 @@ class FakeCall:
         self.call_function = {"name": function}
         self.value = {"call_module": module, "call_function": function, "call_args": params}
         self.params = params
-        self.data = SimpleNamespace(data=f"{module}.{function}:{sorted(params)}".encode())
+        self.data = SimpleNamespace(data=f"{module}.{function}:{sorted(params.items())}".encode())
+
+    def __repr__(self):  # deterministic, so a nested call's bytes depend on its content only
+        return self.data.data.decode()
 
     def get_used_bytes(self):
         return self.data.data
@@ -399,3 +402,46 @@ def test_panic_reads_the_first_definition_for_the_cold_check():
     s.proxies[VAULT].insert(0, {"delegate": COLD.ss58_address, "proxy_type": "Any", "delay": 3})
     with pytest.raises(Refused, match="not a delay-0 delegate"):
         panic(tx, COLD, VAULT, HOT.ss58_address)
+
+
+def test_execute_uses_the_keep_alive_limit():
+    """The vault can lose free − ED to a transfer_keep_alive, not free: a spend in that margin would fail inside
+    proxy_announced and burn the announcement, so it is refused first (fake: free 1000, ED 10)."""
+    s, tx = make()
+    edge = s.compose_call("Balances", "transfer_keep_alive", {"dest": COLD.ss58_address, "value": 995})
+    announce(tx, HOT, VAULT, edge)
+    s.head = 200
+    with pytest.raises(Refused, match="transfer_keep_alive"):
+        execute(tx, HOT, VAULT, edge, wait=False, needs=995)
+    ok = s.compose_call("Balances", "transfer_keep_alive", {"dest": COLD.ss58_address, "value": 990})
+    announce(tx, HOT, VAULT, ok)
+    s.head = 300
+    execute(tx, HOT, VAULT, ok, wait=False, needs=990)
+
+
+def test_any_interruption_after_create_names_the_vault():
+    s, tx = make()
+    s.fail_on = None
+    real_submit = s.submit_extrinsic
+
+    def drop_after_create(xt, wait_for_inclusion):
+        if xt[0].call_function["name"] == "transfer_keep_alive":
+            raise ConnectionResetError(54, "Connection reset by peer")
+        return real_submit(xt, wait_for_inclusion)
+    s.submit_extrinsic = drop_after_create
+    with pytest.raises(VaultIncomplete) as e:
+        create_vault(tx, COLD, HOT.ss58_address, 5, fund=500)
+    assert NEW_VAULT in str(e.value) and isinstance(e.value.__cause__, ConnectionResetError)
+
+
+def test_submission_rejection_is_marked_not_included():
+    from substrateinterface.exceptions import SubstrateRequestException
+
+    from airlock.ops import SubmitRejected
+    s, tx = make()
+
+    def reject(xt, wait_for_inclusion):
+        raise SubstrateRequestException({"code": 1010, "message": "Invalid Transaction"})
+    s.submit_extrinsic = reject
+    with pytest.raises(SubmitRejected, match="1010"):
+        announce(tx, HOT, VAULT, spend(s))

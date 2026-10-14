@@ -155,3 +155,60 @@ def test_describe_call_against_recorded_metadata(profile_id):
         describe_call(chain, raw + b"\x00")
     with pytest.raises(Exception):
         describe_call(chain, b"\xff\xff")
+
+
+def test_a_stalled_client_does_not_block_the_owner(api):
+    """A client that connects and sends half a request holds one thread, not the registry."""
+    import socket as _socket
+
+    url, store, _ = api
+    token = owner_token(url)
+    host, port = url.removeprefix("http://").split(":")
+    stalled = _socket.create_connection((host, int(port)))
+    stalled.sendall(b"POST /api/intents HTTP/1.1\r\nHost: x\r\nContent-Length: 100\r\n\r\n{")
+    try:
+        got = register_intent(url, token, VAULT, CALL, timeout_s=3)
+        assert got["call_hash"] == H
+    finally:
+        stalled.close()
+
+
+@pytest.mark.parametrize("api_url", ["http://192.0.2.1:8787", "http://example.com", "ftp://127.0.0.1"])
+def test_token_is_never_sent_over_plain_http_off_this_machine(api_url):
+    with pytest.raises(RegistryError) as e:
+        register_intent(api_url, "t", VAULT, CALL, timeout_s=1)
+    assert e.value.status == 0 and "refusing to send the owner token" in str(e.value)
+
+
+def test_redirects_are_not_followed(tmp_path):
+    """A redirect would carry the Authorization header elsewhere: it is an error, not a hop."""
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    seen = []
+
+    class Redirect(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            seen.append(self.path)
+            self.send_response(307)
+            self.send_header("Location", "/elsewhere")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+    server = HTTPServer(("127.0.0.1", 0), Redirect)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        with pytest.raises(RegistryError) as e:
+            register_intent(f"http://127.0.0.1:{server.server_port}", "t", VAULT, CALL, timeout_s=2)
+        assert e.value.status == 307 and seen == ["/api/intents"]
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_enrolment_with_an_infinite_timestamp_is_400(api):
+    status, _ = raw(api[0], "POST", f"/api/vaults/{VAULT}/owner",
+                    b'{"cold": "x", "token_sha256": "' + b"a" * 64 + b'", "issued_at": 1e999, "signature": "0x"}')
+    assert status == 400

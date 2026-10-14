@@ -257,3 +257,29 @@ def test_missing_default_token_names_the_enrol_command(monkeypatch, tmp_path):
     with pytest.raises(RegistryError) as e:
         load_token(None, VAULT)
     assert "airlock enroll" in str(e.value)
+
+
+def test_save_token_replaces_a_world_readable_file_without_writing_through_it(tmp_path):
+    import os
+
+    path = tmp_path / "v.token"
+    path.write_text("old")
+    os.chmod(path, 0o644)
+    target = tmp_path / "elsewhere"
+    target.write_text("untouched")
+    link = tmp_path / "l.token"
+    link.symlink_to(target)
+    save_token(path, "new-token")
+    save_token(link, "new-token")
+    assert oct(path.stat().st_mode & 0o777) == "0o600" and path.read_text().strip() == "new-token"
+    assert target.read_text() == "untouched" and not link.is_symlink()
+    assert not list(tmp_path.glob(".*.tmp"))
+
+
+def test_loading_a_wide_open_token_warns(tmp_path, capsys):
+    import os
+
+    path = tmp_path / "w.token"
+    path.write_text("tok\n")
+    os.chmod(path, 0o644)
+    assert load_token(f"file:{path}", VAULT) == "tok" and "chmod 600" in capsys.readouterr().err

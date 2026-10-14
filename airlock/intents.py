@@ -25,8 +25,10 @@ import json
 import os
 import secrets
 import stat
+import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -92,7 +94,7 @@ class Registry:
         try:
             cold, digest, issued_at, signature = (str(body["cold"]), str(body["token_sha256"]),
                                                   int(body["issued_at"]), str(body["signature"]))
-        except (KeyError, TypeError, ValueError):
+        except (KeyError, TypeError, ValueError, OverflowError):
             raise RegistryError(400, "enrolment needs cold, token_sha256, issued_at, signature") from None
         if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
             raise RegistryError(400, "token_sha256 must be 64 lowercase hex characters")
@@ -155,6 +157,8 @@ def load_token(spec: str | None, vault: str) -> str:
                                "shell history)")
     path = Path(spec[5:]).expanduser() if spec else token_path(vault)
     try:
+        if path.stat().st_mode & (stat.S_IRWXG | stat.S_IRWXO):
+            print(f"warning: owner token {path} is readable by other users; chmod 600 it", file=sys.stderr)
         return path.read_text().strip()
     except OSError:
         raise RegistryError(0, f"no owner token at {path}: enrol the vault first (airlock enroll --vault {vault})") \
@@ -162,23 +166,48 @@ def load_token(spec: str | None, vault: str) -> str:
 
 
 def save_token(path: Path, token: str) -> None:
-    """Write the token readable by its owner only (created 0600, never world-readable even for a moment)."""
+    """Write the token readable by its owner only: a new 0600 file (O_EXCL, so no existing file or symlink is written
+    through) renamed over the old one — never world-readable even for a moment."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR)
-    with os.fdopen(fd, "w") as f:
-        f.write(token + "\n")
-    os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
+    tmp = path.with_name(f".{path.name}.{secrets.token_hex(4)}.tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, stat.S_IRUSR | stat.S_IWUSR)
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(token + "\n")
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):  # a redirect would carry the Bearer token to another URL
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+LOOPBACK = ("127.0.0.1", "localhost", "::1")
+
+
+def check_api_url(api: str) -> None:
+    """The owner token travels in a header: https anywhere, plain http only to this machine."""
+    parsed = urllib.parse.urlsplit(api)
+    if parsed.scheme == "https" or (parsed.scheme == "http" and parsed.hostname in LOOPBACK):
+        return
+    raise RegistryError(0, f"refusing to send the owner token to {api}: use https://, or http:// on 127.0.0.1")
 
 
 def post(api: str, path: str, body: dict, token: str | None = None, timeout_s: float = 10) -> dict:
-    """POST JSON; any answer but 200 — or no answer — raises RegistryError (status 0 = unreachable)."""
+    """POST JSON; any answer but 200 — or no answer — raises RegistryError (status 0 = unreachable). Redirects are not
+    followed."""
+    check_api_url(api)
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
     request = urllib.request.Request(api.rstrip("/") + path, data=json.dumps(body).encode(), headers=headers,
                                      method="POST")
     try:
-        with urllib.request.urlopen(request, timeout=timeout_s) as response:
+        with _OPENER.open(request, timeout=timeout_s) as response:
             return json.loads(response.read() or b"{}")
     except urllib.error.HTTPError as e:
         try:

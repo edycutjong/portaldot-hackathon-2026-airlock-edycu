@@ -19,7 +19,8 @@ import json
 import re
 import sys
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,7 @@ from .ops import definitions, delay_of
 from .store import Store
 
 MAX_BODY = 64 * 1024
+HEAD_CACHE_S = 1.0  # unauthenticated /api/health cannot make the registry read the chain more often than this
 OWNER_PATH = re.compile(r"^/api/vaults/([1-9A-HJ-NP-Za-km-z]{40,60})/owner$")
 
 
@@ -64,6 +66,7 @@ class ChainReads:
         self.url, self.profile = url, profile
         self.lock = threading.Lock()
         self.chain = connect(url, profile)
+        self._head: tuple[float, int] | None = None
 
     def _do(self, fn):
         with self.lock:
@@ -74,12 +77,24 @@ class ChainReads:
                     raise
                 fresh = connect(self.url, self.profile)
                 if fresh.genesis_hash != self.chain.genesis_hash:
+                    fresh.substrate.close()
                     raise RegistryError(503, "the chain behind the registry changed genesis") from None
+                try:
+                    self.chain.substrate.close()
+                except Exception:
+                    pass
                 self.chain = fresh
                 return fn(self.chain)
 
-    def head(self) -> int:
-        return self._do(lambda c: c.substrate.get_block_number(None))
+    def head(self, max_age_s: float = 0.0) -> int:
+        """Best block; `max_age_s` > 0 may answer from a read that recent (health checks only — an intent is
+        always recorded against a fresh read)."""
+        now = time.monotonic()
+        if max_age_s and self._head and now - self._head[0] <= max_age_s:
+            return self._head[1]
+        n = self._do(lambda c: c.substrate.get_block_number(None))
+        self._head = (now, n)
+        return n
 
     def delay_of_signer(self, vault: str, account: str) -> int | None:
         return self._do(lambda c: delay_of(definitions(c.substrate.query("Proxy", "Proxies", [vault]).value), account))
@@ -88,13 +103,15 @@ class ChainReads:
         return self._do(lambda c: describe_call(c, raw))
 
 
-def make_handler(registry: Registry, health: dict, log=None):
+def make_handler(registry: Registry, health: dict, log=None, health_head=None):
     log = log or (lambda m: print(m, file=sys.stderr, flush=True))
+    health_head = health_head or registry.head
+    store_lock = threading.Lock()  # one SQLite connection: one request at a time touches it
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "airlock-registry"
         sys_version = ""
-        timeout = 10  # a client that stalls mid-request cannot hold the (single-threaded) server
+        timeout = 10  # per read: a stalled client ties up only its own thread (the server is threaded)
 
         def log_message(self, fmt, *args):  # the default logs to stderr with the request line; keep it, minus noise
             log(f"{self.address_string()} {fmt % args}")
@@ -129,7 +146,7 @@ def make_handler(registry: Registry, health: dict, log=None):
         def do_GET(self):
             if self.path == "/api/health":
                 try:
-                    self._send(200, {**health, "best_block": registry.head()})
+                    self._send(200, {**health, "best_block": health_head()})
                 except Exception as e:
                     self._send(503, {**health, "error": f"chain unreadable ({type(e).__name__})"})
             else:
@@ -144,12 +161,16 @@ def make_handler(registry: Registry, health: dict, log=None):
                     body = self._body()
                     if not isinstance(body, dict):
                         raise RegistryError(400, "body must be a JSON object")
-                    self._send(200, registry.register(token, body))
+                    with store_lock:
+                        reply = registry.register(token, body)
+                    self._send(200, reply)
                 elif m := OWNER_PATH.match(self.path):
                     body = self._body()
                     if not isinstance(body, dict):
                         raise RegistryError(400, "body must be a JSON object")
-                    self._send(200, registry.enroll(m.group(1), body))
+                    with store_lock:
+                        reply = registry.enroll(m.group(1), body)
+                    self._send(200, reply)
                 else:
                     self._send(404, {"error": "not found"})
             except RegistryError as e:
@@ -161,8 +182,12 @@ def make_handler(registry: Registry, health: dict, log=None):
     return Handler
 
 
-def serve(registry: Registry, health: dict, host: str, port: int, log=None) -> HTTPServer:
-    return HTTPServer((host, port), make_handler(registry, health, log))
+def serve(registry: Registry, health: dict, host: str, port: int, log=None, health_head=None) -> ThreadingHTTPServer:
+    """Threaded: a client that connects and stalls holds one thread, never the owner's registration. Chain reads are
+    serialized by ChainReads, store access by the handler's lock."""
+    server = ThreadingHTTPServer((host, port), make_handler(registry, health, log, health_head))
+    server.daemon_threads = True
+    return server
 
 
 def default_db(profile_id: str) -> Path:
@@ -190,7 +215,7 @@ def main(argv=None) -> int:
     registry = Registry(store=store, genesis_hash=chain.genesis_hash, head=reads.head,
                         delay_of_signer=reads.delay_of_signer, describe=reads.describe)
     health = {"profile": chain.profile.id, "label": chain.profile.label, "genesis_hash": chain.genesis_hash}
-    server = serve(registry, health, args.host, args.port)
+    server = serve(registry, health, args.host, args.port, health_head=lambda: reads.head(HEAD_CACHE_S))
     print(f"intent registry on http://{args.host}:{server.server_port} · {chain.profile.label} · genesis "
           f"{chain.genesis_hash} · db {store.path}", file=sys.stderr, flush=True)
     try:

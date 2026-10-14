@@ -14,6 +14,8 @@ from dataclasses import dataclass, field
 from decimal import Context, Decimal, InvalidOperation
 from typing import Any, Mapping
 
+CONNECT_TIMEOUT_S = 15  # handshake + identification only; cleared once connected so subscriptions never time out
+U128_MAX = 2**128 - 1
 CODE_KEY = "0x3a636f6465"  # the well-known storage key ":code" (the runtime wasm)
 
 
@@ -209,15 +211,21 @@ _EXACT = Context(prec=100)  # far beyond any u128 balance, so no rounding ever h
 
 
 def to_planck(amount: float | int | str | Decimal, decimals: int) -> int:
+    text = str(amount)
     try:
-        value = Decimal(str(amount))
-    except InvalidOperation:
-        raise ValueError(f"not a number: {amount!r}") from None
-    if not value.is_finite() or value < 0:
-        raise ValueError(f"amount must be a finite, non-negative number: {amount!r}")
-    planck = value.scaleb(decimals, context=_EXACT)
-    if planck != planck.to_integral_value(context=_EXACT):
+        if "_" in text:
+            raise InvalidOperation
+        value = Decimal(text)
+        if not value.is_finite() or value < 0:
+            raise ValueError(f"amount must be a finite, non-negative number: {amount!r}")
+        planck = value.scaleb(decimals, context=_EXACT)
+        exact = planck == planck.to_integral_value(context=_EXACT)
+    except (InvalidOperation, ArithmeticError):
+        raise ValueError(f"not a usable amount: {amount!r}") from None
+    if not exact:
         raise ValueError(f"{amount} has more than {decimals} decimal places")
+    if planck > U128_MAX:
+        raise ValueError(f"{amount} exceeds the u128 balance range")
     return int(planck)
 
 
@@ -259,11 +267,14 @@ def connect(url: str | None = None, profile_id: str | None = None) -> Chain:
     if not url:
         raise ProfileMismatch("no endpoint: pass url, set AIRLOCK_WSS, or pick a profile with a default endpoint")
 
+    def open_(**kwargs):
+        try:
+            return SubstrateInterface(url=url, ws_options={"timeout": CONNECT_TIMEOUT_S}, **kwargs)
+        except Exception as e:
+            raise ChainUnreachable(f"no node answered at {url}: {type(e).__name__}: {e}") from e
+
     # Identify with raw RPC first: decoding needs the right preset, and the preset depends on the chain.
-    try:
-        probe = SubstrateInterface(url=url)
-    except Exception as e:
-        raise ChainUnreachable(f"no node answered at {url}: {type(e).__name__}: {e}") from e
+    probe = open_()
     try:
         genesis = probe.rpc_request("chain_getBlockHash", [0]).get("result")
         code_hash = probe.rpc_request("state_getStorageHash", [CODE_KEY]).get("result")
@@ -279,15 +290,19 @@ def connect(url: str | None = None, profile_id: str | None = None) -> Chain:
 
     if profile.type_registry_preset:
         probe.close()
-        substrate = SubstrateInterface(url=url, type_registry_preset=profile.type_registry_preset,
-                                       type_registry={"types": dict(profile.type_registry_types)})
+        substrate = open_(type_registry_preset=profile.type_registry_preset,
+                          type_registry={"types": dict(profile.type_registry_types)})
     else:
         substrate = probe
     try:
-        return _resolve(substrate, profile, url, genesis, code_hash)
+        chain = _resolve(substrate, profile, url, genesis, code_hash)
     except Exception:
         substrate.close()
         raise
+    websocket = getattr(substrate, "websocket", None)
+    if websocket is not None:
+        websocket.settimeout(None)
+    return chain
 
 
 def _resolve(substrate, profile: Profile, url: str, genesis: str, code_hash: str) -> Chain:

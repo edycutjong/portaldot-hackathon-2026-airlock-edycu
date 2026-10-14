@@ -125,11 +125,12 @@ def test_to_planck_is_exact():
 
     assert to_planck(100, 12) == 100 * 10**12
     assert to_planck("0.5", 14) == 5 * 10**13
-    big = "123456789012345678901234567890.5"
-    assert to_planck(big, 12) == 1234567890123456789012345678905 * 10**11
+    big = "123456789012345678901234.5"  # 36 digits in planck: past a default 28-digit context, inside u128
+    assert to_planck(big, 12) == 1234567890123456789012345 * 10**11
+    assert to_planck(2**128 - 1, 0) == 2**128 - 1
 
 
-@pytest.mark.parametrize("bad", ["1e-20", "-1", "inf", "nan", "abc"])
+@pytest.mark.parametrize("bad", ["1e-20", "-1", "inf", "nan", "abc", "1_000", "1e1000000", "1e400"])
 def test_to_planck_refuses_bad_amounts(bad):
     from airlock.chain_profile import to_planck
 
@@ -171,15 +172,16 @@ class _FakeSubstrate:
     instances: list = []
 
     def __init__(self, url, **kwargs):
-        if url == "ws://down":
+        if url == "ws://down" or (url == "ws://flaky" and kwargs.get("type_registry_preset")):
             raise ConnectionRefusedError("refused")
         self.url, self.closed = url, False
         _FakeSubstrate.instances.append(self)
 
     def rpc_request(self, method, params):
         result = {
-            "chain_getBlockHash": INTERIM_SDK.genesis_hash if self.url != "ws://other" else "0x" + "ab" * 32,
-            "state_getStorageHash": INTERIM_SDK.code_hashes[0],
+            "chain_getBlockHash": {"ws://other": "0x" + "ab" * 32,
+                                   "ws://flaky": INTERIM_1002.genesis_hash}.get(self.url, INTERIM_SDK.genesis_hash),
+            "state_getStorageHash": INTERIM_1002.code_hashes[0] if self.url == "ws://flaky" else INTERIM_SDK.code_hashes[0],
             "state_getRuntimeVersion": {"specName": "node", "specVersion": 999},  # not the verified 268
         }[method]
         return {"result": result}
@@ -231,3 +233,33 @@ def test_connect_runtime_spec_mismatch_closes_connection(fake_substrate):
     with pytest.raises(UnknownChain, match="expects runtime"):
         connect("ws://sdk", "interim-sdk")
     assert fake_substrate.instances and all(s.closed for s in fake_substrate.instances)
+
+
+def test_connect_1002_reconnect_failure_is_typed_and_probe_closed(fake_substrate):
+    # interim-1002 reconnects with the legacy preset after identification; that second connection can fail too
+    from airlock.chain_profile import ChainUnreachable, connect
+
+    with pytest.raises(ChainUnreachable):
+        connect("ws://flaky", "interim-1002")
+    assert all(s.closed for s in fake_substrate.instances)
+
+
+def test_connect_times_out_on_a_silent_endpoint(monkeypatch):
+    """A port that accepts TCP but never answers the websocket handshake must not hang forever."""
+    import socket
+    import threading
+    import time
+
+    import airlock.chain_profile as cp
+
+    monkeypatch.setattr(cp, "CONNECT_TIMEOUT_S", 1)
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    held = []
+    threading.Thread(target=lambda: held.append(srv.accept()), daemon=True).start()
+    started = time.monotonic()
+    with pytest.raises(cp.ChainUnreachable):
+        cp.connect(f"ws://127.0.0.1:{srv.getsockname()[1]}")
+    assert time.monotonic() - started < 10
+    srv.close()

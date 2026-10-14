@@ -11,8 +11,8 @@
 
 </div>
 
-> **Status: work in progress (README v1).** Portaldot Hacker House 2026 · track: Ecosystem DApps. The Portaldot V3
-> testnet RPC (`testnetv3-node.feso-apps.xyz`) did not resolve on 2026-10-14 (`NXDOMAIN`, last checked 15:27 UTC,
+> **Status: work in progress (check-in build).** Portaldot Hacker House 2026 · track: Ecosystem DApps. The Portaldot V3
+> testnet RPC (`testnetv3-node.feso-apps.xyz`) did not resolve on 2026-10-14 (`NXDOMAIN`, last checked 17:22 UTC,
 > [evidence/v3-dns.txt](evidence/v3-dns.txt)), so everything below ran on **labelled interim chains, not V3** (see
 > [docs/PROOF.md](docs/PROOF.md)). No V3 claim is made until a V3 run exists.
 
@@ -92,6 +92,7 @@ flowchart LR
 | Contract language | none: pallet-native (Proxy pallet) |
 | Client | Python 3.10+, `substrate-interface` 1.8.1, `scalecodec` 1.2.12 |
 | Owner interface | the `airlock` command line ([docs/CLI.md](docs/CLI.md)); no web UI |
+| Owner intent registry | Python stdlib `http.server`, bound to 127.0.0.1, sharing the watcher's SQLite file ([docs/REGISTRY.md](docs/REGISTRY.md)) |
 | Watcher | Python, SQLite (stdlib `sqlite3`), alerts on stdout / JSON lines; Telegram `sendMessage` sender built and tested against a mock Bot API, no bot connected yet |
 
 | Profile | Endpoint (local) | Chain | Runtime | Genesis hash |
@@ -151,7 +152,10 @@ scripts/interim_node.sh interim-sdk     # terminal 1: dev chain on ws://127.0.0.
 # terminal 2
 python scripts/seed.py --profile interim-sdk          # demo vault + history (~3 min), checks fixtures/expected.json
 scripts/e2e_evidence.sh interim-sdk                   # thief -> NOT YOURS alert -> veto -> thief fails (~2 min)
+scripts/intent_evidence.sh interim-sdk                # owner intent registry: YOURS / NOT YOURS, registry killed mid-announce
 AIRLOCK_IT=1 AIRLOCK_PROFILE=interim-sdk pytest -q tests/integration   # I1, I2, control, panic on the chain (~90 s)
+python scripts/bench.py --profile interim-sdk --ablate   # N=20 thief drains, p50/p95 alert + veto latency, one delay-0 control
+python scripts/verify_onchain.py                      # every docs/PROOF.md row re-fetched by extrinsic id (needs both chains up)
 ```
 
 By hand, on the seeded vault (dev keys are accepted only on the interim chains; elsewhere use `file:<path>`):
@@ -186,6 +190,19 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
   `interim-sdk`, 29 on `interim-1002`, 8 call types each (5 legitimate spends executed after the delay, 2 drains
   vetoed, one executed after its veto and failing, one withdrawn announcement, a panic) — and the end-state checks of
   [fixtures/expected.json](fixtures/expected.json) all hold. Re-fetched 27/27 and 29/29 by extrinsic id.
+- **Owner intent registry** ([docs/REGISTRY.md](docs/REGISTRY.md)): the owner's own spend is alerted YOURS, the thief's
+  preimage POST is refused with 401 and its announcement alerted NOT YOURS and vetoed; with the registry frozen
+  (`SIGSTOP`) and then killed (`SIGKILL`), `airlock announce` exits 2 and nothing is announced. `INTENTS PASS` on both
+  interim chains at commit `d6f47d7` (`evidence/intents-interim-sdk-2026-10-14T170106Z.log`,
+  `evidence/intents-interim-1002-2026-10-14T170232Z.log`).
+- **Benchmark** ([docs/BENCH.md](docs/BENCH.md); `scripts/bench.py`, local interim chains, **not V3**): 20 thief drains
+  per chain, every one alerted NOT YOURS and vetoed, then failing `Proxy.Unannounced`; 0 planck moved to the thief.
+  `interim-sdk` (D = 20 blocks, 60 s): alert p50 0.023 s / p95 0.03 s from the announce block's timestamp, veto sent and
+  included in 1 block (send p50 2.116 s, p95 2.171 s), at least 19 of 20 blocks to spare. `interim-1002` (D = 10 blocks,
+  60 s): alert p50 0.033 s / p95 0.157 s, veto send p50 5.918 s / p95 7.581 s, at least 9 of 10 blocks to spare. The
+  veto is automated, so these measure the chain and the watcher on one machine, not a person's reaction time or
+  Telegram delivery. The control (`--ablate`): the same thief against a delay-0 vault moved 100 UNIT (`interim-sdk`) /
+  100 POT (`interim-1002`) in one extrinsic.
 - **Proof:** [docs/PROOF.md](docs/PROOF.md) — every row with extrinsic id, block hash, tx hash and the profile label.
 - **Tests:** 341 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
   I2: a vetoed announcement never executes, also after the delay; the control; panic) that pass on both interim chains

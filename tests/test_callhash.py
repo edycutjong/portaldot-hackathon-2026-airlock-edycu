@@ -1,7 +1,8 @@
 """Call-hash tests against recorded runtime metadata (tests/fixtures), no node needed.
 
-The two I3 vectors are the hashes `Proxy.Announcements(//Bob)` actually stored on-chain during the spike runs in
-docs/PROOF.md (step "hot announces"): recomputing them offline from the recorded metadata must give the same bytes.
+The two I3 vectors are the hashes `Proxy.Announcements(//Bob)` actually stored on-chain by the spike runs (step
+"hot announces theft"; the hash is in that row's note in docs/PROOF.md and evidence/*.json): recomputing them offline
+from the recorded metadata must give the same hash.
 """
 
 import pytest
@@ -39,6 +40,19 @@ def p1002():
 
 def theft(rt, decimals, dest=EVE, amount=100):
     return rt.compose_call("Balances", "transfer_keep_alive", {"dest": dest, "value": amount * 10**decimals})
+
+
+def test_tampered_fixture_is_refused(tmp_path):
+    import shutil
+
+    from airlock.offline import FIXTURES
+
+    for name in ("interim-sdk.json", "interim-sdk.metadata.scale.gz"):
+        shutil.copy(FIXTURES / name, tmp_path / name)
+    info = (tmp_path / "interim-sdk.json").read_text().replace('"metadata_sha256": "', '"metadata_sha256": "00')
+    (tmp_path / "interim-sdk.json").write_text(info)
+    with pytest.raises(ValueError, match="sha256"):
+        load("interim-sdk", tmp_path)
 
 
 def test_blake2_256_known_vector():

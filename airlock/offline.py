@@ -8,6 +8,7 @@ identified by `chain_profile`.
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -47,6 +48,8 @@ def load(profile_id: str, fixtures: Path = FIXTURES) -> OfflineRuntime:
     profile = PROFILES[profile_id]
     info = json.loads((fixtures / f"{profile_id}.json").read_text())
     raw = gzip.decompress((fixtures / f"{profile_id}.metadata.scale.gz").read_bytes())
+    if hashlib.sha256(raw).hexdigest() != info["metadata_sha256"]:
+        raise ValueError(f"{profile_id} metadata fixture does not match its recorded sha256; re-record it")
 
     rc = RuntimeConfigurationObject()
     rc.update_type_registry(load_type_registry_preset("core"))

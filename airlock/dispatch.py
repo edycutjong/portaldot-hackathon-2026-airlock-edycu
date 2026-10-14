@@ -3,8 +3,9 @@
 `ExtrinsicSuccess` alone is not enough. A delegate's `proxy.proxy(...)` can fail two ways:
   (a) the outer dispatch fails — `System.ExtrinsicFailed` (e.g. `Proxy.Unannounced`, `Proxy.NotProxy`);
   (b) the outer call succeeds but the proxied call fails — `Proxy.ProxyExecuted { result: Err(..) }`.
-Reading (b) as success would turn a failed veto into a fake one, so both are checked, and anything that is not a
-clear `Ok` is reported as a failure.
+Reading (b) as success would turn a failed veto into a fake one, so both are checked, and a ProxyExecuted result that
+is not a clear `Ok` is reported as a failure. A successful extrinsic that emits no ProxyExecuted (any non-proxy call)
+is judged by the outer result alone.
 """
 
 from __future__ import annotations
@@ -49,9 +50,13 @@ def describe_error(err: Any, name_error: ErrorNamer) -> str:
     """`Pallet.Error` for a module error, else the DispatchError variant (`BadOrigin`, `Token`, …)."""
     if isinstance(err, dict) and "Module" in err:
         module = err["Module"]
-        return name_error(int(module["index"]), module["error"])
+        try:
+            return name_error(int(module["index"]), module["error"])
+        except (KeyError, TypeError, ValueError, IndexError):
+            return f"Module.unreadable:{module!r}"
     if isinstance(err, dict) and len(err) == 1:
-        return next(iter(err))
+        variant, detail = next(iter(err.items()))
+        return f"{variant}.{detail}" if isinstance(detail, str) else variant  # e.g. Token.FundsUnavailable
     return str(err)
 
 

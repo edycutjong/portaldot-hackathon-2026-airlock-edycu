@@ -65,6 +65,22 @@ def test_inner_ok_both_shapes(runtime):
                    runtime.namer) == OK
 
 
+def test_error_variant_detail_is_kept(runtime):
+    failed = ("System", "ExtrinsicFailed", {"dispatch_error": {"Token": "FundsUnavailable"}})
+    assert outcome(receipt(False, failed), runtime.namer) == "Token.FundsUnavailable"
+
+
+def test_unreadable_module_error_is_a_failure_not_a_crash(runtime):
+    failed = ("System", "ExtrinsicFailed", {"dispatch_error": {"Module": {"index": runtime.proxy, "error": {"odd": 1}}}})
+    assert outcome(receipt(False, failed), runtime.namer).startswith("Module.unreadable")
+
+
+def test_success_without_proxy_executed_is_judged_by_outer_result(runtime):
+    # a plain transfer emits no ProxyExecuted; outcome() does not invent an inner result for it
+    transfer = ("Balances", "Transfer", {"from": "a", "to": "b", "amount": 1})
+    assert outcome(receipt(True, transfer, SUCCESS), runtime.namer) == OK
+
+
 def test_unknown_pallet_and_error_index_are_named_not_hidden(runtime):
     failed = ("System", "ExtrinsicFailed", {"dispatch_error": {"Module": {"index": 250, "error": "0x09000000"}}})
     assert outcome(receipt(False, failed), runtime.namer) == "pallet#250.error#9"

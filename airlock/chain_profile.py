@@ -296,13 +296,24 @@ def connect(url: str | None = None, profile_id: str | None = None) -> Chain:
         substrate = probe
     try:
         chain = _resolve(substrate, profile, url, genesis, code_hash)
-    except Exception:
+    except UnknownChain:
         substrate.close()
         raise
+    except Exception as e:
+        substrate.close()
+        raise ChainUnreachable(f"{profile.id} at {url} stopped answering while connecting: {type(e).__name__}: {e}") from e
+    _clear_timeout(substrate)
+    return chain
+
+
+def _clear_timeout(substrate) -> None:
+    """Connected: drop the handshake timeout, on this socket and on any socket a reconnect would open."""
+    options = getattr(substrate, "ws_options", None)
+    if isinstance(options, dict):
+        options.pop("timeout", None)
     websocket = getattr(substrate, "websocket", None)
     if websocket is not None:
         websocket.settimeout(None)
-    return chain
 
 
 def _resolve(substrate, profile: Profile, url: str, genesis: str, code_hash: str) -> Chain:

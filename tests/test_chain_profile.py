@@ -193,6 +193,35 @@ class _FakeSubstrate:
         self.closed = True
 
 
+def test_connect_clears_the_handshake_timeout(monkeypatch):
+    """Once connected, neither the live socket nor a reconnect may keep the handshake timeout."""
+    import substrateinterface
+
+    from airlock.chain_profile import CONNECT_TIMEOUT_S, Chain, connect
+
+    seen = {}
+
+    class Socket:
+        def settimeout(self, value):
+            seen["socket"] = value
+
+    class Connected(_FakeSubstrate):
+        def __init__(self, url, **kwargs):
+            super().__init__(url, **kwargs)
+            self.ws_options = dict(kwargs.get("ws_options") or {})
+            seen["opened_with"] = self.ws_options.get("timeout")
+            self.websocket = Socket()
+
+    import airlock.chain_profile as cp
+
+    monkeypatch.setattr(substrateinterface, "SubstrateInterface", Connected)
+    monkeypatch.setattr(cp, "_resolve", lambda substrate, *a: Chain(substrate, cp.INTERIM_SDK, "ws://sdk", "", "", "node",
+                                                                     268, 12, "UNIT", 3000, "test", True, 1))
+    chain = connect("ws://sdk", "interim-sdk")
+    assert seen == {"opened_with": CONNECT_TIMEOUT_S, "socket": None}
+    assert "timeout" not in chain.substrate.ws_options
+
+
 @pytest.fixture
 def fake_substrate(monkeypatch):
     import substrateinterface

@@ -20,6 +20,7 @@ Percentiles are nearest-rank (p95 of 20 = the 19th smallest). Local interim dev 
 //AirlockBench//…, funded by //Alice, //Dave on interim-1002); every row carries the profile label.
 
 usage: python scripts/bench.py [--profile interim-sdk] [--n 20] [--delay-s 60] [--ablate] [--md docs/BENCH.md]
+       python scripts/bench.py --render evidence/bench-….json [--md docs/BENCH.md]
 """
 
 from __future__ import annotations
@@ -294,7 +295,17 @@ def main(argv=None) -> int:
     ap.add_argument("--delay-s", type=float, default=60, help="vault delay D in seconds (default 60)")
     ap.add_argument("--ablate", action="store_true", help="also run ONE delay-0 control drain")
     ap.add_argument("--md", type=Path, default=None, help="append the summary table to this markdown file (PASS only)")
+    ap.add_argument("--render", type=Path, default=None, metavar="JSON",
+                    help="no run: print (and with --md append) the table of a saved bench JSON")
     args = ap.parse_args(argv)
+    if args.render:
+        result = json.loads(args.render.read_text())
+        text = markdown(result, args.render.resolve())
+        print(text)
+        if args.md and result["status"] == "passed":
+            with args.md.open("a") as f:
+                f.write("\n" + text + "\n")
+        return 0 if result["status"] == "passed" else 1
     if args.n < 1:
         ap.error("--n must be at least 1")
     return run(args)

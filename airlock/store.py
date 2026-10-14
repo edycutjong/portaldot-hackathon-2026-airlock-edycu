@@ -132,8 +132,10 @@ class Store:
         self.path = str(path)
         if self.path != ":memory:":
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-        # the registry API and the watcher are separate processes on one file: wait for the other's write lock
-        self.db = sqlite3.connect(self.path, timeout=10)
+        # the registry API and the watcher are separate processes on one file: wait for the other's write lock.
+        # Each process uses its Store from one thread at a time (the API server is single-threaded), but not always
+        # the thread that opened it (a server run from a test thread), so the same-thread check is off.
+        self.db = sqlite3.connect(self.path, timeout=10, check_same_thread=False)
         self.db.executescript(SCHEMA)
         self._migrate()
         self.db.commit()

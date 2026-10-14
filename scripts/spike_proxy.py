@@ -228,12 +228,15 @@ def run_vesting(sp: Spike, amount: str) -> None:
 
     def check(stage: str) -> int:
         risk, lock = chain.at_risk(vault), lock_amount()
-        expected = max(risk.free - max(risk.frozen - risk.reserved, 0), 0)
+        modern = "frozen" in s.query("System", "Account", [vault]).value["data"]
+        # modern AccountData: a lock applies to free + reserved; 1002 (misc_frozen): it applies to free alone
+        untouchable = max(risk.frozen - risk.reserved, 0) if modern else risk.frozen
+        expected = max(risk.free - untouchable, 0)
         if lock <= 0 or risk.frozen != lock or risk.transferable != expected or risk.transferable >= risk.free:
             raise StepFailed(f"vesting {stage}: lock {lock}, {risk}, expected transferable {expected}")
         print(f"at-risk PASS ({stage}): transferable {chain.fmt(risk.transferable)} < free {chain.fmt(risk.free)}; "
               f"vesting-locked {chain.fmt(risk.frozen)}, reserved {chain.fmt(risk.reserved)} "
-              f"(untouchable = locked - reserved)")
+              f"({'modern' if modern else '1002'} AccountData)")
         return lock
 
     locked = chain.units(amount)

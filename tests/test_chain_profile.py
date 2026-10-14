@@ -181,6 +181,9 @@ class _FakeSubstrate:
         if self.url == "ws://drops":  # accepts the socket, then the connection drops during identification
             from websocket import WebSocketConnectionClosedException
             raise WebSocketConnectionClosedException("Connection to remote host was lost.")
+        if self.url == "ws://closes":  # a graceful close: the library parses an empty frame
+            import json
+            json.loads("")
         result = {
             "chain_getBlockHash": {"ws://other": "0x" + "ab" * 32,
                                    "ws://flaky": INTERIM_1002.genesis_hash}.get(self.url, INTERIM_SDK.genesis_hash),
@@ -250,6 +253,13 @@ def test_connect_dropped_during_identification_is_unreachable_not_unknown(fake_s
     with pytest.raises(ChainUnreachable, match="stopped answering"):
         connect("ws://drops")
     assert all(s.closed for s in fake_substrate.instances)
+
+
+def test_connect_graceful_close_during_identification_is_unreachable(fake_substrate):
+    from airlock.chain_profile import ChainUnreachable, connect
+
+    with pytest.raises(ChainUnreachable):
+        connect("ws://closes")
 
 
 def test_connect_unknown_chain_closes_probe(fake_substrate):

@@ -368,11 +368,19 @@ def connect(url: str | None = None, profile_id: str | None = None, auto_reconnec
 
 
 def _is_connection_error(e: BaseException) -> bool:
+    """Transport trouble, not a wrong chain: a dropped or closed socket (a graceful close makes the library parse an
+    empty frame -> JSONDecodeError), a timeout, or the node refusing a request (e.g. rate-limited)."""
+    import json
+
     try:
         from websocket import WebSocketException
     except ImportError:  # pragma: no cover
         WebSocketException = OSError
-    return isinstance(e, (OSError, TimeoutError, WebSocketException))
+    try:
+        from substrateinterface.exceptions import SubstrateRequestException
+    except ImportError:  # pragma: no cover
+        SubstrateRequestException = OSError
+    return isinstance(e, (OSError, TimeoutError, WebSocketException, json.JSONDecodeError, SubstrateRequestException))
 
 
 def _clear_timeout(substrate) -> None:

@@ -89,7 +89,25 @@ class Store:
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(self.path)
         self.db.executescript(SCHEMA)
+        self._migrate()
         self.db.commit()
+
+    # columns added after the first release of the schema: (table, column, definition)
+    ADDED_COLUMNS = (
+        ("announcement", "alert_json", "TEXT"),
+        ("announcement", "attempts", "INTEGER NOT NULL DEFAULT 0"),
+        ("announcement", "first_attempt_at", "REAL"),
+        ("announcement", "last_attempt_at", "REAL"),
+        ("announcement", "gave_up", "INTEGER NOT NULL DEFAULT 0"),
+        ("announcement", "delivered_via", "TEXT"),
+    )
+
+    def _migrate(self) -> None:
+        """A database written by an earlier version gets the columns it lacks (CREATE IF NOT EXISTS adds none)."""
+        for table, column, definition in self.ADDED_COLUMNS:
+            have = {row[1] for row in self.db.execute(f"PRAGMA table_info({table})")}
+            if column not in have:
+                self.db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     def close(self) -> None:
         self.db.close()
@@ -189,14 +207,11 @@ class Store:
         self.db.execute(f"UPDATE announcement SET alert_sent_at = ? WHERE {_KEY}", (at, *_key(stored)))
         self.db.commit()
 
-    def unsent(self, attempted_before: float | None = None) -> list[tuple[Stored, str, float | None]]:
-        """Undelivered alerts not given up on, and not attempted at/after `attempted_before` (i.e. not already tried
-        in the current pass): (row, alert JSON, first attempt time)."""
+    def unsent(self) -> list[tuple[Stored, str, float | None]]:
+        """Undelivered alerts not given up on: (row, alert JSON, first attempt time)."""
         rows = self.db.execute(
             "SELECT vault, delegate, call_hash, announced_block, alert_sent_at, alert_json, first_attempt_at "
-            "FROM announcement WHERE alert_sent_at IS NULL AND gave_up = 0 "
-            "AND (? IS NULL OR last_attempt_at IS NULL OR last_attempt_at < ?) ORDER BY announced_block",
-            (attempted_before, attempted_before)).fetchall()
+            "FROM announcement WHERE alert_sent_at IS NULL AND gave_up = 0 ORDER BY announced_block").fetchall()
         return [(Stored(*r[:5]), r[5], r[6]) for r in rows]
 
     def give_up(self, stored: Stored) -> None:

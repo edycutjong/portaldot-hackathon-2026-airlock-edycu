@@ -42,9 +42,9 @@ held at the end (vault total = fund − spends exactly, payees received exactly 
 pending, delegates as expected). The first `fund …` rows appear only when an account was short.
 
 **Reading an end-to-end run** (`scripts/e2e_evidence.sh`, logs `evidence/e2e-*.log`). The thief's three rows come from
-`scripts/thief.py`, which imports no Airlock code: announce a sweep of everything `transfer_keep_alive` can take from the
-demo vault (free − locks − existential deposit; the watcher's at-risk figure can be one existential deposit higher,
-because a plain transfer that empties the vault could take that too), then
+`scripts/thief.py`, which imports no Airlock code: announce a `transfer_keep_alive` sweep of the
+demo vault's free balance minus locks and one existential deposit (the watcher's at-risk figure can be one existential
+deposit higher: on `interim-1002` the vault's reserved deposit keeps it alive, so its whole free balance can move), then
 (after the watcher's NOT YOURS alert and the veto) execute it after the delay, and try `proxy.proxy` with no
 announcement. Both fail `Proxy.Unannounced`. The veto row is the alert's own `airlock veto …` line, run as printed; it
 has no recorded row to compare with, so it is listed as found by id.

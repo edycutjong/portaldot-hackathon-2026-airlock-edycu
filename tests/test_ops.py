@@ -445,3 +445,14 @@ def test_submission_rejection_is_marked_not_included():
     s.submit_extrinsic = reject
     with pytest.raises(SubmitRejected, match="1010"):
         announce(tx, HOT, VAULT, spend(s))
+
+
+def test_pool_dropped_is_a_submit_rejection():
+    from airlock.ops import SubmitRejected
+    s, tx = make()
+
+    def dropped(xt, wait_for_inclusion):
+        raise ValueError("Submit extrinsic failed: dropped")
+    s.submit_extrinsic = dropped
+    with pytest.raises(SubmitRejected, match="dropped"):
+        announce(tx, HOT, VAULT, spend(s))

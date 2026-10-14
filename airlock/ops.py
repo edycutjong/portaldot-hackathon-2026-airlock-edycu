@@ -60,8 +60,9 @@ class VaultIncomplete(NotConfirmed):
     """create_pure succeeded (its deposit is spent) but a later setup step did not: the vault exists, unfinished."""
 
     def __init__(self, vault: str, cause: Exception):
-        super().__init__(f"vault {vault} was created but its setup did not finish ({cause}); it holds whatever was "
-                         f"funded, and `airlock status --vault {vault}` shows its delegates")
+        reason = str(cause) or type(cause).__name__
+        super().__init__(f"vault {vault} was created but its setup may not have finished ({reason}); "
+                         f"`airlock status --vault {vault}` shows its balance and delegates")
         self.vault = vault
 
 
@@ -186,6 +187,10 @@ class Sender:
             receipt = self.s.submit_extrinsic(xt, wait_for_inclusion=True)
         except SubstrateRequestException as e:  # only errors raised by the submission itself mean "not included"
             raise SubmitRejected(f"{step}: {e}") from e
+        except ValueError as e:  # substrate-interface 1.8.1 reports a pool "dropped" status this way
+            if str(e).startswith("Submit extrinsic failed"):
+                raise SubmitRejected(f"{step}: {e}") from e
+            raise
         got = outcome(receipt, self.name_error)
         row = {
             "step": step,
@@ -302,8 +307,9 @@ def create_vault(tx: Sender, cold: Keypair, hot: str, delay: int, index: int = 0
 
 
 def keep_alive_limit(chain: Chain, address: str) -> int:
-    """What a `transfer_keep_alive` out of `address` can move: free − locks − existential deposit, whatever the
-    account's reference counts (the watcher's at-risk figure can be one ED higher: a plain transfer may take it)."""
+    """A conservative bound on what a `transfer_keep_alive` out of `address` can move: free − max(locks − reserved,
+    existential deposit), whatever the account's reference counts. Where reserved funds already keep the account alive
+    (the 1002 runtime) the chain may allow up to one ED more; refusing that margin only costs a re-announce."""
     account = chain.substrate.query("System", "Account", [address]).value
     return at_risk(account["data"], chain.existential_deposit, must_stay_alive=True).transferable
 

@@ -589,4 +589,26 @@ def test_node_lost_during_start_up_exits_cleanly(monkeypatch, capsys):
 
     monkeypatch.setattr(watcher_mod, "run", boom)
     assert watcher_mod.main(["--vault", VAULT, "--no-telegram"]) == 1
-    assert "node unreachable during start-up (ConnectionRefusedError" in capsys.readouterr().err
+    assert "during start-up (ConnectionRefusedError" in capsys.readouterr().err
+
+
+def test_a_sweep_that_cannot_read_storage_is_owed_to_the_next_pass(setup):
+    """'Could not read Proxy.Announcements' must not count as 'nothing pending': the sweep is repeated."""
+    setup.w.catch_up(100)
+    setup.fake.events[99] = [announced(VAULT, HOT, H1)]  # pending since before the watcher's first block
+    broken = {"on": True}
+    real_query = setup.fake.query
+
+    def flaky(module, storage, params, block_hash=None):
+        if storage == "Announcements" and broken["on"]:
+            raise ValueError("unknown Announcements layout")
+        return real_query(module, storage, params, block_hash)
+
+    setup.fake.query = flaky
+    setup.fake.head = 101
+    assert setup.w.catch_up(101, sweep=True) == [] and setup.w.sweep_owed
+    broken["on"] = False
+    setup.fake.head = 102
+    alerts = setup.w.catch_up(102)  # no sweep asked for: the owed one runs
+    assert [(a.announced_block, a.extra["source"]) for a in alerts] == [(99, "pending sweep")]
+    assert not setup.w.sweep_owed

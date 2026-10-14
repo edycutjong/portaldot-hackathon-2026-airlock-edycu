@@ -160,6 +160,7 @@ class Watcher:
         self.alerts_sent = 0
         self.on_progress: Callable[[], None] = lambda: None  # called per processed block (feeds the watchdog)
         self._attempted: set[tuple] = set()  # alerts attempted in the current pass
+        self.sweep_owed = False  # a sweep that could not read storage is repeated on the next pass
         store.bind_chain(chain.genesis_hash, chain.profile.id)
 
     @property
@@ -271,17 +272,24 @@ class Watcher:
     def sweep_pending(self, head: int) -> list[Alert]:
         """Alert every announcement still pending on a watched vault that no block scan has recorded: the first run
         starts at the head, and a gap (unreadable events) must not hide a live announcement."""
-        alerts = []
+        alerts, incomplete = [], False
         for vault, chat_id in self.watched().items():
-            for delegate in self._figure(f"delegates of {vault}",
-                                         lambda: [d for d, _ in delegates(self._proxies(vault, None))], []):
-                for a in self._figure(f"announcements of {delegate}", lambda: pending(self.s, delegate), []):
+            found = self._figure(f"delegates of {vault}",
+                                 lambda: [d for d, _ in delegates(self._proxies(vault, None))], None)
+            incomplete |= found is None
+            for delegate in found or []:
+                entries = self._figure(f"announcements of {delegate}", lambda: pending(self.s, delegate), None)
+                incomplete |= entries is None
+                for a in entries or []:
                     if not same_account(a.real, vault) or self.store.has(vault, delegate, a.call_hash, a.height):
                         continue
                     ann = Announced(real=vault, delegate=delegate, call_hash=a.call_hash, extrinsic_index=None)
                     block_hash = self.s.get_block_hash(a.height) or ""
                     alerts.append(self._alert(ann, vault, chat_id, a.height, block_hash, head, source="pending sweep"))
                     self.on_progress()
+        if incomplete:  # "could not read" is not "nothing pending": try the whole sweep again on the next pass
+            self.sweep_owed = True
+            self.log("pending sweep incomplete (storage unreadable); owed to the next pass")
         return alerts
 
     def retry_unsent(self, head: int, budget_s: float = RETRY_BUDGET_S) -> int:
@@ -355,7 +363,8 @@ class Watcher:
             alerts += block_alerts
             sweep = sweep or not readable
             self.on_progress()
-        if sweep:
+        if sweep or self.sweep_owed:
+            self.sweep_owed = False
             alerts += self.sweep_pending(head)
         self.retry_unsent(head)  # never re-tries what this pass just attempted
         return alerts
@@ -563,7 +572,8 @@ def main(argv=None) -> int:
         print(f"WATCHER FAILED: {type(e).__name__}: {e}", file=sys.stderr)  # reconnect: profile facts may have changed
         return 1
     except CONNECTION_ERRORS as e:  # the node went away during start-up (before the follow loop could reconnect)
-        print(f"WATCHER FAILED: node unreachable during start-up ({type(e).__name__}: {e})", file=sys.stderr)
+        print(f"WATCHER FAILED: node unreachable or I/O error during start-up ({type(e).__name__}: {e})",
+              file=sys.stderr)
         return 1
     except KeyboardInterrupt:
         return 130

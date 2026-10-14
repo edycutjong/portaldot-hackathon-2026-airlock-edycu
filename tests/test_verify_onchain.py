@@ -85,3 +85,13 @@ def test_label_mismatch_fails_even_with_skip_unreachable(monkeypatch, tmp_path):
 
 def test_all_unreachable_and_skipped_is_not_a_pass(monkeypatch, tmp_path):
     assert _run(monkeypatch, tmp_path, v.ChainUnreachable("down"), skip=True) == 1
+
+
+def test_unparsed_row_is_reported_and_fails_without_a_traceback(monkeypatch, tmp_path, capsys):
+    proof = tmp_path / "PROOF.md"
+    proof.write_text("### x\n\n| id | call |\n|---|---|\n| `123-2` | Proxy.announce |\n")
+    monkeypatch.setattr(v, "ROOT", tmp_path)
+    (tmp_path / "evidence").mkdir()
+    assert v.main([str(proof)]) == 1
+    out = capsys.readouterr().out
+    assert "UNPARSED" in out and "VERIFY FAIL" in out

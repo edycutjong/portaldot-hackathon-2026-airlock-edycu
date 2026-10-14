@@ -106,7 +106,6 @@ class ChainReads:
 def make_handler(registry: Registry, health: dict, log=None, health_head=None):
     log = log or (lambda m: print(m, file=sys.stderr, flush=True))
     health_head = health_head or registry.head
-    store_lock = threading.Lock()  # one SQLite connection: one request at a time touches it
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "airlock-registry"
@@ -161,16 +160,12 @@ def make_handler(registry: Registry, health: dict, log=None, health_head=None):
                     body = self._body()
                     if not isinstance(body, dict):
                         raise RegistryError(400, "body must be a JSON object")
-                    with store_lock:
-                        reply = registry.register(token, body)
-                    self._send(200, reply)
+                    self._send(200, registry.register(token, body))
                 elif m := OWNER_PATH.match(self.path):
                     body = self._body()
                     if not isinstance(body, dict):
                         raise RegistryError(400, "body must be a JSON object")
-                    with store_lock:
-                        reply = registry.enroll(m.group(1), body)
-                    self._send(200, reply)
+                    self._send(200, registry.enroll(m.group(1), body))
                 else:
                     self._send(404, {"error": "not found"})
             except RegistryError as e:
@@ -184,7 +179,7 @@ def make_handler(registry: Registry, health: dict, log=None, health_head=None):
 
 def serve(registry: Registry, health: dict, host: str, port: int, log=None, health_head=None) -> ThreadingHTTPServer:
     """Threaded: a client that connects and stalls holds one thread, never the owner's registration. Chain reads are
-    serialized by ChainReads, store access by the handler's lock."""
+    serialized by ChainReads, store access by the Registry's lock (never held across a chain read)."""
     server = ThreadingHTTPServer((host, port), make_handler(registry, health, log, health_head))
     server.daemon_threads = True
     return server

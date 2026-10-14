@@ -212,3 +212,19 @@ def test_enrolment_with_an_infinite_timestamp_is_400(api):
     status, _ = raw(api[0], "POST", f"/api/vaults/{VAULT}/owner",
                     b'{"cold": "x", "token_sha256": "' + b"a" * 64 + b'", "issued_at": 1e999, "signature": "0x"}')
     assert status == 400
+
+
+def test_proxy_settings_in_the_environment_are_ignored(api, monkeypatch):
+    """The token must not detour through an http(s)_proxy from the environment."""
+    url = api[0]
+    token = owner_token(url)
+    for name in ("http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY", "all_proxy", "ALL_PROXY"):
+        monkeypatch.setenv(name, "http://127.0.0.1:9")  # nothing listens there
+    monkeypatch.delenv("no_proxy", raising=False)
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    assert register_intent(url, token, VAULT, CALL, timeout_s=3)["call_hash"] == H
+
+
+def test_malformed_registry_url_is_a_refusal_not_a_traceback():
+    with pytest.raises(RegistryError):
+        register_intent("http://[::1", "t", VAULT, CALL)

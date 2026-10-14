@@ -26,11 +26,12 @@ import os
 import secrets
 import stat
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
@@ -89,6 +90,8 @@ class Registry:
     delay_of_signer: Callable[[str, str], int | None]
     describe: Callable[[bytes], str]
     clock: Callable[[], float] = time.time
+    # one SQLite connection shared by the server's threads: store access only under this lock, chain reads never
+    lock: threading.Lock = field(default_factory=threading.Lock)
 
     def enroll(self, vault: str, body: dict) -> dict:
         try:
@@ -109,14 +112,16 @@ class Registry:
             raise RegistryError(401, "enrolment signature does not verify for this cold key, vault and chain")
         if self.delay_of_signer(vault, cold) != 0:
             raise RegistryError(401, "the signer is not a delay-0 (cold) delegate of this vault on chain")
-        known = self.store.owner(vault)
-        if known is not None and issued_at <= known.issued_at:
-            raise RegistryError(409, "an enrolment at least as new is already recorded (replayed signature?)")
-        self.store.enroll(vault, cold, digest, issued_at, signature)
+        with self.lock:
+            known = self.store.owner(vault)
+            if known is not None and issued_at <= known.issued_at:
+                raise RegistryError(409, "an enrolment at least as new is already recorded (replayed signature?)")
+            self.store.enroll(vault, cold, digest, issued_at, signature)
         return {"vault": vault, "cold": cold, "issued_at": issued_at, "enrolled": True}
 
     def authorized(self, vault: str, token: str | None) -> bool:
-        owner = self.store.owner(vault)
+        with self.lock:
+            owner = self.store.owner(vault)
         # compare digests in constant time; an unknown vault and a wrong token are the same answer
         expected = owner.token_sha256 if owner else "0" * 64
         return bool(token) and hmac.compare_digest(token_digest(token), expected) and owner is not None
@@ -135,7 +140,8 @@ class Registry:
         except Exception as e:
             raise RegistryError(400, f"call_hex is not a call this runtime can decode ({type(e).__name__})") from None
         head = self.head()
-        intent_id = self.store.add_intent(vault, h, "0x" + raw.hex(), summary, head)
+        with self.lock:
+            intent_id = self.store.add_intent(vault, h, "0x" + raw.hex(), summary, head)
         return {"vault": vault, "call_hash": h, "intent_id": intent_id, "registered_head": head, "summary": summary}
 
 
@@ -185,14 +191,19 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-_OPENER = urllib.request.build_opener(_NoRedirect)
+# no proxy from the environment either: the token goes straight to the registry or not at all
+_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect)
 LOOPBACK = ("127.0.0.1", "localhost", "::1")
 
 
 def check_api_url(api: str) -> None:
     """The owner token travels in a header: https anywhere, plain http only to this machine."""
-    parsed = urllib.parse.urlsplit(api)
-    if parsed.scheme == "https" or (parsed.scheme == "http" and parsed.hostname in LOOPBACK):
+    try:
+        parsed = urllib.parse.urlsplit(api)
+        host = parsed.hostname
+    except ValueError:
+        raise RegistryError(0, f"not a registry URL: {api!r}") from None
+    if parsed.scheme == "https" or (parsed.scheme == "http" and host in LOOPBACK):
         return
     raise RegistryError(0, f"refusing to send the owner token to {api}: use https://, or http:// on 127.0.0.1")
 

@@ -47,6 +47,12 @@ waitfor() {
   done; return 0
 }
 alerts() { [[ -f "$J" ]] && grep -c . "$J" || echo 0; }
+wait_alerts() {
+  local n=0
+  until [[ "$(alerts)" -ge "$1" ]]; do
+    sleep 1; n=$((n+1)); [[ $n -gt 120 ]] && { say "timeout: no alert #$1 after 120 s"; exit 1; }
+  done; return 0
+}
 echo "code $CODE · profile $P · vault $VAULT · delay $DELAY blocks · registry $API · payee payee-rent $PAYEE · thief payee attacker-2 $THIEF_TO" > "$LOG"
 
 python3 -u -m airlock.api --db "$DB" --port "$PORT" >> "$LOG" 2>&1 &
@@ -63,13 +69,13 @@ say "2. owner announces a spend: register first, then proxy.announce"
 airlock announce --vault "$VAULT" --to "$PAYEE" --amount 1.5 --api "$API" --token "file:$TOKEN" 2>&1 | tee -a "$LOG" "$TMP/own"
 OWN_HASH="$(grep -o 'announced 0x[0-9a-f]*' "$TMP/own" | cut -d' ' -f2)"
 [[ -n "$OWN_HASH" ]] || { say "owner announce failed"; exit 1; }
-until [[ "$(alerts)" -ge 1 ]]; do sleep 1; done
+wait_alerts 1
 say "alert 1: $(sed -n 1p "$J" | python3 -c 'import json,sys;a=json.load(sys.stdin);print(a["verdict"],a["call_hash"],a["extra"].get("call"))')"
 
 say "3. thief posts the sweep's preimage without the owner token, then announces it (scripts/thief.py, no airlock code)"
 python3 scripts/thief.py --url "$WS" --vault "$VAULT" --to "$THIEF_TO" --amount all --post-intent "$API" \
   --state ".thief-intents-$P.json" | tee -a "$T" "$LOG"
-until [[ "$(alerts)" -ge 2 ]]; do sleep 1; done
+wait_alerts 2
 say "alert 2: $(sed -n 2p "$J" | python3 -c 'import json,sys;a=json.load(sys.stdin);print(a["verdict"],a["call_hash"])')"
 CMD="$(sed -n 2p "$J" | python3 -c 'import json,sys;print(json.load(sys.stdin)["veto_command"])')"
 echo "\$ $CMD" | tee -a "$LOG"

@@ -179,13 +179,14 @@ def main(argv=None) -> int:
                                                                            and args.skip_unreachable)]
     for r in results:
         if r["status"] != "MATCH":
-            print(f"{r['status']:<11} {r['extrinsic_id']:<9} {r['source']}  {'; '.join(r['diffs'])}")
+            print(f"{r['status']:<11} {r['extrinsic_id'] or '-':<9} {r['source']}  {'; '.join(r['diffs'])}")
     by_profile = {}
     for r in results:
         s = by_profile.setdefault(r["profile"] or "unlabelled", {"rows": 0, "match": 0, "ids": set()})
         s["rows"] += 1
         s["match"] += r["status"] == "MATCH"
-        s["ids"].add(r["extrinsic_id"])
+        if r["extrinsic_id"]:
+            s["ids"].add(r["extrinsic_id"])
     for p, s in sorted(by_profile.items()):
         print(f"{p}: {s['match']}/{s['rows']} rows matched ({len(s['ids'])} distinct extrinsics)")
     out = ROOT / "evidence" / f"verify-onchain-{started.replace(':', '')}.json"

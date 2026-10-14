@@ -150,7 +150,7 @@ pytest -q                               # 341 passed, 4 skipped: no chain or net
 scripts/interim_node.sh interim-sdk     # terminal 1: dev chain on ws://127.0.0.1:29944 (archive state)
 
 # terminal 2
-python scripts/seed.py --profile interim-sdk          # demo vault + history (~3 min), checks fixtures/expected.json
+python scripts/seed.py --profile interim-sdk          # demo vault + history (~3 min), checks fixtures/expected.json (on a fresh chain)
 scripts/e2e_evidence.sh interim-sdk                   # thief -> NOT YOURS alert -> veto -> thief fails (~2 min)
 scripts/intent_evidence.sh interim-sdk                # owner intent registry: YOURS / NOT YOURS, registry killed mid-announce
 AIRLOCK_IT=1 AIRLOCK_PROFILE=interim-sdk pytest -q tests/integration   # I1, I2, control, panic on the chain (~90 s)
@@ -169,7 +169,8 @@ python scripts/thief.py --vault <demo vault> --to <same address> --amount all --
 airlock status --vault <demo vault>
 ```
 
-`seed.py` prints the demo vault and hot-key addresses. The other tools: `scripts/spike_proxy.py` (the 10-extrinsic
+`seed.py` prints the demo vault and hot-key addresses. Run it once per chain: on an already-seeded chain it only re-checks, and
+once `intent_evidence.sh` has executed an owner spend from the vault the re-check reports that drift and exits 1. The other tools: `scripts/spike_proxy.py` (the 10-extrinsic
 protocol walk-through, `--vesting` adds 4 at-risk steps), `scripts/refetch.py` (re-read recorded extrinsics by id),
 the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs/CLI.md)).
 
@@ -206,7 +207,7 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
 - **Proof:** [docs/PROOF.md](docs/PROOF.md) — every row with extrinsic id, block hash, tx hash and the profile label.
 - **Tests:** 341 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
   I2: a vetoed announcement never executes, also after the delay; the control; panic) that pass on both interim chains
-  (`evidence/integration-*-T154*Z.json`, `…-T155*Z.json` and, after the intent registry, `…-T171*Z.json`,
+  (`evidence/integration-*-2026-10-14T154*Z.json`, `…T155*Z.json` and, after the intent registry, `…T171*Z.json`,
   `"status": "passed"`; the two earlier `…T1522*Z.json` runs predate that field).
 - **Watcher:** [docs/WATCHER.md](docs/WATCHER.md) — also shown live after a watcher restart, a node restart and a node
   freeze (recorded by [scripts/watcher_evidence.sh](scripts/watcher_evidence.sh)). No alert has reached a phone yet

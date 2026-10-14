@@ -2,7 +2,7 @@
 
 Every row is a real extrinsic, identified by extrinsic id (`block-index`), block hash and transaction hash, and
 labelled with the chain profile it ran on (`airlock/chain_profile.py`). Rows are appended by the script that
-produced them (`scripts/spike_proxy.py --proof docs/PROOF.md`), never typed by hand; each run names the commit
+produced them (`scripts/spike_proxy.py --proof docs/PROOF.md`), never added by hand (a stale row may be deleted by hand); each run names the commit
 that produced it; its JSON is in `evidence/`.
 
 **Profile labels.** The target is the Portaldot V3 testnet. At 2026-10-14 01:04 UTC its RPC host

@@ -5,7 +5,7 @@
 **A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.**
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Tests: 179 passing](https://img.shields.io/badge/tests-179%20passing-brightgreen)
+![Tests: 180 passing](https://img.shields.io/badge/tests-180%20passing-brightgreen)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)
 ![Chain: interim, not V3](https://img.shields.io/badge/chain-interim%20%E2%80%94%20not%20V3-orange)
 
@@ -100,7 +100,7 @@ Airlock is **pallet-native**: there is no contract to deploy. The calls it uses,
 
 ### Requirements
 
-- Python 3.10+ (tests run on 3.11)
+- Python 3.10+ (the test suite passes on 3.11.1 and 3.10.20)
 - macOS on Apple Silicon for the pinned `interim-sdk` node binary (`scripts/interim_node.sh` exits with a message on
   other systems; build `substrate-node` from the same tag there). `interim-1002` needs the `portaldot_dev` binary from
   the Portaldot node repo, set as `PORTALDOT_DEV`.
@@ -116,7 +116,7 @@ cd portaldot-hackathon-2026-airlock-edycu
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'
 
-pytest -q                          # 179 unit tests, no chain or network needed (metadata fixtures committed; Telegram mocked on localhost)
+pytest -q                          # 180 unit tests, no chain or network needed (metadata fixtures committed; Telegram mocked on localhost)
 
 scripts/interim_node.sh interim-sdk   # terminal 1: dev chain on ws://127.0.0.1:29944 (archive state)
 python scripts/spike_proxy.py --profile interim-sdk   # terminal 2: the 10-extrinsic flow, ~1 min

@@ -37,7 +37,7 @@ from a watched vault. It never signs anything.
    5 s no new one is started, so a pass runs at most one send timeout longer and new blocks come first), with the
    countdown and pending state recomputed, for 30 minutes; after one last attempt the watcher logs
    `GAVE UP … never reached <channel>` instead of dropping it silently. The JSON-lines log is evidence, not an owner
-   channel: a failed write is logged once and not retried.
+   channel: a failed write is logged and only retried while an owner channel is still being retried.
 8. **Notifiers:** stdout, a JSON-lines log (`--jsonl`), and Telegram `sendMessage` (plain text, no image). The text
    carries the copy-paste veto command; a URL button is added only when `AIRLOCK_VETO_URL_BASE` (an `https://` URL) is
    set — no web veto page exists yet. A Telegram failure is reported and retried, never raised into the block loop, and
@@ -50,7 +50,7 @@ from a watched vault. It never signs anything.
    A block whose events cannot be read or decoded is logged as a `GAP` and covered by the sweep, never retried forever.
    If one figure of an alert cannot be read (a storage or account layout the decoder does not know — the V3 layouts are
    unverified), the alert still goes out: at risk becomes "the whole balance (unreadable)", an unreadable delay becomes
-   "veto now", and the log names the figure. A different genesis, or a chain on which none of the processed blocks
+   "veto now", and the log names the figure. A pending sweep that cannot read storage is repeated on the next pass. A different genesis, or a chain on which none of the processed blocks
    exists any more (a dev chain restarted from genesis has the same genesis hash), stops the watcher with exit code 3.
    A vault address that does not decode is refused (exit 2); a vault with no delegates is watched with a warning. A
    node that is unreachable at start, or a chain whose runtime changed (new code hash) when the watcher reconnects,

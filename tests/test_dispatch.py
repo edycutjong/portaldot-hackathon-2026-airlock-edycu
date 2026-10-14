@@ -84,3 +84,12 @@ def test_success_without_proxy_executed_is_judged_by_outer_result(runtime):
 def test_unknown_pallet_and_error_index_are_named_not_hidden(runtime):
     failed = ("System", "ExtrinsicFailed", {"dispatch_error": {"Module": {"index": 250, "error": "0x09000000"}}})
     assert outcome(receipt(False, failed), runtime.namer) == "pallet#250.error#9"
+
+
+@pytest.mark.parametrize("attrs", [{}, []])
+def test_malformed_failed_event_is_a_failure_not_a_crash(runtime, attrs):
+    assert outcome(receipt(False, ("System", "ExtrinsicFailed", attrs)), runtime.namer) == "failed:unreadable-ExtrinsicFailed"
+
+
+def test_malformed_proxy_executed_is_not_success(runtime):
+    assert outcome(receipt(True, ("Proxy", "ProxyExecuted", {}), SUCCESS), runtime.namer) == "inner:unreadable-ProxyExecuted"

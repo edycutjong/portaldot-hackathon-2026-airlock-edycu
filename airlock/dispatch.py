@@ -66,10 +66,17 @@ def outcome(receipt: Any, name_error: ErrorNamer) -> str:
         failed = find_event(receipt, "System", "ExtrinsicFailed")
         if failed is None:
             return "failed:no-ExtrinsicFailed-event"
-        return describe_error(event_field(failed, "dispatch_error", 0), name_error)
+        try:
+            err = event_field(failed, "dispatch_error", 0)
+        except (KeyError, ValueError, TypeError):
+            return "failed:unreadable-ExtrinsicFailed"
+        return describe_error(err, name_error)
     for m, e, attrs in events(receipt):
         if (m, e) == ("Proxy", "ProxyExecuted"):
-            result = event_field(attrs, "result", 0)
+            try:
+                result = event_field(attrs, "result", 0)
+            except (KeyError, ValueError, TypeError):
+                return "inner:unreadable-ProxyExecuted"
             if not _is_ok(result):
                 err = result.get("Err") if isinstance(result, dict) else result
                 return f"inner:{describe_error(err, name_error)}"

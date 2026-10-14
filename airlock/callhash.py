@@ -106,7 +106,8 @@ def _has_call(runtime: Any, module: str, function: str) -> bool:
 
 def revive_call(runtime: Any, dest_h160: str, value: int, weight_limit: dict, storage_deposit_limit: int,
                 data: str | bytes) -> Any:
-    """Compose `Revive.call` — an EVM-side spend the vault could be asked to make.
+    """Compose `Revive.call` — an EVM-side spend the vault could be asked to make. Encode-only for now: it fixes how
+    such a call is hashed; dispatching one through the vault is verified separately (V3 gate G3).
 
     The gas limits (`weight_limit`, `storage_deposit_limit`) are part of the encoded call, so they are part of the
     announced hash: an announcement commits to them, and executing with different limits is a different call.

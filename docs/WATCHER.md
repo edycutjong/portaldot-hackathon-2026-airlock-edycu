@@ -21,8 +21,8 @@ from a watched vault. It never signs anything.
    announcement is **NOT YOURS** — including a call whose preimage someone else published, a replay of a call the owner
    already made, or any announcement while the registry cannot be read (it fails closed). Each alert
    also checks that the announcement is still pending; one that was already vetoed, removed or executed (seen late,
-   after downtime) is sent as **NOT YOURS — NO LONGER PENDING**, without a veto command, telling the owner to check the
-   vault.
+   after downtime) is sent as **`<verdict>` — NO LONGER PENDING** (NOT YOURS, or YOURS for a registered spend), without
+   a veto command, telling the owner to check the vault.
 5. **Countdown.** The delegate's delay is read from `Proxy.Proxies(vault)` at the announcement's block. The pallet lets
    `proxy_announced` through once `now − announced ≥ delay`, so the call can be included in block `announced + delay`;
    the alert therefore names `announced + delay − 1` as the last block a veto can land in and still be sure to win,

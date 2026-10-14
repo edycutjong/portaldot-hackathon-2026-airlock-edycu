@@ -1,0 +1,304 @@
+{
+  "started": "2026-10-14T15:25:50Z",
+  "endpoint": "http://127.0.0.1:19933",
+  "transport": "http",
+  "profile": "interim-1002",
+  "label": "interim \u2014 not V3 (Portaldot dev node, runtime spec 1002)",
+  "genesis_hash": "0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22",
+  "head_at_refetch": 8612,
+  "source": "evidence/seed-interim-1002-2026-10-14T151531Z.json",
+  "matched": 29,
+  "total": 29,
+  "rows": [
+    {
+      "extrinsic_id": "8510-1",
+      "block_number": 8510,
+      "block_hash": "0x045b15620cf9c6eaefeb6303e68f1e30b4a7d4851f343a50e58eb8fb18598a45",
+      "extrinsic_hash": "0xcb5f9381e8ebe5e0326a4a2642fe97f3d714a35f88695820b56c28cd2f9bacec",
+      "call": "Balances.transfer_keep_alive",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8511-1",
+      "block_number": 8511,
+      "block_hash": "0x93883d5eaedac0b753dcd4aa06a5ecf0b1f0b90e9aa4694fed87b1388285f451",
+      "extrinsic_hash": "0xb723342f2b2c239d121c6dbc6ad9c495a884e6bba8e1d1fa0243c3c96468b4e3",
+      "call": "Balances.transfer_keep_alive",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8512-1",
+      "block_number": 8512,
+      "block_hash": "0x3fa644f746c0f1b94aec1b2c60919d12f689a5242b0e4e5e432840d3a387c13e",
+      "extrinsic_hash": "0x6b5bdbd1ef958e5778d95f23d830172e08faee2559d646a1b63b51b24ee3cb3d",
+      "call": "Balances.transfer_keep_alive",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8513-1",
+      "block_number": 8513,
+      "block_hash": "0xbfa04b7da6e6d6264b719d57e3b7391fcd57e2b817423d2bc36cf8750371709e",
+      "extrinsic_hash": "0x3d106f17515abddaf30ec03a8d43b1a538a4bb77c2a47ee9fc62a2c9b30cc9d5",
+      "call": "Balances.transfer_keep_alive",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8514-1",
+      "block_number": 8514,
+      "block_hash": "0x64d3d76a186c156459baf7681ff97a6a8173ebcf2430c7ed78ffd5440d4368cc",
+      "extrinsic_hash": "0x9c540fec1825c07dbe393e5e4d81511a5dc396a01d33e71ae3ceb86cd50c42d9",
+      "call": "Proxy.anonymous",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8515-1",
+      "block_number": 8515,
+      "block_hash": "0x975d9c20a08f8823e1322c551fb7fca47e0b8c9938911ca968ef933ff74123f5",
+      "extrinsic_hash": "0x9125c36c1f5260018fe5a4361c52df13ac6e1ee5deb673d97a2ec331a56763b7",
+      "call": "Balances.transfer_keep_alive",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8516-1",
+      "block_number": 8516,
+      "block_hash": "0x6e770dfb09b6cdecf06dd8954c4f07ab340ba31bb84730c26b9e4d7bc5f54a0b",
+      "extrinsic_hash": "0x662e7df9f7fa0195c4581d62bc088a10756e6c9e8c7cff4d4f81f772758e5b13",
+      "call": "Proxy.proxy(Proxy.add_proxy)",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8517-1",
+      "block_number": 8517,
+      "block_hash": "0x40e8303695bf0b19c934c5ccc9cee60a52304464386e8c7b2dbfc8830868c8fe",
+      "extrinsic_hash": "0xeaf639aaa279fb4f95e07eedc674cbf6d5be2e1f66ddd3a48f0a5f3af52462f1",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8518-1",
+      "block_number": 8518,
+      "block_hash": "0x3a85b67f51e8cee5defbf4cc10c4afbf42a09744248a5f8bdef1a0eb04ab0b3f",
+      "extrinsic_hash": "0x469886899a2c5d09fb6e5e2616fc059212c1659a2e2b7e6e391872fc872765e0",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8519-1",
+      "block_number": 8519,
+      "block_hash": "0xceff2267c310b88ad861c4fd024b6ea3240899d2467c0425e980dbdb5d4f6ab2",
+      "extrinsic_hash": "0x69fb96bb9a4b01bca82ea4e39ab8236e736ebc4b55c0fa8cb022b5371d8bab20",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8520-1",
+      "block_number": 8520,
+      "block_hash": "0x22bef4e250a9ccc4d984e2172817e06b625099639d65598f29f740e9ccc76453",
+      "extrinsic_hash": "0x0a4a5f313571c633198987b33cc21441fdf6a438716ecb2fce8726e8ac14cae1",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8521-1",
+      "block_number": 8521,
+      "block_hash": "0x76cec0f71cfd6a6ce983149a2882adac05b3c26a772e46173971523a396d0808",
+      "extrinsic_hash": "0x36ca9900758a1917dad06ed273b74cfcfc2f15a0aac6fa0d1fafe1da98ab2ed7",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8528-1",
+      "block_number": 8528,
+      "block_hash": "0xc8a05a15b89df22bb37cdf9a8e1d622d7a70a7a44ca2d329eb0b183449abb970",
+      "extrinsic_hash": "0xeb86309ec52c000de299ad24c37e904ea9069e86cb52c94d2b3cd649f6b83593",
+      "call": "Proxy.proxy_announced(Balances.transfer_keep_alive)",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8529-1",
+      "block_number": 8529,
+      "block_hash": "0xa44733a436d6d95bed78a217ba04799ffc3bb780f05b13d7c8d5d3ff88b48d45",
+      "extrinsic_hash": "0x6a577e93aaeabe9b40ca40bdd4bf98e47875ff66d424ff33b9f08f5a4c64bf16",
+      "call": "Proxy.proxy_announced(Balances.transfer_keep_alive)",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8530-1",
+      "block_number": 8530,
+      "block_hash": "0xf51638d413b973718b1091e9d2c59e71f9aaf3b1424ef801a508f2ef7c2e4625",
+      "extrinsic_hash": "0x868407305be566cb8515d4fa8df9bf2c4120a06ba5b750158f339eb180d2b2d8",
+      "call": "Proxy.proxy_announced(Balances.transfer_keep_alive)",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8531-1",
+      "block_number": 8531,
+      "block_hash": "0x6b83b8341a32eeff64b70f0278ce75faf774dcf7b5bc639a76ce78e16d23a826",
+      "extrinsic_hash": "0xd2cfb3138c7597326f6c14d46153caba96848c8bc46e83d6632c2189ca6c7991",
+      "call": "Proxy.proxy_announced(Balances.transfer_keep_alive)",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8532-1",
+      "block_number": 8532,
+      "block_hash": "0x482bebe3474b68ac7153ad33ab1cfa65ed620b2be61acb8d3c5555ba447a7088",
+      "extrinsic_hash": "0xd71515bab0a6ac1acda50c1b2ac00c7555c16ed0f091f184ba3a2d7220868983",
+      "call": "Proxy.proxy_announced(Balances.transfer_keep_alive)",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8533-1",
+      "block_number": 8533,
+      "block_hash": "0x32d9de54e9e6f4e34c36a20e9324e832e13a1ca76917deb2b7a8e94bdd7faa48",
+      "extrinsic_hash": "0x8eed4c0849bf5b068481c19aa13392502bd79a63561d197ed446915755751822",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8534-1",
+      "block_number": 8534,
+      "block_hash": "0x3964307d16375f6629ba3cf292c67c9650ebd10eaf3d6f3398e47c7205f74f3a",
+      "extrinsic_hash": "0x6db5ec532781c0de5c28f48030f8eb9a7bac5161a162a37feca460993b7d8974",
+      "call": "Proxy.proxy(Proxy.reject_announcement)",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8535-1",
+      "block_number": 8535,
+      "block_hash": "0xae966e980ec14fb4efc9ff2b72d51a6d6909e49b513daef9cb4bfa269123e699",
+      "extrinsic_hash": "0x18e83ffa8371d546c886c6f3ffd5af6df5ceb938b7c221ed17f58f3b115f9fee",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8536-1",
+      "block_number": 8536,
+      "block_hash": "0xe4001241d70322d89c6503817f965e8d6d9003003ac7320b0a4c34d6badb67b7",
+      "extrinsic_hash": "0x49c3387c08477b2fba5144751b74bca9ac75142002f926ee52e4d60720a9ebcc",
+      "call": "Proxy.proxy(Proxy.reject_announcement)",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8546-1",
+      "block_number": 8546,
+      "block_hash": "0x3b4fbaef59817acb0a2f9dd1d7694aab452f350c4da94a749315f944dadc3f24",
+      "extrinsic_hash": "0x8799fd07612d01c8875cb880dd47bd841b5948b0fe7b4b92c2e5a62a5d758d98",
+      "call": "Proxy.proxy_announced(Balances.transfer_keep_alive)",
+      "outcome": "Proxy.Unannounced",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8547-1",
+      "block_number": 8547,
+      "block_hash": "0x0732275d72d268e8d2efb52dd28fa4f25ed84c3e52f5688da9c999af3a2ca7cc",
+      "extrinsic_hash": "0x90d0b3f14d16f0c8486f674eef9e062bd6cc718cb70ceca224b3d09108ad1c63",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8548-1",
+      "block_number": 8548,
+      "block_hash": "0x268846cddcc7e853d0ffb45d48f2e46dbf47c54536065a33657bfe962cf25ade",
+      "extrinsic_hash": "0x073d67ee36a785576430e7ad43f3cafeb7d899c93a9421bafb40c63d8024b521",
+      "call": "Proxy.remove_announcement",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8549-1",
+      "block_number": 8549,
+      "block_hash": "0x9bd306c4ef346e9020ff1fe49153043274647451b5af95e89327e527efb56c93",
+      "extrinsic_hash": "0x72f85658ca0b7d58094223d50f5c7477753b7dddc67da8f8b9c61ca6a510a286",
+      "call": "Proxy.anonymous",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8550-1",
+      "block_number": 8550,
+      "block_hash": "0x8159d5384d606e77bb57ba069d68623c97e9b41876e701da2cb4aa8b3c888789",
+      "extrinsic_hash": "0x6c8cd8fcfe21989457c9c5693deae98be0ed9e39982d52467ffce19d9438d0f7",
+      "call": "Balances.transfer_keep_alive",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8551-1",
+      "block_number": 8551,
+      "block_hash": "0x276b59ed9723b18b4c8d0e22d57e1d7ead1fc064a9f720a95f2cf0a4e9c33967",
+      "extrinsic_hash": "0x9e29f39a874b73c52a5a2061e4526c7d1e9288f761cc125484b12b2b86695313",
+      "call": "Proxy.proxy(Proxy.add_proxy)",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8552-1",
+      "block_number": 8552,
+      "block_hash": "0x6ee85f87a101156407a09dacd188f76a8f68da115ce42eb2dec0bfbe88b1c32e",
+      "extrinsic_hash": "0x27db1c2dc9be8772327ad62345d2d7008fb8b97edc37697c7296833377a6c6dc",
+      "call": "Proxy.proxy(Proxy.remove_proxy)",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "8553-1",
+      "block_number": 8553,
+      "block_hash": "0x83b56a605eb6ddcbd33d848c92bdcd7a5bef2666f235121a477850b24d0f19f7",
+      "extrinsic_hash": "0x6c8a81cde997420ed6c19031064452c16a6b43528e8d2195ac02f10cf00eb281",
+      "call": "Proxy.announce",
+      "outcome": "Proxy.NotProxy",
+      "match": true,
+      "diffs": []
+    }
+  ]
+}

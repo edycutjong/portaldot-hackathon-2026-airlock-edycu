@@ -189,3 +189,73 @@ Runtime `portaldot/1002` · genesis `0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53
 | 27 | throwaway: add delayed hot key | `Proxy.proxy(Proxy.add_proxy)` | cold | ok | ok | `8551-1` | `0x276b59ed9723b18b4c8d0e22d57e1d7ead1fc064a9f720a95f2cf0a4e9c33967` | `0x9e29f39a874b73c52a5a2061e4526c7d1e9288f761cc125484b12b2b86695313` | interim-1002 — not V3 |
 | 28 | throwaway: panic | `Proxy.proxy(Proxy.remove_proxy)` | cold | ok | ok | `8552-1` | `0x6ee85f87a101156407a09dacd188f76a8f68da115ce42eb2dec0bfbe88b1c32e` | `0x27db1c2dc9be8772327ad62345d2d7008fb8b97edc37697c7296833377a6c6dc` | interim-1002 — not V3 |
 | 29 | throwaway: hot announces after panic | `Proxy.announce` | hot | Proxy.NotProxy | Proxy.NotProxy | `8553-1` | `0x83b56a605eb6ddcbd33d848c92bdcd7a5bef2666f235121a477850b24d0f19f7` | `0x6c8a81cde997420ed6c19031064452c16a6b43528e8d2195ac02f10cf00eb281` | interim-1002 — not V3 |
+
+### re-fetch — 2026-10-14T15:25:49Z — the 2026-10-14T15:15:39Z interim-sdk run, by extrinsic id
+
+Fresh process over http (`http://127.0.0.1:29944`; the run itself was sent over ws) at head #17155 · `evidence/refetch-interim-sdk-2026-10-14T152549Z.json` · every row: same block hash, tx hash and outcome as recorded.
+
+| extrinsic id | call | outcome | tx hash | profile |
+|---|---|---|---|---|
+| `16953-2` | `Balances.transfer_keep_alive` | ok | `0x8e8181c4db10e843383a92e7228b615fe0caf186506d417803432209bae66b55` | interim-sdk — not V3 |
+| `16954-2` | `Balances.transfer_keep_alive` | ok | `0x48ec85ca55f5bf0df67479b7ec554650f98be0faee3681fddcbdc80c365e904f` | interim-sdk — not V3 |
+| `16955-2` | `Proxy.create_pure` | ok | `0x9b6913236f255aef3ee9fbe72324ce56842e981e31701a64aa5ff5f788442bde` | interim-sdk — not V3 |
+| `16956-2` | `Balances.transfer_keep_alive` | ok | `0xf79bbb5d6044ac1a8bdeed9f6fc2ec8e424b2c5700b1dd434e44616fa0000670` | interim-sdk — not V3 |
+| `16957-2` | `Proxy.proxy(Proxy.add_proxy)` | ok | `0x3275c711990a2e5d0b537c2c2052d7ddc5ee0df3b01077363c99a63ea74d8993` | interim-sdk — not V3 |
+| `16958-2` | `Proxy.announce` | ok | `0xfd62486a67d4ef224a83ad1e710e2bb949bbdd37ea2dbb2ad25edeebf6b74c5a` | interim-sdk — not V3 |
+| `16959-2` | `Proxy.announce` | ok | `0xe9046d62bdc49f428c522ea481bd40a4380d918b006825043c48a651ec9e1b92` | interim-sdk — not V3 |
+| `16960-2` | `Proxy.announce` | ok | `0x0790b73c83b1af26a7ff49d31d6ae3f500667b0caf228327ff94bcab1b71ba07` | interim-sdk — not V3 |
+| `16961-2` | `Proxy.announce` | ok | `0x0fef93342110b5c13efa854dd94ce6d761b376ea6c0e463f4b64d43dd5b1c55f` | interim-sdk — not V3 |
+| `16962-2` | `Proxy.announce` | ok | `0x03f6876e61fbbb2491fa1ab2b3050445fe07ab050208867b656292f603dc361b` | interim-sdk — not V3 |
+| `16979-2` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0xe7d56af21d0114254f914d87d2d226467dfaf629c1605c32232d7eff6d898d6e` | interim-sdk — not V3 |
+| `16980-2` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0x3103a4ec5fe0cc3c9d4652656433c678f0bbe5d37bb47dca62b61e4000b93ede` | interim-sdk — not V3 |
+| `16981-2` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0x453db8a6b1879f2fc72ea08c3f90d09b647b1aece281ad81b6e72f1878dcb563` | interim-sdk — not V3 |
+| `16982-2` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0x5b5d324b22fe1b604a31a295f4bfa5c7c0f651788a9713f55d23d03644b78980` | interim-sdk — not V3 |
+| `16983-2` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0xca8bc9784a59936ebcdbc6765d330aa689edba8d3898be4993f01fc55fba1243` | interim-sdk — not V3 |
+| `16984-2` | `Proxy.announce` | ok | `0x4e0b22982abe8f7c8d1eeb7f0cb0038be2e4818fed334be380a167df309a27a8` | interim-sdk — not V3 |
+| `16985-2` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0x7643fea1ff1ee69bc6b3926ae4311ce17ee7e3457ced37981a1f85d7091794ac` | interim-sdk — not V3 |
+| `16986-2` | `Proxy.announce` | ok | `0xba230cbd13081e6888ed19f2f1b3c12c3fe17a0901e46f06bb3cbf103972b9f3` | interim-sdk — not V3 |
+| `16987-2` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0x986ba03c64fa449b27084f7b03f46037be824f9c58dd1f15fa1676d77634d31e` | interim-sdk — not V3 |
+| `17007-2` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0xc46a09f4a47823d8b9f918666ddfb32496657a3b8940757805fbbd9916ccf2ad` | interim-sdk — not V3 |
+| `17008-2` | `Proxy.announce` | ok | `0xab3e2e4649c1b1fe1e0b2db55469a38217b3ae1400020c29c132345e235e7ad7` | interim-sdk — not V3 |
+| `17009-2` | `Proxy.remove_announcement` | ok | `0x62570bc962a97feeef7c16bb9b415fbf4253b2af3f1ccf44b46c69bae096ba2f` | interim-sdk — not V3 |
+| `17010-2` | `Proxy.create_pure` | ok | `0x54b3f5990de51c50da248c5e56f47107f0b7cedac7f63d348eb00852d90b3856` | interim-sdk — not V3 |
+| `17011-2` | `Balances.transfer_keep_alive` | ok | `0xdb9910d99c2961c22fc28d393c50aa2c6dacb3f1b0ae44c8551c6327c0c23c93` | interim-sdk — not V3 |
+| `17012-2` | `Proxy.proxy(Proxy.add_proxy)` | ok | `0xcdf64540f0f6e6a42ad8f93d3991626278bb231c34b3e584f1b3d438f991e46e` | interim-sdk — not V3 |
+| `17013-2` | `Proxy.proxy(Proxy.remove_proxy)` | ok | `0x477475b90c31ae6a26fb9abd81b237dbb564e838db93b63e992f24b14479eb1e` | interim-sdk — not V3 |
+| `17014-2` | `Proxy.announce` | Proxy.NotProxy | `0x5708783476a98f9bf12dc3f5ebf158238344ede1278b7e88de60c06fae706553` | interim-sdk — not V3 |
+
+### re-fetch — 2026-10-14T15:25:50Z — the 2026-10-14T15:15:31Z interim-1002 run, by extrinsic id
+
+Fresh process over http (`http://127.0.0.1:19933`; the run itself was sent over ws) at head #8612 · `evidence/refetch-interim-1002-2026-10-14T152550Z.json` · every row: same block hash, tx hash and outcome as recorded.
+
+| extrinsic id | call | outcome | tx hash | profile |
+|---|---|---|---|---|
+| `8510-1` | `Balances.transfer_keep_alive` | ok | `0xcb5f9381e8ebe5e0326a4a2642fe97f3d714a35f88695820b56c28cd2f9bacec` | interim-1002 — not V3 |
+| `8511-1` | `Balances.transfer_keep_alive` | ok | `0xb723342f2b2c239d121c6dbc6ad9c495a884e6bba8e1d1fa0243c3c96468b4e3` | interim-1002 — not V3 |
+| `8512-1` | `Balances.transfer_keep_alive` | ok | `0x6b5bdbd1ef958e5778d95f23d830172e08faee2559d646a1b63b51b24ee3cb3d` | interim-1002 — not V3 |
+| `8513-1` | `Balances.transfer_keep_alive` | ok | `0x3d106f17515abddaf30ec03a8d43b1a538a4bb77c2a47ee9fc62a2c9b30cc9d5` | interim-1002 — not V3 |
+| `8514-1` | `Proxy.anonymous` | ok | `0x9c540fec1825c07dbe393e5e4d81511a5dc396a01d33e71ae3ceb86cd50c42d9` | interim-1002 — not V3 |
+| `8515-1` | `Balances.transfer_keep_alive` | ok | `0x9125c36c1f5260018fe5a4361c52df13ac6e1ee5deb673d97a2ec331a56763b7` | interim-1002 — not V3 |
+| `8516-1` | `Proxy.proxy(Proxy.add_proxy)` | ok | `0x662e7df9f7fa0195c4581d62bc088a10756e6c9e8c7cff4d4f81f772758e5b13` | interim-1002 — not V3 |
+| `8517-1` | `Proxy.announce` | ok | `0xeaf639aaa279fb4f95e07eedc674cbf6d5be2e1f66ddd3a48f0a5f3af52462f1` | interim-1002 — not V3 |
+| `8518-1` | `Proxy.announce` | ok | `0x469886899a2c5d09fb6e5e2616fc059212c1659a2e2b7e6e391872fc872765e0` | interim-1002 — not V3 |
+| `8519-1` | `Proxy.announce` | ok | `0x69fb96bb9a4b01bca82ea4e39ab8236e736ebc4b55c0fa8cb022b5371d8bab20` | interim-1002 — not V3 |
+| `8520-1` | `Proxy.announce` | ok | `0x0a4a5f313571c633198987b33cc21441fdf6a438716ecb2fce8726e8ac14cae1` | interim-1002 — not V3 |
+| `8521-1` | `Proxy.announce` | ok | `0x36ca9900758a1917dad06ed273b74cfcfc2f15a0aac6fa0d1fafe1da98ab2ed7` | interim-1002 — not V3 |
+| `8528-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0xeb86309ec52c000de299ad24c37e904ea9069e86cb52c94d2b3cd649f6b83593` | interim-1002 — not V3 |
+| `8529-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0x6a577e93aaeabe9b40ca40bdd4bf98e47875ff66d424ff33b9f08f5a4c64bf16` | interim-1002 — not V3 |
+| `8530-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0x868407305be566cb8515d4fa8df9bf2c4120a06ba5b750158f339eb180d2b2d8` | interim-1002 — not V3 |
+| `8531-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0xd2cfb3138c7597326f6c14d46153caba96848c8bc46e83d6632c2189ca6c7991` | interim-1002 — not V3 |
+| `8532-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0xd71515bab0a6ac1acda50c1b2ac00c7555c16ed0f091f184ba3a2d7220868983` | interim-1002 — not V3 |
+| `8533-1` | `Proxy.announce` | ok | `0x8eed4c0849bf5b068481c19aa13392502bd79a63561d197ed446915755751822` | interim-1002 — not V3 |
+| `8534-1` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0x6db5ec532781c0de5c28f48030f8eb9a7bac5161a162a37feca460993b7d8974` | interim-1002 — not V3 |
+| `8535-1` | `Proxy.announce` | ok | `0x18e83ffa8371d546c886c6f3ffd5af6df5ceb938b7c221ed17f58f3b115f9fee` | interim-1002 — not V3 |
+| `8536-1` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0x49c3387c08477b2fba5144751b74bca9ac75142002f926ee52e4d60720a9ebcc` | interim-1002 — not V3 |
+| `8546-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x8799fd07612d01c8875cb880dd47bd841b5948b0fe7b4b92c2e5a62a5d758d98` | interim-1002 — not V3 |
+| `8547-1` | `Proxy.announce` | ok | `0x90d0b3f14d16f0c8486f674eef9e062bd6cc718cb70ceca224b3d09108ad1c63` | interim-1002 — not V3 |
+| `8548-1` | `Proxy.remove_announcement` | ok | `0x073d67ee36a785576430e7ad43f3cafeb7d899c93a9421bafb40c63d8024b521` | interim-1002 — not V3 |
+| `8549-1` | `Proxy.anonymous` | ok | `0x72f85658ca0b7d58094223d50f5c7477753b7dddc67da8f8b9c61ca6a510a286` | interim-1002 — not V3 |
+| `8550-1` | `Balances.transfer_keep_alive` | ok | `0x6c8cd8fcfe21989457c9c5693deae98be0ed9e39982d52467ffce19d9438d0f7` | interim-1002 — not V3 |
+| `8551-1` | `Proxy.proxy(Proxy.add_proxy)` | ok | `0x9e29f39a874b73c52a5a2061e4526c7d1e9288f761cc125484b12b2b86695313` | interim-1002 — not V3 |
+| `8552-1` | `Proxy.proxy(Proxy.remove_proxy)` | ok | `0x27db1c2dc9be8772327ad62345d2d7008fb8b97edc37697c7296833377a6c6dc` | interim-1002 — not V3 |
+| `8553-1` | `Proxy.announce` | Proxy.NotProxy | `0x6c8a81cde997420ed6c19031064452c16a6b43528e8d2195ac02f10cf00eb281` | interim-1002 — not V3 |

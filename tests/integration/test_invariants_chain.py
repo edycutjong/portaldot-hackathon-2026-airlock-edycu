@@ -27,7 +27,7 @@ COLD_URI = {"interim-sdk": "//Alice", "interim-1002": "//Dave"}
 
 
 @pytest.fixture(scope="module")
-def env():
+def env(request):
     from substrateinterface import Keypair
 
     from airlock.chain_profile import connect
@@ -52,9 +52,10 @@ def env():
     yield {"chain": chain, "tx": tx, "cold": cold, "hot": hot, "payee": payee}
     out = os.environ.get("AIRLOCK_IT_EVIDENCE")
     if out:
-        path = Path(out) / f"integration-{chain.profile.id}-{started}.json"
+        status = "passed" if request.session.testsfailed == 0 else "failed"
+        path = Path(out) / f"integration-{chain.profile.id}-{started}{'' if status == 'passed' else '-FAILED'}.json"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"started": started, "code": code_version(), "profile": chain.profile.id,
+        path.write_text(json.dumps({"started": started, "status": status, "code": code_version(), "profile": chain.profile.id,
                                     "label": chain.profile.label, "endpoint": chain.url,
                                     "genesis_hash": chain.genesis_hash, "delay_blocks": DELAY, "rows": tx.rows},
                                    indent=2) + "\n")

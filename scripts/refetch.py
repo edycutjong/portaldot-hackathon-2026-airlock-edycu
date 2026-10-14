@@ -57,7 +57,7 @@ def main(argv=None) -> int:
     ap.add_argument("--id", action="append", default=[], help="an extrinsic id to look up (repeatable)")
     ap.add_argument("--profile", default=None, help="expected profile (default: the evidence file's, else auto)")
     ap.add_argument("--url", default=None, help="node endpoint, ws:// or http:// (default $AIRLOCK_WSS, else profile)")
-    ap.add_argument("--proof", type=Path, default=None, help="append a re-fetch table to this PROOF.md (all-match only)")
+    ap.add_argument("--proof", type=Path, default=None, help="append a re-fetch table to this PROOF.md (all found/matched only)")
     args = ap.parse_args(argv)
 
     recorded = load(args.evidence) if args.evidence else None
@@ -121,17 +121,22 @@ def main(argv=None) -> int:
 
     if bad:
         return 1
-    if args.proof and recorded:
-        lines = [f"### re-fetch — {started} — the {recorded['started']} {chain.profile.id} run, by extrinsic id",
-                 "",
-                 f"Fresh process over {transport(chain.url)} (`{chain.url}`; the run itself was sent over "
-                 f"{transport(recorded['endpoint'])}) at head #{head} · `{shown(out)}` · every row: same block hash, "
-                 f"tx hash and outcome as recorded.",
-                 "",
-                 "| extrinsic id | call | outcome | tx hash | profile |",
-                 "|---|---|---|---|---|"]
-        lines += [f"| `{r['extrinsic_id']}` | `{r['call']}` | {r['outcome']} | `{r['extrinsic_hash']}` | {label} |"
-                  for r in results]
+    if args.proof:
+        if recorded:
+            title = f"the {recorded['started']} {chain.profile.id} run, by extrinsic id"
+            detail = (f"Fresh process over {transport(chain.url)} (`{chain.url}`; the run itself was sent over "
+                      f"{transport(recorded['endpoint'])}) at head #{head} · `{shown(out)}` · every row: same block "
+                      f"hash, tx hash and outcome as recorded.")
+        else:
+            title = f"{', '.join(args.id)} on {chain.profile.id}, found by extrinsic id"
+            detail = (f"Fresh process over {transport(chain.url)} (`{chain.url}`) at head #{head} · `{shown(out)}` · "
+                      f"looked up by id alone: no recorded row to compare with — the block hash, call, outcome and tx "
+                      f"hash below are what the chain returns.")
+        lines = [f"### re-fetch — {started} — {title}", "", detail, "",
+                 "| extrinsic id | call | outcome | block hash | tx hash | profile |",
+                 "|---|---|---|---|---|---|"]
+        lines += [f"| `{r['extrinsic_id']}` | `{r['call']}` | {r['outcome']} | `{r['block_hash']}` | "
+                  f"`{r['extrinsic_hash']}` | {label} |" for r in results]
         with args.proof.open("a") as f:
             f.write("\n" + "\n".join(lines) + "\n")
         print(f"re-fetch table appended to {args.proof}")

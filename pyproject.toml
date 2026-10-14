@@ -10,6 +10,9 @@ dependencies = [
   "scalecodec==1.2.12",
 ]
 
+[project.scripts]
+airlock = "airlock.cli:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=7"]
 

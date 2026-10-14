@@ -260,6 +260,7 @@ def record(chain: Chain, args) -> int:
 
     status = "failed" if failure else "passed"
     out = ROOT / "evidence" / f"spike-proxy-{chain.profile.id}-{started.replace(':', '')}{'-FAILED' if failure else ''}.json"
+    out.parent.mkdir(exist_ok=True)
     out.write_text(json.dumps({"started": started, "status": status, "failure": failure, "code": version,
                                "profile": chain.profile.id, "label": chain.profile.label, "endpoint": chain.url,
                                "genesis_hash": chain.genesis_hash, "code_hash": chain.code_hash,

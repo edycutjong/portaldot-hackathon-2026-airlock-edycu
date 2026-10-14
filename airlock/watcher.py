@@ -260,6 +260,7 @@ def follow(watcher: Watcher, args, log) -> int:
             try:
                 watcher.chain = _reconnect(watcher, args)
                 backoff = 1.0
+                log(f"reconnected to {watcher.chain.url} (same genesis); resuming after #{watcher.store.last_block}")
             except CONNECTION_ERRORS as e2:  # still down: loop and retry
                 log(f"reconnect failed: {type(e2).__name__}: {e2}")
         finally:

@@ -1,8 +1,9 @@
 """What the owner is told when a delegate announces a spend from a watched vault, and how it reaches them.
 
-Until the owner-token intent registry exists every announcement is NOT YOURS: an announcement carries only a call
-hash, and nothing the owner registered can vouch for it yet. The alert says what is at risk, when the call becomes
-executable, and carries the exact veto command to paste. Plain text, no image; the URL button is flag-gated until a
+An announcement carries only a call hash. It is YOURS only when the owner registered that exact call with the owner
+token before announcing it (airlock/intents.py); every other announcement — a thief's, even one whose preimage is
+public — is NOT YOURS. Either way the alert says what is at risk, when the call becomes executable, and carries the
+exact veto command to paste (a YOURS spend can still be cancelled). Plain text, no image; the URL button is flag-gated until a
 web veto page exists.
 
 Notifiers: stdout, a JSON-lines log, and Telegram `sendMessage` over plain HTTPS. A notifier failure is reported and
@@ -23,6 +24,7 @@ from pathlib import Path
 from typing import Callable, Protocol
 
 NOT_YOURS = "NOT YOURS"
+YOURS = "YOURS"
 TELEGRAM_API = "https://api.telegram.org"
 TELEGRAM_ENV = Path.home() / ".config" / "airlock" / "telegram.env"
 TOKEN_SHAPE = re.compile(r"^\d+:[A-Za-z0-9_-]+$")  # what @BotFather issues: <bot id>:<secret>
@@ -92,14 +94,25 @@ def format_text(a: Alert) -> str:
             f"Check the vault: up to {a.at_risk} is movable now. If a spend you did not make executed, "
             f"remove the delegate with the cold key.",
             f"Call hash {a.call_hash}"])
-    lines = [f"{a.verdict} — VETO" if a.verdict == NOT_YOURS else a.verdict,
-             f"Vault {a.vault}",
-             f"Chain: {chain}",
-             f"Up to {a.at_risk} at risk" + (f" ({a.locked} of the free balance cannot move: locks, or the "
-                                             f"existential deposit a vault with deposits keeps)" if a.locked else "")]
+    if a.verdict == YOURS:
+        lines = [f"{YOURS} — your registered spend (intent {a.extra.get('intent_id')}, registered at "
+                 f"#{a.extra.get('registered_head')})",
+                 f"Vault {a.vault}",
+                 f"Chain: {chain}",
+                 f"Call {a.extra.get('call') or '(not decoded)'}"]
+    else:
+        lines = [f"{a.verdict} — VETO",
+                 f"Vault {a.vault}",
+                 f"Chain: {chain}",
+                 f"Up to {a.at_risk} at risk" + (f" ({a.locked} of the free balance cannot move: locks, or the "
+                                                 f"existential deposit a vault with deposits keeps)" if a.locked else "")]
     announced = f"Announced by delegate {a.delegate} at block #{a.announced_block}"
     if a.release_block is None:
-        lines.append(f"{announced}; its delay could not be read — veto now")
+        lines.append(f"{announced}; its delay could not be read" + ("" if a.verdict == YOURS else " — veto now"))
+    elif a.verdict == YOURS:
+        lines.append(f"{announced}; executable from #{a.release_block}"
+                     + (f" ({a.blocks_left} blocks{_seconds(a.blocks_left, a.block_time_ms)} from head #{a.head})"
+                        if a.blocks_left > 0 else f" — executable now (head #{a.head})"))
     elif a.blocks_to_veto > 0:
         lines.append(f"{announced}; executable from #{a.release_block}. "
                      f"Veto must land by #{a.veto_by}: {a.blocks_to_veto} blocks"
@@ -109,6 +122,9 @@ def format_text(a: Alert) -> str:
                      f"a veto still works until the call executes, but the thief can now execute it")
     if a.late_by > 1:
         lines.append(f"Seen {a.late_by} blocks late: the watcher was offline or catching up")
+    if a.verdict == YOURS:
+        lines += [f"Call hash {a.call_hash}", "Not yours after all? Cancel it with the cold key:", a.veto_command()]
+        return "\n".join(lines)
     lines += [f"Call hash {a.call_hash} (an announcement publishes only the hash)",
               "Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY, e.g. file:~/.config/airlock/cold.seed):",
               a.veto_command(),

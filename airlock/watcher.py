@@ -5,7 +5,8 @@
     -> System.Events -> Proxy.Announced { real, proxy, call_hash } with real ∈ watched vaults
     -> delay of that delegate from Proxy.Proxies(vault) -> executable-from block
     -> at-risk = what a transfer could move out of the vault (chain_profile, per AccountData layout)
-    -> still pending? (Proxy.Announcements) -> verdict (NOT YOURS until the owner intent registry exists)
+    -> still pending? (Proxy.Announcements) -> verdict: YOURS only if the owner registered this call first (owner
+       intent registry, same SQLite file — airlock/intents.py), else NOT YOURS
     -> SQLite -> notifiers
   at start, and after any block whose events could not be read: sweep Proxy.Announcements of every watched vault's
   delegates, so an announcement made before the first run (or inside a pruned range) is still alerted.
@@ -33,11 +34,11 @@ from dataclasses import dataclass, fields, replace
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-from .alerts import (NOT_YOURS, Alert, JsonlNotifier, Notifier, StdoutNotifier, TelegramError, format_text,
+from .alerts import (NOT_YOURS, YOURS, Alert, JsonlNotifier, Notifier, StdoutNotifier, TelegramError, format_text,
                      telegram_from_config)
 from .callhash import pending, same_account
 from .chain_profile import Chain, ChainUnreachable, ProfileMismatch, UnknownChain, connect, event_field
-from .store import ChainReset, GenesisChanged, Store
+from .store import ChainReset, GenesisChanged, Intent, Store
 
 RETRY_WINDOW_S = 30 * 60  # an undelivered alert is retried on every new block for this long, then given up (logged)
 RETRY_BUDGET_S = 5.0  # per pass, after the first retry no new one starts past this long: new blocks are never starved
@@ -111,9 +112,15 @@ def delegate_delay(proxies_value: Any, delegate: str) -> int | None:
     return min(delays) if delays else None
 
 
-def classify(announced: Announced) -> str:
-    """Owner intent registry: not built yet, so nothing can vouch for an announcement — every one is NOT YOURS."""
-    return NOT_YOURS
+def classify(store: Store, ann: Announced, vault: str, announced_block: int) -> tuple[str, Intent | None]:
+    """YOURS only when the owner registered this exact call (owner token) before it was announced and no other
+    announcement has used that intent; every other announcement is NOT YOURS — a known preimage alone never counts
+    (I6). Fails closed: an unreadable registry means NOT YOURS."""
+    try:
+        intent = store.match_intent(vault, ann.call_hash, ann.delegate, announced_block)
+    except Exception:
+        intent = None
+    return (YOURS, intent) if intent is not None else (NOT_YOURS, None)
 
 
 class Watchdog:
@@ -247,8 +254,9 @@ class Watcher:
                source: str = "block scan") -> Alert:
         delay = self._figure("delay", lambda: delegate_delay(self._proxies(vault, block_hash), ann.delegate), None)
         risk = self._figure("at-risk", lambda: self.chain.at_risk(vault), None)
+        verdict, intent = classify(self.store, ann, vault, number)
         alert = Alert(
-            verdict=classify(ann), profile_id=self.chain.profile.id, profile_label=self.chain.profile.label,
+            verdict=verdict, profile_id=self.chain.profile.id, profile_label=self.chain.profile.label,
             is_interim=self.chain.profile.is_interim, vault=vault, delegate=ann.delegate, call_hash=ann.call_hash,
             announced_block=number, block_hash=block_hash,
             release_block=None if delay is None else number + delay, head=head,
@@ -257,7 +265,9 @@ class Watcher:
             locked=self.chain.fmt(risk.held_back) if risk is not None and risk.held_back else None,
             late_by=head - number, chat_id=chat_id,
             pending=self._figure("pending", lambda: self.is_pending(vault, ann.delegate, ann.call_hash, number), None),
-            extra={"delay_blocks": delay, "extrinsic_index": ann.extrinsic_index, "source": source})
+            extra={"delay_blocks": delay, "extrinsic_index": ann.extrinsic_index, "source": source,
+                   **({"intent_id": intent.id, "call": intent.summary, "registered_head": intent.registered_head}
+                      if intent else {})})
         text = format_text(alert)
         stored = self.store.record(vault=vault, delegate=ann.delegate, call_hash=ann.call_hash, announced_block=number,
                                    block_hash=block_hash, extrinsic_index=ann.extrinsic_index,

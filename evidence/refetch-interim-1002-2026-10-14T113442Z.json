@@ -1,0 +1,24 @@
+{
+  "started": "2026-10-14T11:34:42Z",
+  "endpoint": "http://127.0.0.1:19933",
+  "transport": "http",
+  "profile": "interim-1002",
+  "label": "interim \u2014 not V3 (Portaldot dev node, runtime spec 1002)",
+  "genesis_hash": "0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22",
+  "head_at_refetch": 6301,
+  "source": null,
+  "matched": 1,
+  "total": 1,
+  "rows": [
+    {
+      "extrinsic_id": "6285-1",
+      "block_number": 6285,
+      "block_hash": "0xda86b15a79e73892054edcd0a5eed617e03811c12404398f31b6abca0733c526",
+      "extrinsic_hash": "0x2ae5f29c5b3146bf93a7418953a5f0ae1623348669b2c8b43d6b1a89ab183b6b",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    }
+  ]
+}

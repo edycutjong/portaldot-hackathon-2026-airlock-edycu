@@ -40,7 +40,7 @@ from .chain_profile import Chain, ChainUnreachable, ProfileMismatch, UnknownChai
 from .store import ChainReset, GenesisChanged, Store
 
 RETRY_WINDOW_S = 30 * 60  # an undelivered alert is retried on every new block for this long, then given up (logged)
-RETRY_BUDGET_S = 5.0  # per pass, retries stop being started after this long, so new blocks are never starved
+RETRY_BUDGET_S = 5.0  # per pass, after the first retry no new one starts past this long: new blocks are never starved
 READ_TIMEOUT_S = 30  # a read the node does not answer in this time counts as a lost connection
 STALL_BLOCK_TIMES = 5  # no new header for this many block times (at least 30 s): reconnect
 
@@ -56,6 +56,9 @@ except ImportError:  # pragma: no cover
 # (JSONDecodeError); a node refusing a request (rate limit, overload) raises SubstrateRequestException.
 CONNECTION_ERRORS = (ChainUnreachable, WebSocketException, ConnectionError, TimeoutError, OSError,
                      json.JSONDecodeError, SubstrateRequestException)
+
+
+UNKNOWN_AT_RISK = "the whole balance (unreadable)"
 
 
 class BlockNotYetAvailable(Exception):
@@ -200,9 +203,16 @@ class Watcher:
                      f"pending announcements will be swept instead")
             self.store.set_last_block(number, block_hash)
             return [], False
+        try:
+            announced = decode_announced(events)
+        except Exception as e:  # a Proxy.Announced shape this decoder does not know: the sweep reads storage instead
+            self.log(f"GAP: Proxy.Announced in #{number} undecodable ({type(e).__name__}: {e}); "
+                     f"pending announcements will be swept instead")
+            self.store.set_last_block(number, block_hash)
+            return [], False
         vaults = self.watched()
         alerts = []
-        for ann in decode_announced(events):
+        for ann in announced:
             vault = next((v for v in vaults if same_account(v, ann.real)), None)
             if vault is None:
                 continue
@@ -221,18 +231,31 @@ class Watcher:
         return any(a.call_hash == call_hash.lower() and a.height == height and same_account(a.real, vault)
                    for a in pending(self.s, delegate))
 
+    def _figure(self, what: str, read: Callable[[], Any], fallback: Any) -> Any:
+        """One secondary alert figure (delay, at-risk, pending). Transport errors still reconnect; anything else (a
+        storage or account layout this decoder does not know) is logged and replaced, so the alert still goes out."""
+        try:
+            return read()
+        except CONNECTION_ERRORS:
+            raise
+        except Exception as e:
+            self.log(f"alert figure '{what}' unreadable ({type(e).__name__}: {e}); alerting without it")
+            return fallback
+
     def _alert(self, ann: Announced, vault: str, chat_id: str | None, number: int, block_hash: str, head: int,
                source: str = "block scan") -> Alert:
-        delay = delegate_delay(self._proxies(vault, block_hash), ann.delegate)
-        risk = self.chain.at_risk(vault)
+        delay = self._figure("delay", lambda: delegate_delay(self._proxies(vault, block_hash), ann.delegate), None)
+        risk = self._figure("at-risk", lambda: self.chain.at_risk(vault), None)
         alert = Alert(
             verdict=classify(ann), profile_id=self.chain.profile.id, profile_label=self.chain.profile.label,
             is_interim=self.chain.profile.is_interim, vault=vault, delegate=ann.delegate, call_hash=ann.call_hash,
             announced_block=number, block_hash=block_hash,
             release_block=None if delay is None else number + delay, head=head,
-            block_time_ms=self.chain.block_time_ms, at_risk=self.chain.fmt(risk.transferable),
-            locked=self.chain.fmt(risk.held_back) if risk.held_back else None, late_by=head - number, chat_id=chat_id,
-            pending=self.is_pending(vault, ann.delegate, ann.call_hash, number),
+            block_time_ms=self.chain.block_time_ms,
+            at_risk=UNKNOWN_AT_RISK if risk is None else self.chain.fmt(risk.transferable),
+            locked=self.chain.fmt(risk.held_back) if risk is not None and risk.held_back else None,
+            late_by=head - number, chat_id=chat_id,
+            pending=self._figure("pending", lambda: self.is_pending(vault, ann.delegate, ann.call_hash, number), None),
             extra={"delay_blocks": delay, "extrinsic_index": ann.extrinsic_index, "source": source})
         text = format_text(alert)
         stored = self.store.record(vault=vault, delegate=ann.delegate, call_hash=ann.call_hash, announced_block=number,
@@ -250,8 +273,9 @@ class Watcher:
         starts at the head, and a gap (unreadable events) must not hide a live announcement."""
         alerts = []
         for vault, chat_id in self.watched().items():
-            for delegate, _delay in delegates(self._proxies(vault, None)):
-                for a in pending(self.s, delegate):
+            for delegate in self._figure(f"delegates of {vault}",
+                                         lambda: [d for d, _ in delegates(self._proxies(vault, None))], []):
+                for a in self._figure(f"announcements of {delegate}", lambda: pending(self.s, delegate), []):
                     if not same_account(a.real, vault) or self.store.has(vault, delegate, a.call_hash, a.height):
                         continue
                     ann = Announced(real=vault, delegate=delegate, call_hash=a.call_hash, extrinsic_index=None)
@@ -262,21 +286,23 @@ class Watcher:
 
     def retry_unsent(self, head: int, budget_s: float = RETRY_BUDGET_S) -> int:
         """Re-send undelivered alerts to the channels that missed them, countdown and pending state recomputed.
-        Rows already attempted in this pass are skipped (tracked in memory, so a wall-clock step cannot reorder them).
+        Rows go least-recently-attempted first, so a slow channel cannot starve the newer alerts behind the oldest one;
+        rows already attempted in this pass are skipped (tracked in memory, so a wall-clock step cannot reorder them).
         Once RETRY_WINDOW_S has passed, one last attempt is made; if that fails too the alert is given up on — loudly,
         never silently."""
-        resent = 0
+        resent = tried = 0
         names = {f.name for f in fields(Alert)}
         started = time.monotonic()
         for stored, raw, first in self.store.unsent():
             if (stored.vault, stored.delegate, stored.call_hash, stored.announced_block) in self._attempted:
                 continue
-            if time.monotonic() - started > budget_s:
-                break  # new retries stop being started; the rest waits for the next header
+            if tried and time.monotonic() - started > budget_s:
+                break  # at least one retry per pass; then no new ones once the budget is spent (next header goes on)
+            tried += 1
             data = {k: v for k, v in json.loads(raw).items() if k in names}
             alert = replace(Alert(**data), head=head, late_by=head - stored.announced_block,
-                            pending=self.is_pending(stored.vault, stored.delegate, stored.call_hash,
-                                                    stored.announced_block))
+                            pending=self._figure("pending", lambda: self.is_pending(
+                                stored.vault, stored.delegate, stored.call_hash, stored.announced_block), None))
             if self.deliver(stored, alert, format_text(alert)):
                 resent += 1
             self.on_progress()
@@ -533,8 +559,11 @@ def main(argv=None) -> int:
         notifiers.append(JsonlNotifier(args.jsonl))
     try:
         return run(args, notifiers)
-    except (UnknownChain, ProfileMismatch) as e:
-        print(f"WATCHER FAILED: {type(e).__name__}: {e}", file=sys.stderr)
+    except (UnknownChain, ProfileMismatch) as e:  # incl. ChainUnreachable at start, and a runtime upgrade seen on a
+        print(f"WATCHER FAILED: {type(e).__name__}: {e}", file=sys.stderr)  # reconnect: profile facts may have changed
+        return 1
+    except CONNECTION_ERRORS as e:  # the node went away during start-up (before the follow loop could reconnect)
+        print(f"WATCHER FAILED: node unreachable during start-up ({type(e).__name__}: {e})", file=sys.stderr)
         return 1
     except KeyboardInterrupt:
         return 130

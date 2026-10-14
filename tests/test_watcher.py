@@ -420,15 +420,19 @@ def test_unreadable_events_are_a_logged_gap_covered_by_the_sweep(tmp_path):
     assert store.last_block == 103
 
 
-def test_a_decoder_bug_is_not_mistaken_for_a_lagging_node(setup):
-    """A KeyError inside decoding must surface, not be swallowed as 'block not available yet' (it is a LookupError)."""
+def test_a_decoder_bug_is_a_logged_gap_not_a_lagging_node_or_a_crash_loop(setup):
+    """A KeyError inside decoding is neither 'block not available yet' (that would wedge on the block) nor fatal (the
+    cursor would not move, so every restart would crash on the same block): it is a logged GAP the sweep covers."""
+    logs = []
+    setup.w.log = logs.append
     setup.w.catch_up(100)
     setup.fake.events[101] = [SimpleNamespace(value={"module_id": "Proxy", "event_id": "Announced",
                                                      "attributes": {"real": VAULT}})]  # fields missing
     setup.fake.head = 101
-    with pytest.raises(KeyError):
-        setup.w.catch_up(101)
-    assert setup.store.last_block == 100
+    setup.w.catch_up(101)
+    assert setup.store.last_block == 101
+    assert any(m.startswith("GAP: Proxy.Announced in #101 undecodable (KeyError") for m in logs)
+    assert not any("retrying on the next header" in m for m in logs)
 
 
 def test_an_undecodable_block_is_a_gap_not_a_wedge(tmp_path):
@@ -477,18 +481,27 @@ def test_reads_node_lagging_the_subscription_stops_the_pass_without_moving_the_c
 
 
 def test_retries_respect_the_time_budget(tmp_path):
+    """Past the budget no new retry starts — but one always does, so the oldest alert cannot block a pass forever."""
     fake = FakeSubstrate()
     store = Store(tmp_path / "w.db")
     store.watch(VAULT, "interim-sdk")
-    telegram = Recorder("telegram", fail_times=1)
+    telegram = Recorder("telegram", fail_times=10**6)
     ticks = iter(range(1, 10**6))
     w = Watcher(chain(fake), store, [telegram], log=lambda m: None, clock=lambda: float(next(ticks)))
     fake.events[100] = [announced(VAULT, HOT, H1)]
-    w.catch_up(100)
+    fake.events[101] = [announced(VAULT, HOT, H2)]
     fake.head = 101
+    w.catch_up(101, from_block=100)  # both alerts attempted once, both failed
+    attempts = lambda: {r["announced_block"]: r["attempts"] for r in store.announcements()}
+    assert attempts() == {100: 1, 101: 1}
     w._attempted = set()  # a new pass
-    assert w.retry_unsent(101, budget_s=-1) == 0  # budget already spent: nothing started
-    assert w.retry_unsent(101) == 1
+    assert w.retry_unsent(101, budget_s=-1) == 0  # budget already spent: exactly one retry started (and failed)
+    assert sorted(attempts().values()) == [1, 2]
+    telegram.fail_times = 0
+    w._attempted = set()
+    assert w.retry_unsent(101, budget_s=-1) == 1  # the other row's turn now
+    assert attempts() == {100: 2, 101: 2}
+    assert w.retry_unsent(101) == 1 and not store.unsent()  # same pass: only the row not yet tried in it is retried
 
 
 def test_validate_vaults_refuses_typos_and_warns_on_vaults_without_delegates():
@@ -505,3 +518,75 @@ def test_misconfigured_telegram_refuses_to_start(monkeypatch, capsys):
     monkeypatch.setattr(watcher_mod, "run", lambda *a, **k: pytest.fail("must not connect"))
     assert watcher_mod.main(["--vault", VAULT]) == 2
     assert "MISCONFIGURED" in capsys.readouterr().err
+
+
+# -- an alert goes out even when a secondary figure cannot be read (unknown storage / account layout) ---------------
+
+def test_unreadable_balance_still_alerts_with_the_whole_balance_at_risk(setup):
+    logs = []
+    setup.w.log = logs.append
+    setup.fake.account = {"mystery": 1}  # an AccountData layout no profile knows
+    setup.fake.events[100] = [announced(VAULT, HOT, H1)]
+    alerts = setup.w.catch_up(100)
+    assert len(alerts) == 1 and len(setup.out.sent) == 1
+    text = setup.out.sent[0][1]
+    assert text.startswith(NOT_YOURS) and "Up to the whole balance (unreadable) at risk" in text
+    assert alerts[0].release_block == 105  # the other figures are still read
+    assert any(m.startswith("alert figure 'at-risk' unreadable") for m in logs)
+
+
+def test_unreadable_proxies_layout_still_alerts_with_veto_now(setup):
+    setup.fake.proxies = {VAULT: ([{"who": HOT}], 198)}  # neither the named nor the positional shape
+    setup.fake.events[100] = [announced(VAULT, HOT, H1)]
+    alerts = setup.w.catch_up(100)
+    assert alerts[0].release_block is None
+    assert "its delay could not be read — veto now" in setup.out.sent[0][1]
+
+
+def test_transport_errors_inside_an_alert_figure_still_reconnect(setup):
+    class Dropped(FakeSubstrate):
+        def query(self, module, storage, params, block_hash=None):
+            if storage == "Account":
+                raise ConnectionResetError("socket closed")
+            return super().query(module, storage, params, block_hash)
+
+    store = setup.store
+    w = Watcher(chain(Dropped()), store, [Recorder()], log=lambda m: None)
+    w.s.events[100] = [announced(VAULT, HOT, H1)]
+    with pytest.raises(ConnectionResetError):
+        w.catch_up(100)
+    assert store.last_block is None  # the block is re-processed after the reconnect
+
+
+def test_retries_rotate_so_one_slow_alert_cannot_starve_the_rest(tmp_path):
+    """With a budget that allows one send per pass, each pass retries a different alert (least recently attempted)."""
+    fake = FakeSubstrate()
+    store = Store(tmp_path / "w.db")
+    store.watch(VAULT, "interim-sdk")
+    telegram = Recorder("telegram", fail_times=10**6)
+    ticks = iter(range(1, 10**6))
+    w = Watcher(chain(fake), store, [telegram], log=lambda m: None, clock=lambda: float(next(ticks)))
+    for n, h in ((100, H1), (101, H2), (102, "0x" + "33" * 32)):
+        fake.events[n] = [announced(VAULT, HOT, h)]
+    w.catch_up(100, from_block=100)
+    fake.head = 102
+    w.catch_up(102)
+    retried = []
+    for _ in range(3):
+        w._attempted = set()  # a new pass
+        before = {r["announced_block"]: r["attempts"] for r in store.announcements()}
+        w.retry_unsent(102, budget_s=0)  # the first send already exceeds the budget: one retry per pass
+        after = {r["announced_block"]: r["attempts"] for r in store.announcements()}
+        retried += [b for b in after if after[b] != before[b]]
+    assert sorted(retried) == [100, 101, 102]
+
+
+def test_node_lost_during_start_up_exits_cleanly(monkeypatch, capsys):
+    from airlock import watcher as watcher_mod
+
+    def boom(*a, **k):
+        raise ConnectionRefusedError("refused")
+
+    monkeypatch.setattr(watcher_mod, "run", boom)
+    assert watcher_mod.main(["--vault", VAULT, "--no-telegram"]) == 1
+    assert "node unreachable during start-up (ConnectionRefusedError" in capsys.readouterr().err

@@ -208,10 +208,11 @@ class Store:
         self.db.commit()
 
     def unsent(self) -> list[tuple[Stored, str, float | None]]:
-        """Undelivered alerts not given up on: (row, alert JSON, first attempt time)."""
+        """Undelivered alerts not given up on, least recently attempted first: (row, alert JSON, first attempt time)."""
         rows = self.db.execute(
             "SELECT vault, delegate, call_hash, announced_block, alert_sent_at, alert_json, first_attempt_at "
-            "FROM announcement WHERE alert_sent_at IS NULL AND gave_up = 0 ORDER BY announced_block").fetchall()
+            "FROM announcement WHERE alert_sent_at IS NULL AND gave_up = 0 "
+            "ORDER BY COALESCE(last_attempt_at, 0), announced_block").fetchall()
         return [(Stored(*r[:5]), r[5], r[6]) for r in rows]
 
     def give_up(self, stored: Stored) -> None:

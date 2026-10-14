@@ -183,17 +183,24 @@ class AtRisk:
         return self.free - self.transferable
 
 
-def at_risk(account_data: Mapping[str, int]) -> AtRisk:
-    """Worst case: everything a transfer could move without keeping the account alive (a thief would not).
+def at_risk(account_data: Mapping[str, int], existential_deposit: int = 0, must_stay_alive: bool = False) -> AtRisk:
+    """Worst case: everything a transfer could move out of the account (a thief would not keep it alive).
 
+    `must_stay_alive`: the account cannot be reaped (it has consumers, e.g. proxy deposits, and a single provider),
+    so the pallet keeps the existential deposit in it whatever the transfer asks for.
     On the 1002 layout a transfer is checked against `misc_frozen` only (`fee_frozen` gates fee payment, and the
     thief's fees are paid by the delegate key, not the vault), so the fee lock is left out to avoid understating.
     """
     data = dict(account_data)
     if "misc_frozen" in data:
         data["fee_frozen"] = 0
-    return AtRisk(transferable=transferable(data), free=int(data["free"]),
-                  reserved=int(data.get("reserved", 0)), frozen=frozen(data))
+    return AtRisk(transferable=transferable(data, existential_deposit, keep_alive=must_stay_alive),
+                  free=int(data["free"]), reserved=int(data.get("reserved", 0)), frozen=frozen(data))
+
+
+def cannot_be_reaped(account: Mapping[str, Any]) -> bool:
+    """frame_system's `can_dec_provider` is false: consumers > 0 and only one provider."""
+    return int(account.get("consumers", 0)) > 0 and int(account.get("providers", 0)) <= 1
 
 
 def event_field(attributes: Any, name: str, position: int) -> Any:
@@ -246,7 +253,7 @@ class Chain:
     def at_risk(self, address: str, block_hash: str | None = None) -> AtRisk:
         """At-risk balance of `address` (per this profile's AccountData layout), at a block or the best head."""
         account = self.substrate.query("System", "Account", [address], block_hash=block_hash).value
-        return at_risk(account["data"])
+        return at_risk(account["data"], self.existential_deposit, cannot_be_reaped(account))
 
 
 def fmt_amount(planck: int, decimals: int, symbol: str) -> str:
@@ -338,6 +345,8 @@ def connect(url: str | None = None, profile_id: str | None = None, auto_reconnec
         raise
     except Exception as e:
         probe.close()
+        if _is_connection_error(e):  # the node went away mid-handshake: unreachable, not unknown
+            raise ChainUnreachable(f"{url} stopped answering while being identified: {type(e).__name__}: {e}") from e
         raise UnknownChain(f"could not identify the chain at {url}: {type(e).__name__}: {e}") from e
 
     if profile.type_registry_preset:
@@ -356,6 +365,14 @@ def connect(url: str | None = None, profile_id: str | None = None, auto_reconnec
         raise ChainUnreachable(f"{profile.id} at {url} stopped answering while connecting: {type(e).__name__}: {e}") from e
     _clear_timeout(substrate)
     return chain
+
+
+def _is_connection_error(e: BaseException) -> bool:
+    try:
+        from websocket import WebSocketException
+    except ImportError:  # pragma: no cover
+        WebSocketException = OSError
+    return isinstance(e, (OSError, TimeoutError, WebSocketException))
 
 
 def _clear_timeout(substrate) -> None:

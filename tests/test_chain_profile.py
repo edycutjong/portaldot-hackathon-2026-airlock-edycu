@@ -178,6 +178,9 @@ class _FakeSubstrate:
         _FakeSubstrate.instances.append(self)
 
     def rpc_request(self, method, params):
+        if self.url == "ws://drops":  # accepts the socket, then the connection drops during identification
+            from websocket import WebSocketConnectionClosedException
+            raise WebSocketConnectionClosedException("Connection to remote host was lost.")
         result = {
             "chain_getBlockHash": {"ws://other": "0x" + "ab" * 32,
                                    "ws://flaky": INTERIM_1002.genesis_hash}.get(self.url, INTERIM_SDK.genesis_hash),
@@ -238,6 +241,15 @@ def test_connect_unreachable_is_typed(fake_substrate):
 
     with pytest.raises(ChainUnreachable):
         connect("ws://down")
+
+
+def test_connect_dropped_during_identification_is_unreachable_not_unknown(fake_substrate):
+    """A watcher retries an unreachable chain; it must not give up on a dropped socket as an 'unknown chain'."""
+    from airlock.chain_profile import ChainUnreachable, connect
+
+    with pytest.raises(ChainUnreachable, match="stopped answering"):
+        connect("ws://drops")
+    assert all(s.closed for s in fake_substrate.instances)
 
 
 def test_connect_unknown_chain_closes_probe(fake_substrate):
@@ -322,3 +334,13 @@ def test_frozen_refuses_unknown_layouts():
     from airlock.chain_profile import frozen
     with pytest.raises(ValueError):
         frozen({"free": 1})
+
+
+def test_at_risk_keeps_the_existential_deposit_when_the_account_cannot_be_reaped():
+    from airlock.chain_profile import at_risk, cannot_be_reaped
+    data = {"free": 1_000, "reserved": 100, "frozen": 0, "flags": 0}
+    assert at_risk(data, existential_deposit=10).transferable == 1_000
+    assert at_risk(data, existential_deposit=10, must_stay_alive=True).transferable == 990
+    assert cannot_be_reaped({"consumers": 1, "providers": 1}) is True
+    assert cannot_be_reaped({"consumers": 0, "providers": 1}) is False
+    assert cannot_be_reaped({"consumers": 2, "providers": 2}) is False

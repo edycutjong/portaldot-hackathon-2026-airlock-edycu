@@ -151,7 +151,7 @@ def test_at_risk_excludes_locked_funds(setup):
     setup.fake.events[100] = [announced(VAULT, HOT, H1)]
     a, text = setup.out.sent[0] if setup.w.catch_up(100) else (None, None)
     assert a.at_risk == "3.0000 UNIT" and a.locked == "2.0000 UNIT"
-    assert "(2.0000 UNIT locked, not movable)" in text
+    assert "(2.0000 UNIT of the free balance cannot move" in text
 
 
 def test_unwatched_vault_is_ignored(setup):

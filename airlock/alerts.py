@@ -43,7 +43,7 @@ class Alert:
     head: int
     block_time_ms: int | None
     at_risk: str  # formatted transferable balance
-    locked: str | None  # formatted free balance a transfer cannot touch (locks), shown apart; None when nothing
+    locked: str | None  # formatted free balance a transfer cannot touch (locks or a kept ED), shown apart; None if 0
     late_by: int = 0  # blocks between the announcement and the head when the alert was built (catch-up)
     chat_id: str | None = None
     pending: bool | None = None  # still in Proxy.Announcements when the alert was built (None = not checked)
@@ -95,7 +95,8 @@ def format_text(a: Alert) -> str:
     lines = [f"{a.verdict} — VETO" if a.verdict == NOT_YOURS else a.verdict,
              f"Vault {a.vault}",
              f"Chain: {chain}",
-             f"Up to {a.at_risk} at risk" + (f" ({a.locked} locked, not movable)" if a.locked else "")]
+             f"Up to {a.at_risk} at risk" + (f" ({a.locked} of the free balance cannot move: locks, or the "
+                                             f"existential deposit a vault with deposits keeps)" if a.locked else "")]
     announced = f"Announced by delegate {a.delegate} at block #{a.announced_block}"
     if a.release_block is None:
         lines.append(f"{announced}; its delay could not be read — veto now")

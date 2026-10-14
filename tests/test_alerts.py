@@ -46,7 +46,7 @@ def test_veto_deadline_is_one_block_before_the_call_can_execute():
 
 
 def test_text_shows_locked_funds_apart():
-    assert "(19,920.0000 UNIT locked, not movable)" in format_text(alert(locked="19,920.0000 UNIT"))
+    assert "(19,920.0000 UNIT of the free balance cannot move: locks, or the existential deposit" in format_text(alert(locked="19,920.0000 UNIT"))
 
 
 def test_text_when_the_delay_has_already_elapsed():

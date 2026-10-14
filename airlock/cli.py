@@ -26,7 +26,7 @@ from typing import Any
 from substrateinterface.utils.ss58 import ss58_decode
 
 from .callhash import call_bytes, call_hash, same_account
-from .chain_profile import Chain, ChainUnreachable, ProfileMismatch, UnknownChain, connect
+from .chain_profile import Chain, ChainUnreachable, ProfileMismatch, UnknownChain, _is_connection_error, connect
 from .keys import KeyRefused, load_key
 from .ops import (NotConfirmed, Refused, Sender, TxFailed, announce, blocks_for, create_vault, deposits, execute,
                   panic, pending_for, transfer, veto)
@@ -84,6 +84,13 @@ def hot_address(spec: str, chain: Chain) -> str:
         return load_key(spec, chain.profile, "hot").ss58_address
 
 
+def planck(chain: Chain, value: str, flag: str) -> int:
+    try:
+        return chain.units(value)
+    except (ValueError, ArithmeticError) as e:
+        raise Refused(f"{flag} {value!r}: {e}") from e
+
+
 def spend_call(chain: Chain, args) -> Any:
     """The held call: transfer_keep_alive(to, amount), or a pre-encoded call given as --call 0x…"""
     if getattr(args, "call", None):
@@ -98,26 +105,20 @@ def spend_call(chain: Chain, args) -> Any:
         return obj
     if not (args.to and args.amount):
         raise Refused("give --to and --amount (or --call 0x…)")
-    try:
-        planck = chain.units(args.amount)
-    except ValueError as e:
-        raise Refused(f"--amount {args.amount!r}: {e}") from e
-    return transfer(chain, address(args.to, "--to"), planck)
+    return transfer(chain, address(args.to, "--to"), planck(chain, args.amount, "--amount"))
 
 
 def cmd_create(chain: Chain, tx: Sender, out: Out, args) -> int:
     cold = load_key(args.cold, chain.profile, "cold")
     hot = hot_address(args.hot, chain)
     delay = args.delay if args.delay is not None else blocks_for(args.delay_s, chain.block_time_ms)
-    fund = chain.units(args.fund) if args.fund else None
+    fund = planck(chain, args.fund, "--fund") if args.fund else None
     d = deposits(chain)
     out.say(f"vault for hot key {hot}: delay {delay} blocks{seconds(delay, chain)} on {chain.profile.label}")
     out.say(f"deposits (read from chain): create {chain.fmt(d['ProxyDepositBase'] + d['ProxyDepositFactor'])} "
             f"reserved from the cold key; add hot key {chain.fmt(d['ProxyDepositFactor'])} reserved from the vault; "
             f"each pending announcement {chain.fmt(d['AnnouncementDepositBase'])} + "
             f"{chain.fmt(d['AnnouncementDepositFactor'])} reserved from the hot key (max {d['MaxPending']} pending)")
-    if not fund:
-        out.say("note: no --fund — the vault needs funds before the hot-key deposit can be reserved")
     vault = create_vault(tx, cold, hot, delay, args.index, fund)
     out.say(f"vault {vault}: cold {cold.ss58_address} delay 0 (veto/panic), hot {hot} delay {delay}")
     out.say(f"watch it:  python -m airlock.watcher --vault {vault}")
@@ -156,7 +157,8 @@ def cmd_execute(chain: Chain, tx: Sender, out: Out, args) -> int:
         out.say(f"  head #{n} …")
 
     out.say(f"executing {call_hash(call)} from {vault}")
-    execute(tx, hot, vault, call, wait=not args.no_wait, on_tick=tick)
+    needs = None if args.call else planck(chain, args.amount, "--amount")
+    execute(tx, hot, vault, call, wait=not args.no_wait, on_tick=tick, needs=needs)
     out.say("executed: the announced call ran as the vault")
     out.result(command="execute", vault=vault, call_hash=call_hash(call), profile=chain.profile.id, rows=tx.rows)
     return 0
@@ -180,7 +182,11 @@ def cmd_panic(chain: Chain, tx: Sender, out: Out, args) -> int:
     left = [p for p in pending_for(tx, vault) if same_account(p.delegate, delegate)]
     panic(tx, cold, vault, delegate)
     out.say(f"PANIC done: {delegate} is no longer a delegate of {vault}; it cannot announce or execute "
-            f"(Proxy.NotProxy)" + (f" — its {len(left)} pending announcement(s) can never execute" if left else ""))
+            f"(Proxy.NotProxy)")
+    if left:
+        out.say(f"its {len(left)} pending announcement(s) stay in storage (its deposit stays reserved) and cannot "
+                f"execute while it is not a delegate — never re-add this key without vetoing them first: "
+                + ", ".join(p.call_hash for p in left))
     out.result(command="panic", vault=vault, delegate=delegate, profile=chain.profile.id, rows=tx.rows)
     return 0
 
@@ -200,8 +206,7 @@ def cmd_status(chain: Chain, tx: Sender, out: Out, args) -> int:
     if not defs:
         out.say("  no delegates")
     for p in items:
-        state = (f"executable from #{p.release_block}" if p.release_block is not None and p.release_block > head
-                 else "EXECUTABLE NOW" if p.release_block is not None else "dead (delegate removed)")
+        state = f"executable from #{p.release_block}" if p.release_block > head else "EXECUTABLE NOW"
         out.say(f"  pending {p.call_hash} by {p.delegate} at #{p.height}: {state}")
     if not items:
         out.say("  no pending announcements")
@@ -281,13 +286,34 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{PROG}: refused, nothing sent: {e}", file=sys.stderr)
         return 2
     except TxFailed as e:
-        print(f"{PROG}: FAILED on chain: {e}", file=sys.stderr)
+        hint = (" — the announcement was used up: announce again" if e.row["outcome"].startswith("inner:")
+                and e.row["call"].startswith("Proxy.proxy_announced") else "")
+        print(f"{PROG}: FAILED on chain: {e}{hint}", file=sys.stderr)
         return 1
     except NotConfirmed as e:
         print(f"{PROG}: NOT CONFIRMED: {e}", file=sys.stderr)
         return 1
+    except KeyboardInterrupt:
+        print(f"{PROG}: interrupted — if a transaction was already submitted it may still be included; check with "
+              f"`airlock status`", file=sys.stderr)
+        return 130
+    except Exception as e:
+        if not _is_connection_error(e):
+            raise
+        from substrateinterface.exceptions import SubstrateRequestException
+
+        if isinstance(e, SubstrateRequestException):  # e.g. 1010 Invalid Transaction: the pool refused it
+            print(f"{PROG}: the node rejected the request: {e} — a rejected transaction is not included; check with "
+                  f"`airlock status`", file=sys.stderr)
+        else:
+            print(f"{PROG}: connection lost ({type(e).__name__}: {e}) — outcome unknown: check with `airlock status`",
+                  file=sys.stderr)
+        return 1
     finally:
-        chain.substrate.close()
+        try:
+            chain.substrate.close()
+        except Exception:  # closing a socket that already dropped must not mask the exit status
+            pass
 
 
 if __name__ == "__main__":

@@ -82,3 +82,67 @@ def test_json_rows_are_one_object_per_line(capsys):
     out.result(command="veto")
     lines = capsys.readouterr().out.splitlines()
     assert lines == ['{"tx": {"step": "veto", "outcome": "ok", "expected": "ok"}}', '{"result": {"command": "veto"}}']
+
+
+# main(): every failure is a clean exit status, never a traceback --------------------------------------------------
+
+def fake_connect(monkeypatch, raise_on_submit=None):
+    from tests.test_ops import make
+
+    s, tx = make()
+    s.close = lambda: None
+    if raise_on_submit is not None:
+        def boom(*a, **k):
+            raise raise_on_submit
+        s.submit_extrinsic = boom
+    monkeypatch.setattr(cli, "connect", lambda url, profile: tx.chain)
+    return s
+
+
+def test_veto_end_to_end_through_main(monkeypatch, capsys):
+    from tests.test_ops import HOT, VAULT, spend
+    s = fake_connect(monkeypatch)
+    s.announcements[HOT.ss58_address] = [{"real": VAULT, "call_hash": cli.call_hash(spend(s)), "height": 99}]
+    rc = cli.main(["veto", "--cold", "//Alice", "--vault", VAULT, "--delegate", HOT.ss58_address,
+                   "--hash", cli.call_hash(spend(s))])
+    assert rc == 0 and "VETOED" in capsys.readouterr().out and s.announcements[HOT.ss58_address] == []
+
+
+def test_nothing_to_veto_is_exit_2(monkeypatch, capsys):
+    from tests.test_ops import HOT, VAULT
+    fake_connect(monkeypatch)
+    assert cli.main(["veto", "--cold", "//Alice", "--vault", VAULT, "--delegate", HOT.ss58_address, "--hash", H]) == 2
+    assert "nothing sent" in capsys.readouterr().err
+
+
+def test_bad_fund_is_refused_not_a_traceback(monkeypatch, capsys):
+    fake_connect(monkeypatch)
+    assert cli.main(["create", "--cold", "//Alice", "--hot", HOT, "--delay", "5", "--fund", "abc"]) == 2
+    assert "--fund 'abc'" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("exc, code, text", [
+    ("node", 1, "node rejected"),
+    ("socket", 1, "outcome unknown"),
+    ("ctrl-c", 130, "interrupted"),
+])
+def test_node_and_connection_failures_map_to_exit_codes(monkeypatch, capsys, exc, code, text):
+    from substrateinterface.exceptions import SubstrateRequestException
+
+    from tests.test_ops import HOT, VAULT, spend
+    error = {"node": SubstrateRequestException({"code": 1010, "message": "Invalid Transaction"}),
+             "socket": BrokenPipeError(32, "Broken pipe"), "ctrl-c": KeyboardInterrupt()}[exc]
+    s = fake_connect(monkeypatch, raise_on_submit=error)
+    s.announcements[HOT.ss58_address] = [{"real": VAULT, "call_hash": cli.call_hash(spend(s)), "height": 99}]
+    rc = cli.main(["veto", "--cold", "//Alice", "--vault", VAULT, "--delegate", HOT.ss58_address,
+                   "--hash", cli.call_hash(spend(s))])
+    assert rc == code and text in capsys.readouterr().err
+
+
+def test_unexpected_errors_are_not_swallowed(monkeypatch):
+    from tests.test_ops import HOT, VAULT, spend
+    s = fake_connect(monkeypatch, raise_on_submit=ZeroDivisionError("bug"))
+    s.announcements[HOT.ss58_address] = [{"real": VAULT, "call_hash": cli.call_hash(spend(s)), "height": 99}]
+    with pytest.raises(ZeroDivisionError):
+        cli.main(["veto", "--cold", "//Alice", "--vault", VAULT, "--delegate", HOT.ss58_address,
+                  "--hash", cli.call_hash(spend(s))])

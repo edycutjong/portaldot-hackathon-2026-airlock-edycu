@@ -48,6 +48,8 @@ def secret_of(spec: str, profile: Profile) -> str:
             secret = path.read_text().strip()
         except OSError as e:
             raise KeyRefused(f"cannot read key file {path}: {e.strerror or e}") from e
+        except ValueError:  # not UTF-8 text; the decoder's message could quote bytes of the secret
+            raise KeyRefused(f"key file {path} is not a text mnemonic or secret URI") from None
         if mode & (stat.S_IRWXG | stat.S_IRWXO):
             print(f"warning: key file {path} is readable by other users; chmod 600 it", file=sys.stderr)
     elif kind == "env" and where:

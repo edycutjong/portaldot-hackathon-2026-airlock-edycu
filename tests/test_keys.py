@@ -89,3 +89,12 @@ def test_invalid_secret_not_echoed(monkeypatch):
 def test_no_spec_names_the_env_var():
     with pytest.raises(KeyRefused, match=r"\$AIRLOCK_COLD_KEY"):
         load_key(None, INTERIM_SDK, "cold")
+
+
+def test_non_text_key_file_refused_without_echo(tmp_path):
+    f = tmp_path / "k"
+    f.write_bytes(b"\xff\xfesecret-bytes")
+    os.chmod(f, 0o600)
+    with pytest.raises(KeyRefused) as e:
+        load_key(f"file:{f}", V3, "cold")
+    assert "secret" not in str(e.value).replace("secret URI", "")

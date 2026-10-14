@@ -35,7 +35,7 @@ def test_text_names_the_chain_and_the_countdown():
     assert "Chain: interim — not V3" in text
     assert "executable from #105. Veto must land by #104: 3 blocks (≈ 9 s) from head #101" in text
     assert f"call=proxy.rejectAnnouncement(delegate={HOT}, callHash={HASH})" in text
-    assert "Airlock CLI (ships with the CLI step)" in text
+    assert "Airlock CLI (cold key from $AIRLOCK_COLD_KEY" in text
 
 
 def test_veto_deadline_is_one_block_before_the_call_can_execute():

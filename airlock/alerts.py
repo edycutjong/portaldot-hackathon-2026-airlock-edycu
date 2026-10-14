@@ -110,9 +110,9 @@ def format_text(a: Alert) -> str:
     if a.late_by > 1:
         lines.append(f"Seen {a.late_by} blocks late: the watcher was offline or catching up")
     lines += [f"Call hash {a.call_hash} (an announcement publishes only the hash)",
-              "Veto with the cold key — Airlock CLI (ships with the CLI step):",
+              "Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY, e.g. file:~/.config/airlock/cold.seed):",
               a.veto_command(),
-              "or today in polkadot.js Apps > Developer > Extrinsics, signed by the cold key:",
+              "or in polkadot.js Apps > Developer > Extrinsics, signed by the cold key:",
               f"proxy.proxy(real={a.vault}, forceProxyType=None, "
               f"call=proxy.rejectAnnouncement(delegate={a.delegate}, callHash={a.call_hash}))"]
     return "\n".join(lines)

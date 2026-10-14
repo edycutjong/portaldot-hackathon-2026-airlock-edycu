@@ -56,8 +56,9 @@ from a watched vault. It never signs anything.
    node that is unreachable at start, or a chain whose runtime changed (new code hash) when the watcher reconnects,
    stops it with exit code 1 (`WATCHER FAILED`): the profile's facts may no longer hold, so it does not guess.
 
-The `airlock veto` command in the alert is the CLI's syntax; the CLI itself is the next build step, and the alert says
-so. Until then the alert also gives the same veto as a polkadot.js Apps extrinsic signed by the cold key:
+The `airlock veto` command in the alert runs as printed once `$AIRLOCK_COLD_KEY` names the cold key (`file:<path>`;
+see [CLI.md](CLI.md)) — `scripts/e2e_evidence.sh` runs it exactly that way. The alert also gives the same veto as a
+polkadot.js Apps extrinsic signed by the cold key, for an owner without the CLI:
 `proxy.proxy(real=<vault>, forceProxyType=None, call=proxy.rejectAnnouncement(delegate, callHash))`.
 
 ## Run it

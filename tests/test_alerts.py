@@ -209,3 +209,25 @@ def test_telegram_config_from_file_and_env_override(tmp_path):
     n = telegram_from_config(f, environ={"AIRLOCK_TELEGRAM_CHAT_ID": "2"})
     assert n._token == "111:file-token" and n.default_chat_id == "2" and n.veto_url_base is None
     assert telegram_from_config(f, environ={"AIRLOCK_TELEGRAM_TOKEN": "222:env-token"})._token == "222:env-token"
+
+
+def test_a_token_without_a_chat_id_is_a_config_error(tmp_path):
+    f = tmp_path / "telegram.env"
+    f.write_text("TELEGRAM_BOT_TOKEN=111:abc\n")
+    with pytest.raises(ValueError, match="TELEGRAM_CHAT_ID"):
+        telegram_from_config(f, environ={})
+
+
+def test_a_non_object_reply_is_a_telegram_error():
+    api = MockBotApi(200, ["not", "an", "object"])
+    try:
+        with pytest.raises(TelegramError, match="refused"):
+            TelegramNotifier(TOKEN, "777", api_base=api.url).send(alert(), "x")
+    finally:
+        api.close()
+
+
+def test_no_longer_pending_text_has_no_veto_command():
+    text = format_text(alert(pending=False, head=120))
+    assert text.splitlines()[0] == "NOT YOURS — NO LONGER PENDING"
+    assert "airlock veto" not in text and "Check the vault: up to 902.0000 UNIT is movable now" in text

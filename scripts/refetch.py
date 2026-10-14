@@ -78,19 +78,23 @@ def main(argv=None) -> int:
             try:
                 got = refetch(chain.substrate, row["extrinsic_id"], name_error)
                 diffs = compare(row, got) if recorded else []
-                entry = {**as_dict(got), "match": not diffs, "diffs": diffs}
+                # with --id there is no recorded row to compare against: found, not matched
+                entry = {**as_dict(got), "match": (not diffs) if recorded else None, "diffs": diffs}
             except Exception as e:  # a missing extrinsic is a result to report, not a crash
                 entry = {"extrinsic_id": row["extrinsic_id"], "match": False, "diffs": [f"{type(e).__name__}: {e}"]}
-            bad += 0 if entry["match"] else 1
+            ok = entry["match"] is not False
+            bad += 0 if ok else 1
             results.append(entry)
-            print(f"{'MATCH' if entry['match'] else 'DIFF '} {entry['extrinsic_id']:<8} {entry.get('call', '?'):<52} "
+            mark = "FOUND" if entry["match"] is None else ("MATCH" if ok else "DIFF ")
+            print(f"{mark} {entry['extrinsic_id']:<8} {entry.get('call', '?'):<52} "
                   f"outcome={entry.get('outcome', '?'):<18} tx={entry.get('extrinsic_hash', '?')}"
-                  + ("" if entry["match"] else f"  {'; '.join(entry['diffs'])}"))
+                  + ("" if ok else f"  {'; '.join(entry['diffs'])}"))
     finally:
         chain.substrate.close()
 
     label = f"{chain.profile.id}" + (" — not V3" if chain.profile.is_interim else "")
-    summary = f"{len(results) - bad}/{len(results)} re-fetched by extrinsic id over {transport(chain.url)} ({label})"
+    verb = "re-fetched and matched" if recorded else "found"
+    summary = f"{len(results) - bad}/{len(results)} {verb} by extrinsic id over {transport(chain.url)} ({label})"
     print(summary)
     out = ROOT / "evidence" / f"refetch-{chain.profile.id}-{started.replace(':', '')}.json"
     out.parent.mkdir(exist_ok=True)

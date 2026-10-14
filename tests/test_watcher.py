@@ -32,6 +32,7 @@ class FakeSubstrate:
         self.head = head
         self.fork = {}  # block number -> replacement hash (a reorg or a reset chain)
         self.events = {}
+        self.removed = set()  # (vault, call_hash) vetoed or executed
         self.proxies = {VAULT: ([{"delegate": HOT, "proxy_type": "Any", "delay": 5},
                                  {"delegate": OTHER, "proxy_type": "Any", "delay": 0}], 198)}
         self.account = {"free": 1_000_000, "reserved": 0, "frozen": 0, "flags": 0}
@@ -47,7 +48,26 @@ class FakeSubstrate:
             return self.events.get(block_hash, [])
         return self.events.get(int(block_hash, 16), [])
 
+    def announcements(self, delegate):
+        """Proxy.Announcements(delegate) as the chain would hold it: every Announced event so far, minus removed."""
+        out = []
+        for block, evs in self.events.items():
+            number = block if isinstance(block, int) else next(n for n, h in self.fork.items() if h == block)
+            for e in evs:
+                v = e.value
+                if v["event_id"] != "Announced" or number > self.head:
+                    continue
+                a = v["attributes"]
+                real, proxy, h = (a["real"], a["proxy"], a["call_hash"]) if isinstance(a, dict) else \
+                    (a[0]["value"], a[1]["value"], a[2]["value"])
+                h = "0x" + bytes(h).hex() if isinstance(h, (bytes, bytearray)) else h.lower()
+                if proxy == delegate and (real, h) not in self.removed:
+                    out.append({"real": real, "call_hash": h, "height": number})
+        return (out, 1) if out else None
+
     def query(self, module, storage, params, block_hash=None):
+        if (module, storage) == ("Proxy", "Announcements"):
+            return SimpleNamespace(value=self.announcements(params[0]))
         if (module, storage) == ("Proxy", "Proxies"):
             return SimpleNamespace(value=self.proxies.get(params[0]))
         if (module, storage) == ("System", "Account"):
@@ -196,15 +216,17 @@ def test_failed_channel_is_retried_next_block_without_repeating_the_others(tmp_p
     store = Store(tmp_path / "w.db")
     store.watch(VAULT, "interim-sdk")
     stdout, telegram, log = Recorder("stdout"), Recorder("telegram", fail_times=1), Recorder("jsonl")
-    w = Watcher(chain(fake), store, [stdout, telegram, log], log=lambda m: None, clock=lambda: 7.0)
+    ticks = iter(range(1, 10**6))
+    w = Watcher(chain(fake), store, [stdout, telegram, log], log=lambda m: None, clock=lambda: float(next(ticks)))
     fake.events[100] = [announced(VAULT, HOT, H1)]
     w.catch_up(100)
     row = store.announcements()[0]
     assert row["alert_sent_at"] is None and row["delivered_via"] == "jsonl,stdout" and w.alerts_sent == 0
+    assert row["attempts"] == 1  # not re-tried inside the pass that just failed
     fake.head = 101
     w.catch_up(101)
     row = store.announcements()[0]
-    assert row["alert_sent_at"] == 7.0 and row["delivered_via"] == "jsonl,stdout,telegram" and row["attempts"] == 2
+    assert row["alert_sent_at"] is not None and row["delivered_via"] == "jsonl,stdout,telegram" and row["attempts"] == 2
     assert len(stdout.sent) == 1 and len(telegram.sent) == 1 and len(log.sent) == 1
     assert telegram.sent[0][0].head == 101 and telegram.sent[0][0].blocks_left == 4  # countdown recomputed
 
@@ -237,11 +259,15 @@ def test_retries_give_up_loudly_after_the_window(tmp_path):
     import airlock.watcher as watcher_mod
     now = [1000.0]
     logs = []
+
+    def clock():
+        now[0] += 0.001  # time moves on between passes
+        return now[0]
     fake = FakeSubstrate()
     store = Store(tmp_path / "w.db")
     store.watch(VAULT, "interim-sdk")
     telegram = Recorder("telegram", fail_times=10**6)
-    w = Watcher(chain(fake), store, [telegram], log=logs.append, clock=lambda: now[0])
+    w = Watcher(chain(fake), store, [telegram], log=logs.append, clock=clock)
     fake.events[100] = [announced(VAULT, HOT, H1)]
     w.catch_up(100)
     for head in range(101, 106):
@@ -312,3 +338,95 @@ def test_legacy_1002_profile_end_to_end(tmp_path):
 def test_stall_timeout_scales_with_block_time():
     from airlock.watcher import stall_seconds
     assert stall_seconds(3000) == 30.0 and stall_seconds(12000) == 60.0 and stall_seconds(None) == 30.0
+
+
+# -- round-2 paths ---------------------------------------------------------------------------------------------------
+
+def test_watchdog_fires_without_headers_and_not_while_beating():
+    import threading
+    import time as _time
+
+    from airlock.watcher import Watchdog
+    fired = threading.Event()
+    dog = Watchdog(0.3, fired.set, tick_s=0.05).start()
+    assert fired.wait(3) and dog.fired
+    calm = threading.Event()
+    dog2 = Watchdog(0.3, calm.set, tick_s=0.05).start()
+    for _ in range(12):  # 0.6 s of regular beats
+        dog2.beat()
+        _time.sleep(0.05)
+    dog2.stop()
+    assert not calm.is_set() and not dog2.fired
+
+
+def test_first_run_sweep_alerts_an_announcement_made_before_the_watcher_started(setup):
+    setup.fake.events[97] = [announced(VAULT, HOT, H1)]
+    alerts = setup.w.catch_up(100, sweep=True)  # first run starts at the head; block 97 is never scanned
+    assert [(a.announced_block, a.extra["source"]) for a in alerts] == [(97, "pending sweep")]
+    assert alerts[0].late_by == 3 and alerts[0].pending is True
+    setup.fake.head = 101
+    assert setup.w.catch_up(101, sweep=True) == []  # recorded: never swept twice
+    assert len(setup.out.sent) == 1
+
+
+def test_an_announcement_already_gone_is_reported_as_no_longer_pending(setup):
+    setup.w.catch_up(100)
+    setup.fake.events[102] = [announced(VAULT, HOT, H1)]
+    setup.fake.removed.add((VAULT, H1))  # vetoed or executed while the watcher was down
+    setup.fake.head = 104
+    a, text = setup.out.sent[0] if setup.w.catch_up(104) else (None, None)
+    assert a.pending is False and text.startswith("NOT YOURS — NO LONGER PENDING")
+    assert "airlock veto" not in text and "vetoed, removed, or already executed" in text
+
+
+def test_unreadable_events_are_a_logged_gap_covered_by_the_sweep(tmp_path):
+    from substrateinterface.exceptions import SubstrateRequestException
+
+    class Pruned(FakeSubstrate):
+        def get_events(self, block_hash):
+            if int(block_hash, 16) == 102:
+                raise SubstrateRequestException({"code": 4003, "message": "State already discarded"})
+            return super().get_events(block_hash)
+
+    fake, logs = Pruned(), []
+    store = Store(tmp_path / "w.db")
+    store.watch(VAULT, "interim-sdk")
+    out = Recorder()
+    w = Watcher(chain(fake), store, [out], log=logs.append)
+    w.catch_up(100)
+    fake.events[102] = [announced(VAULT, HOT, H1)]
+    fake.head = 103
+    alerts = w.catch_up(103)
+    assert any(m.startswith("GAP: events of #102") for m in logs)
+    assert [(a.announced_block, a.extra["source"]) for a in alerts] == [(102, "pending sweep")]
+    assert store.last_block == 103
+
+
+def test_reads_node_lagging_the_subscription_stops_the_pass_without_moving_the_cursor(setup):
+    setup.w.catch_up(100)
+    logs = []
+    setup.w.log = logs.append
+    setup.w.catch_up(103)  # the header says 103, but the reads node only has up to 100
+    assert setup.store.last_block == 100 and any("retrying on the next header" in m for m in logs)
+
+
+def test_retries_respect_the_time_budget(tmp_path):
+    fake = FakeSubstrate()
+    store = Store(tmp_path / "w.db")
+    store.watch(VAULT, "interim-sdk")
+    telegram = Recorder("telegram", fail_times=1)
+    ticks = iter(range(1, 10**6))
+    w = Watcher(chain(fake), store, [telegram], log=lambda m: None, clock=lambda: float(next(ticks)))
+    fake.events[100] = [announced(VAULT, HOT, H1)]
+    w.catch_up(100)
+    fake.head = 101
+    assert w.retry_unsent(101, budget_s=-1) == 0  # budget already spent: nothing started
+    assert w.retry_unsent(101) == 1
+
+
+def test_validate_vaults_refuses_typos_and_warns_on_vaults_without_delegates():
+    from airlock.watcher import validate_vaults
+    logs = []
+    bad = validate_vaults(chain(FakeSubstrate()), [VAULT, OTHER, "5Hb37Sqm-typo"], logs.append)
+    assert bad == ["5Hb37Sqm-typo"]
+    assert any(OTHER in m and "no proxy delegates" in m for m in logs) and not any(VAULT in m for m in logs)

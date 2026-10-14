@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS announcement (
   alert_json TEXT,
   attempts INTEGER NOT NULL DEFAULT 0,
   first_attempt_at REAL,
+  last_attempt_at REAL,
   gave_up INTEGER NOT NULL DEFAULT 0,
   alert_sent_at REAL,
   delivered_via TEXT,
@@ -164,9 +165,13 @@ class Store:
             (vault, delegate, call_hash.lower(), announced_block)).fetchone()
         return Stored(*row)
 
+    def has(self, vault: str, delegate: str, call_hash: str, announced_block: int) -> bool:
+        return self.db.execute(f"SELECT 1 FROM announcement WHERE {_KEY}",
+                               (vault, delegate, call_hash.lower(), announced_block)).fetchone() is not None
+
     def note_attempt(self, stored: Stored, at: float) -> None:
-        self.db.execute(f"UPDATE announcement SET attempts = attempts + 1, "
-                        f"first_attempt_at = COALESCE(first_attempt_at, ?) WHERE {_KEY}", (at, *_key(stored)))
+        self.db.execute(f"UPDATE announcement SET attempts = attempts + 1, last_attempt_at = ?, "
+                        f"first_attempt_at = COALESCE(first_attempt_at, ?) WHERE {_KEY}", (at, at, *_key(stored)))
         self.db.commit()
 
     def delivered_via(self, stored: Stored) -> set[str]:
@@ -184,11 +189,14 @@ class Store:
         self.db.execute(f"UPDATE announcement SET alert_sent_at = ? WHERE {_KEY}", (at, *_key(stored)))
         self.db.commit()
 
-    def unsent(self) -> list[tuple[Stored, str, float | None]]:
-        """Undelivered alerts not given up on: (row, alert JSON, first attempt time)."""
+    def unsent(self, attempted_before: float | None = None) -> list[tuple[Stored, str, float | None]]:
+        """Undelivered alerts not given up on, and not attempted at/after `attempted_before` (i.e. not already tried
+        in the current pass): (row, alert JSON, first attempt time)."""
         rows = self.db.execute(
             "SELECT vault, delegate, call_hash, announced_block, alert_sent_at, alert_json, first_attempt_at "
-            "FROM announcement WHERE alert_sent_at IS NULL AND gave_up = 0 ORDER BY announced_block").fetchall()
+            "FROM announcement WHERE alert_sent_at IS NULL AND gave_up = 0 "
+            "AND (? IS NULL OR last_attempt_at IS NULL OR last_attempt_at < ?) ORDER BY announced_block",
+            (attempted_before, attempted_before)).fetchall()
         return [(Stored(*r[:5]), r[5], r[6]) for r in rows]
 
     def give_up(self, stored: Stored) -> None:

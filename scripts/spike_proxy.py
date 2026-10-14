@@ -14,12 +14,15 @@
  --vesting N (optional, chains with a Vesting pallet):
  11. cold   vesting.vested_transfer(vault, N locked)               -> locked funds are NOT counted as at risk
  12. cold   proxy.proxy(vault, vesting.vest())                     -> claimed through the vault; at-risk = transferable
- 13. cold   proxy.proxy(vault, transfer(payee, at-risk + 1 token)) -> must FAIL: the lock, not the formula, is the limit
+ 13. cold   proxy.proxy(vault, transfer(payee, at-risk + 1 planck)) -> must FAIL on the lock
+ 14. cold   proxy.proxy(vault, transfer(payee, at-risk))            -> succeeds; the vault's at-risk is then 0
+     (13 + 14: the chain's own limit is exactly the at-risk figure the watcher reports)
 
 Step 10 is the control for step 7: the same delegate and delay, and the only difference is the veto. Step 9 shows the
 delay itself is enforced, not just stored.
 
-Signers are dev keys (//Alice cold, //Bob hot, //Eve the thief's payee, //Ferdie a legitimate payee): local interim
+Signers are dev keys (//Alice cold unless --cold names another dev key, //Bob hot, //Eve the thief's payee, //Ferdie a
+legitimate payee): local interim
 chains only. Every row carries the chain profile label and is written to evidence/ as JSON, failed runs included.
 
 usage: python scripts/spike_proxy.py [--profile interim-sdk] [--url ws://…] [--delay 5] [--proof docs/PROOF.md]
@@ -128,11 +131,14 @@ def as_vault(s, vault: str, call):
     return s.compose_call("Proxy", "proxy", {"real": vault, "force_proxy_type": None, "call": call})
 
 
-def run(sp: Spike, delay: int, index: int, fund: str, amount: str) -> None:
+DEV_COLD_KEYS = ("//Alice", "//Charlie", "//Dave")  # public dev keys only; //Bob, //Eve, //Ferdie have other roles
+
+
+def run(sp: Spike, delay: int, index: int, fund: str, amount: str, cold_uri: str = "//Alice") -> None:
     chain, s, p = sp.chain, sp.s, sp.chain.profile
     if not p.is_interim:
         raise StepFailed(f"{p.id} is not an interim chain: this spike signs with public dev keys (//Alice …)")
-    cold, hot, thief, payee = (Keypair.create_from_uri(u) for u in ("//Alice", "//Bob", "//Eve", "//Ferdie"))
+    cold, hot, thief, payee = (Keypair.create_from_uri(u) for u in (cold_uri, "//Bob", "//Eve", "//Ferdie"))
     print(f"chain: {p.label} · {chain.spec_name}/{chain.spec_version} · genesis {chain.genesis_hash} · {chain.url} · "
           f"{chain.decimals} decimals · block {chain.block_time_ms} ms ({chain.block_time_source}) · "
           f"revive={chain.has_revive} · code {code_version()}")
@@ -210,11 +216,12 @@ def run(sp: Spike, delay: int, index: int, fund: str, amount: str) -> None:
     print(f"control PASS payee +{chain.fmt(received)} exactly, after {delay} blocks with no veto")
 
 
-def run_vesting(sp: Spike, amount: str) -> None:
-    """Optional steps 11–13: a vested payout lands in the vault; locked funds are not at risk, vesting is claimed
-    through the vault, at-risk stays equal to the transferable balance, and moving one token more than at-risk fails."""
+def run_vesting(sp: Spike, amount: str, cold_uri: str = "//Alice") -> None:
+    """Optional steps 11–14: a vested payout lands in the vault; locked funds are not at risk, vesting is claimed
+    through the vault, and the at-risk figure is exact on chain: one planck more fails on the lock, the exact amount
+    moves."""
     chain, s = sp.chain, sp.s
-    cold = Keypair.create_from_uri("//Alice")
+    cold = Keypair.create_from_uri(cold_uri)
     vault = sp.vault
     if not any(p.name == "Vesting" for p in s.get_metadata().pallets):
         print(f"vesting steps skipped: {chain.profile.id} has no Vesting pallet")
@@ -256,16 +263,34 @@ def run_vesting(sp: Spike, amount: str) -> None:
         raise StepFailed(f"vest through the vault did not release anything: lock {lock_before} -> {lock_after}")
     print(f"vest PASS lock {chain.fmt(lock_before)} -> {chain.fmt(lock_after)}")
 
-    # 13. the chain itself refuses to move more than the at-risk figure: one token above it fails on the lock
+    # 13–14. the chain's own limit is exactly the at-risk figure: one planck more fails on the lock, exactly it works
     payee = Keypair.create_from_uri("//Ferdie")
+    send = "transfer_allow_death" if _has_call(s, "Balances", "transfer_allow_death") else "transfer"  # 1002: transfer
     risk = chain.at_risk(vault)
-    over = s.compose_call("Balances", "transfer_keep_alive",
-                          {"dest": payee.ss58_address, "value": risk.transferable + chain.units(1)})
-    sp.submit("move above at-risk", "cold", cold, as_vault(s, vault, over), LOCK_ERROR[p_layout(s, vault)],
-              note=f"at-risk {chain.fmt(risk.transferable)} + 1")
+
+    def move(value):
+        return as_vault(s, vault, s.compose_call("Balances", send, {"dest": payee.ss58_address, "value": value}))
+
+    sp.submit("move at-risk + 1 planck", "cold", cold, move(risk.transferable + 1), LOCK_ERROR[p_layout(s, vault)],
+              note=f"at-risk {chain.fmt(risk.transferable)} + 1 planck")
     if chain.at_risk(vault).free != risk.free:
         raise StepFailed("the over-limit transfer moved funds")
-    print(f"limit PASS moving at-risk + 1 fails on the lock; vault unchanged")
+    payee_before = sp.free(payee.ss58_address)
+    sp.submit("move exactly at-risk", "cold", cold, move(risk.transferable), OK,
+              note=f"{risk.transferable} planck")
+    after = chain.at_risk(vault)
+    if sp.free(payee.ss58_address) - payee_before != risk.transferable or after.transferable != 0:
+        raise StepFailed(f"exact move: payee +{sp.free(payee.ss58_address) - payee_before}, vault at-risk now "
+                         f"{after.transferable} (expected +{risk.transferable} and 0)")
+    print(f"limit PASS at-risk {chain.fmt(risk.transferable)} is exact: +1 planck fails on the lock, the exact amount "
+          f"moves, and the vault's at-risk is now 0")
+
+
+def _has_call(s, module: str, function: str) -> bool:
+    try:
+        return s.get_metadata_call_function(module, function) is not None
+    except Exception:
+        return False
 
 
 # What a transfer that would dip into locked funds fails with, per AccountData layout (pallet_balances of that era).
@@ -301,7 +326,9 @@ def main(argv=None) -> int:
     ap.add_argument("--index", type=int, default=0, help="create_pure disambiguation index")
     ap.add_argument("--fund", default="1000", help="tokens sent to the vault")
     ap.add_argument("--amount", default="100", help="tokens each spend tries to move")
-    ap.add_argument("--vesting", default=None, help="also run steps 11-13 with this many tokens vested to the vault")
+    ap.add_argument("--cold", default="//Alice", choices=DEV_COLD_KEYS,
+                    help="dev key for the cold role (1002's //Alice is a staking validator with little unlocked balance)")
+    ap.add_argument("--vesting", default=None, help="also run steps 11-14 with this many tokens vested to the vault")
     ap.add_argument("--proof", type=Path, default=None, help="append the run's rows to this PROOF.md (passing runs only)")
     args = ap.parse_args(argv)
     if args.delay < 1:
@@ -324,9 +351,9 @@ def record(chain: Chain, args) -> int:
     sp = Spike(chain)
     failure = None
     try:
-        run(sp, args.delay, args.index, args.fund, args.amount)
+        run(sp, args.delay, args.index, args.fund, args.amount, args.cold)
         if args.vesting:
-            run_vesting(sp, args.vesting)
+            run_vesting(sp, args.vesting, args.cold)
     except Exception as e:  # any failure still leaves an evidence file with the rows collected so far
         failure = str(e) if isinstance(e, StepFailed) else f"{type(e).__name__}: {e}"
         print(f"SPIKE FAILED: {failure}", file=sys.stderr)
@@ -338,6 +365,7 @@ def record(chain: Chain, args) -> int:
                                "profile": chain.profile.id, "label": chain.profile.label, "endpoint": chain.url,
                                "genesis_hash": chain.genesis_hash, "code_hash": chain.code_hash,
                                "runtime": f"{chain.spec_name}/{chain.spec_version}", "delay_blocks": args.delay,
+                               "fund": args.fund, "amount": args.amount, "vesting": args.vesting, "cold": args.cold,
                                "vault": sp.vault, "rows": sp.rows}, indent=2) + "\n")
     print(f"{len(sp.rows)} extrinsics, {status} -> {out.relative_to(ROOT)}")
     if failure:

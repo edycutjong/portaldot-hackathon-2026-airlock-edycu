@@ -46,6 +46,7 @@ class Alert:
     locked: str | None  # formatted free balance a transfer cannot touch (locks), shown apart; None when nothing
     late_by: int = 0  # blocks between the announcement and the head when the alert was built (catch-up)
     chat_id: str | None = None
+    pending: bool | None = None  # still in Proxy.Announcements when the alert was built (None = not checked)
     extra: dict = field(default_factory=dict)
 
     @property
@@ -81,6 +82,16 @@ def _seconds(blocks: int, block_time_ms: int | None) -> str:
 def format_text(a: Alert) -> str:
     """The alert as sent: verdict first, the chain named, the veto command last so it is easy to copy."""
     chain = a.profile_label if a.is_interim else f"{a.profile_label} ({a.profile_id})"
+    if a.pending is False:
+        return "\n".join([
+            f"{a.verdict} — NO LONGER PENDING",
+            f"Vault {a.vault}",
+            f"Chain: {chain}",
+            f"Announced by delegate {a.delegate} at block #{a.announced_block}; seen at head #{a.head}",
+            "It is no longer in Proxy.Announcements: it was vetoed, removed, or already executed.",
+            f"Check the vault: up to {a.at_risk} is movable now. If a spend you did not make executed, "
+            f"remove the delegate with the cold key.",
+            f"Call hash {a.call_hash}"])
     lines = [f"{a.verdict} — VETO" if a.verdict == NOT_YOURS else a.verdict,
              f"Vault {a.vault}",
              f"Chain: {chain}",
@@ -150,7 +161,7 @@ class TelegramNotifier:
     name = "telegram"
 
     def __init__(self, token: str, default_chat_id: str | None, api_base: str = TELEGRAM_API,
-                 veto_url_base: str | None = None, timeout_s: float = 10):
+                 veto_url_base: str | None = None, timeout_s: float = 5):
         if not token or not TOKEN_SHAPE.match(token):
             raise ValueError("Telegram bot token is empty or not shaped like <digits>:<secret> (value not shown)")
         if veto_url_base and not veto_url_base.startswith("https://"):
@@ -191,8 +202,9 @@ class TelegramNotifier:
             raise TelegramError(self._redact(f"Telegram unreachable: {type(e).__name__}: {e}")) from None
         except Exception as e:  # anything else from the HTTP stack: still a delivery failure, never a crash or a leak
             raise TelegramError(self._redact(f"Telegram send failed: {type(e).__name__}: {e}")) from None
-        if not reply.get("ok"):
-            raise TelegramError(self._redact(f"Telegram refused the message: {reply.get('description', reply)}"))
+        if not isinstance(reply, dict) or not reply.get("ok"):
+            detail = reply.get("description", reply) if isinstance(reply, dict) else reply
+            raise TelegramError(self._redact(f"Telegram refused the message: {detail}"))
 
 
 def read_env_file(path: Path) -> dict[str, str]:
@@ -220,5 +232,8 @@ def telegram_from_config(path: Path = TELEGRAM_ENV, environ: dict | None = None)
     if not token:
         return None
     chat = environ.get("AIRLOCK_TELEGRAM_CHAT_ID") or values.get("TELEGRAM_CHAT_ID")
+    if not chat:  # every send would fail; say so at start instead of 30 minutes of retries
+        raise ValueError("a Telegram token is set but TELEGRAM_CHAT_ID is not (send /start to the bot, then read the "
+                         "chat id from getUpdates)")
     veto_url = environ.get("AIRLOCK_VETO_URL_BASE") or values.get("AIRLOCK_VETO_URL_BASE")
     return TelegramNotifier(token, chat, veto_url_base=veto_url or None)

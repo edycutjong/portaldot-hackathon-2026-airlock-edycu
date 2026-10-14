@@ -78,7 +78,8 @@ def outcome(receipt: Any, name_error: ErrorNamer) -> str:
             except (KeyError, ValueError, TypeError):
                 return "inner:unreadable-ProxyExecuted"
             if not _is_ok(result):
-                err = result.get("Err") if isinstance(result, dict) else result
+                # the 1002 runtime under the legacy preset spells the variant "Error", modern metadata "Err"
+                err = (result.get("Err", result.get("Error")) if isinstance(result, dict) else result)
                 return f"inner:{describe_error(err, name_error)}"
     return OK
 

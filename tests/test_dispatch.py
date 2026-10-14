@@ -59,6 +59,15 @@ def test_inner_error_legacy_wrapped(runtime):
     assert outcome(receipt(True, inner, SUCCESS), runtime.namer) == "inner:BadOrigin"
 
 
+def test_inner_error_legacy_error_variant_as_decoded_on_1002():
+    """Measured on interim-1002 (extrinsic 6484-1): DispatchResult decodes as {'Error': ...}, not {'Err': ...}."""
+    rt = load("interim-1002")
+    namer = error_namer(rt.metadata.pallets)
+    inner = ("Proxy", "ProxyExecuted",
+             [{"type": "DispatchResult", "value": {"Error": {"Module": {"index": 6, "error": 1}}}}])
+    assert outcome(receipt(True, inner, SUCCESS), namer) == "inner:Balances.LiquidityRestrictions"
+
+
 def test_inner_ok_both_shapes(runtime):
     assert outcome(receipt(True, ("Proxy", "ProxyExecuted", {"result": "Ok"}), SUCCESS), runtime.namer) == OK
     assert outcome(receipt(True, ("Proxy", "ProxyExecuted", [{"type": "DispatchResult", "value": {"Ok": None}}]), SUCCESS),

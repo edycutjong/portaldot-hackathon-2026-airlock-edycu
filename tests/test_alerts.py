@@ -231,3 +231,13 @@ def test_no_longer_pending_text_has_no_veto_command():
     text = format_text(alert(pending=False, head=120))
     assert text.splitlines()[0] == "NOT YOURS — NO LONGER PENDING"
     assert "airlock veto" not in text and "Check the vault: up to 902.0000 UNIT is movable now" in text
+
+
+def test_a_registered_spend_seen_after_it_is_gone_keeps_its_yours_verdict():
+    from airlock.alerts import YOURS, Alert, format_text
+
+    a = Alert(verdict=YOURS, profile_id="interim-sdk", profile_label="interim", is_interim=True, vault="V",
+              delegate="D", call_hash="0x" + "11" * 32, announced_block=10, block_hash="0x", release_block=15, head=30,
+              block_time_ms=3000, at_risk="1 UNIT", locked=None, pending=False, extra={"intent_id": 1})
+    text = format_text(a)
+    assert text.startswith("YOURS — NO LONGER PENDING") and "airlock veto" not in text and "Check the vault" in text

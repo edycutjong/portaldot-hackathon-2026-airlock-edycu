@@ -8,7 +8,8 @@ Per drain (scripts/thief.py, which imports no Airlock code, announces a sweep of
                     this path (its delivery time is not measured here).
   veto inclusion    the alert's own veto (its vault, delegate and hash) sent automatically — no human, so this measures
                     the chain, not a person: the veto extrinsic's send, from signing until its receipt is read
-                    (submission, inclusion, and decoding the block's events for the outcome; the CLI operation's
+                    (submission, inclusion, decoding the block's events for the outcome, and the block-number
+                    lookup for the result row; the CLI operation's
                     pre-checks and read-back are outside the timer); blocks = veto block - head just before signing
   announce -> veto  on-chain: veto block timestamp - announce block timestamp, and veto block - announce block,
                     against the delay D (blocks to spare = announce block + D - veto block)
@@ -99,7 +100,10 @@ def wait_alert(path: Path, call_hash: str, block: int, timeout_s: float = ALERT_
     while time.monotonic() < end:
         if path.exists():
             for line in path.read_text().splitlines():
-                a = json.loads(line)
+                try:
+                    a = json.loads(line)
+                except ValueError:  # the watcher is mid-write on the last line: read it on the next pass
+                    continue
                 if a["call_hash"] == call_hash and a["announced_block"] == block:
                     return a
         time.sleep(0.05)

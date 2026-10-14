@@ -49,15 +49,15 @@ CLI sends the owner token only over `https://`, or plain `http://` to this machi
 `scripts/intent_evidence.sh <profile>` runs it all live with real processes on a local interim chain: enrol; an owner
 spend alerted **YOURS** with the decoded call; the thief's preimage POST answered **401** and its announcement alerted
 **NOT YOURS** and vetoed; the registry frozen mid-request (`SIGSTOP`) and then killed (`SIGKILL`) — `airlock announce`
-exits 2 both times and nothing new is pending; exactly two alerts in total. Each log ends with its checks and
-`INTENTS PASS` or `FAIL`; the extrinsics are re-fetched by id in `evidence/refetch-*`. Passing runs at the current
+exits 2 both times and nothing new is pending; exactly two alerts in total. Each completed log prints its checks and
+`INTENTS PASS` (or `FAIL`), then the by-id re-fetch of its extrinsics (`evidence/refetch-*`). Passing runs at the current
 registry code (threaded server; token only over https or loopback http; no store lock across chain reads), commit
 `d6f47d7`: `evidence/intents-interim-sdk-2026-10-14T170106Z.log`, `evidence/intents-interim-1002-2026-10-14T170232Z.log`.
 Earlier passing runs at older commits (each log's first line names it): `…-sdk-2026-10-14T165014Z.log`,
 `…-1002-2026-10-14T165141Z.log`, `…-sdk-2026-10-14T161239Z.log`, `…-1002-2026-10-14T161455Z.log`. The
 first attempt, `evidence/intents-interim-sdk-2026-10-14T161108Z.log`, is kept: it stopped at the owner's registration
-(HTTP 400 — the registry could not yet decode a call on a fresh connection); the bug it found was fixed in the next
-commit.
+(HTTP 400 — the registry could not yet decode a call on a fresh connection) before any check ran, so it prints neither
+PASS nor FAIL; the bug it found was fixed in the next commit.
 
 ## Honest scope
 
@@ -66,3 +66,8 @@ CLI config, so a file-level leak (malware, synced dotfiles, a backup) that expos
 lets a theft render YOURS. The YOURS label is the server's classification: a compromised server can mislabel or drop an
 alert, but cannot move funds or shorten the delay — the chain enforces both, and the veto works whatever the label says.
 A cold-key-certified intent key verified in the client would remove the server from that trust path; it is not built.
+
+An intent is bound to the vault and the call, not to the transaction that announces it. If the owner's announce never
+happens after a successful registration (the CLI gave up, or the announce failed), that intent stays unclaimed for up
+to 50 blocks; a thief who knows that exact call (for example from an earlier identical payment) and announces it in
+that window gets the YOURS label — for a payment the owner chose, to the owner's payee. The veto still works.

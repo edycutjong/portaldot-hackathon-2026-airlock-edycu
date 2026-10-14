@@ -17,8 +17,9 @@ announced sweep; each must fail `Proxy.Unannounced`.
   authoring, import, header delivery and the watcher's reads — not a network figure, and not Telegram delivery. In
   blocks: the head when the alert was built minus the announce block.
 - *Veto send*: the veto extrinsic's send, from just before signing until its receipt has been read — submission,
-  inclusion, and decoding the block's events to judge the outcome (the CLI operation's pre-checks and its read-back
-  afterwards are outside the timer); in blocks, the veto's block minus the head read just before signing.
+  inclusion, decoding the block's events to judge the outcome, and the block-number lookup for the result row (the CLI
+  operation's pre-checks and its read-back afterwards are outside the timer; the timed span is the same in both runs
+  below); in blocks, the veto's block minus the head read just before signing.
 - *Announce → veto*: the veto block's on-chain timestamp minus the announce block's, and the block difference, against
   the vault's delay D.
 - Percentiles are nearest-rank: p95 of 20 values is the 19th smallest.

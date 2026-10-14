@@ -31,3 +31,20 @@ proxy deposit stay: a keep-alive transfer cannot take them).
 `//AirlockBench//…`, funded by `//Alice` (`//Dave` on `interim-1002`).
 
 ## Runs
+
+### bench — 2026-10-14T16:36:23Z — interim — not V3 (Portaldot dev node, runtime spec 1002)
+
+`evidence/bench-interim-1002-2026-10-14T163623Z.json` · code `d4f4be0` · genesis `0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22` · block time 6000 ms · D = 10 blocks (60 s) · vault `5CnNrBEc9AQpLzD84TLHRnTBMW8SDH2xRqa9udz9sJzhwHvy`
+
+**20 thief drains** (scripts/thief.py, no Airlock code): 20/20 alerted NOT YOURS, 20/20 vetoed and then failed `Proxy.Unannounced` when executed after the delay; moved to the thief: 0 planck; vault total 100000000000000000 planck before, 100000000000000000 after. Fewest blocks to spare before a drain could have executed: 9 of 10.
+
+| metric (nearest-rank) | p50 | p95 | range |
+|---|---|---|---|
+| alert latency: announce block timestamp → alert written (incl. block import + delivery, one machine) | 0.033 s | 0.157 s | 0.018–0.214 s |
+| alert latency in blocks (head at alert − announce block) | 0 blocks | 0 blocks | 0–0 blocks |
+| veto inclusion: veto signed → seen in a block (automated, no human) | 5.918 s | 7.581 s | 5.395–8.236 s |
+| veto inclusion in blocks (veto block − head just before signing) | 1 block | 1 block | 1–1 block |
+| announce → veto, on-chain timestamps | 5.997 s | 6.007 s | 5.513–6.843 s |
+| announce → veto in blocks | 1 block | 1 block | 1–1 block |
+
+**Ablation (`--ablate`, one control drain):** the same thief script with `--direct` against a control vault whose hot key has delay 0 moved 100.0000 POT (10000000000000000 planck) of the control vault's 102.9800 POT in 1 extrinsic (`9397-1`, outcome ok), 1 block after the head it was sent at. The rest stays because a keep-alive transfer cannot take it: the existential deposit and the reserved proxy deposit.

@@ -10,27 +10,34 @@
 #   5. registry killed (SIGKILL): airlock announce -> exit 2, nothing announced
 #   6. no new alert for 4./5. (the owner's spend never alerted red), owner's spend executed after the delay
 # Writes evidence/intents-<profile>-<time>.{log,jsonl} (+ thief JSON lines), then re-fetches the extrinsics by id over
-# HTTP from a fresh process. Dev keys only (//AirlockDemo//…). usage: scripts/intent_evidence.sh [interim-sdk|interim-1002]
+# HTTP (WSS on v3) from a fresh process. Interim chains: dev keys (//AirlockDemo//…) on the seeded vault. v3: file: keys in
+# $AIRLOCK_COLD_KEY / $AIRLOCK_HOT_KEY, and $AIRLOCK_VAULT + $AIRLOCK_DELAY + $AIRLOCK_PAYEE + $AIRLOCK_THIEF_TO.
+# usage: scripts/intent_evidence.sh [interim-sdk|interim-1002|v3]
 set -euo pipefail
 B="$(cd "$(dirname "$0")/.." && pwd)"; cd "$B"
 P="${1:-interim-sdk}"
 case "$P" in
   interim-sdk)  WS=ws://127.0.0.1:29944; HTTP=http://127.0.0.1:29944 ;;
   interim-1002) WS=ws://127.0.0.1:19944; HTTP=http://127.0.0.1:19933 ;;
+  v3)           WS=wss://test-node-v3.portaldot.dev; HTTP="$WS" ;;  # V3 answers RPC over WSS only (HTTPS: 403)
   *) echo "unknown profile $P" >&2; exit 2 ;;
 esac
-STATE="$(ls -t "${AIRLOCK_STATE_DIR:-$HOME/.local/share/airlock}"/seed-"$P"-*.json 2>/dev/null | head -1 || true)"
-[[ -n "$STATE" ]] || { echo "no seed state for $P: run scripts/seed.py --profile $P first" >&2; exit 2; }
 j() { python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print(eval(sys.argv[2]))" "$@"; }
-VAULT="$(j "$STATE" "d['vault']")"; DELAY="$(j "$STATE" "d['delay']")"
+if [[ -n "${AIRLOCK_VAULT:-}" ]]; then
+  VAULT="$AIRLOCK_VAULT"; DELAY="${AIRLOCK_DELAY:?set AIRLOCK_DELAY (blocks) with AIRLOCK_VAULT}"
+else
+  STATE="$(ls -t "${AIRLOCK_STATE_DIR:-$HOME/.local/share/airlock}"/seed-"$P"-*.json 2>/dev/null | head -1 || true)"
+  [[ -n "$STATE" ]] || { echo "no seed state for $P: run scripts/seed.py --profile $P first (or set AIRLOCK_VAULT)" >&2; exit 2; }
+  VAULT="$(j "$STATE" "d['vault']")"; DELAY="$(j "$STATE" "d['delay']")"
+fi
 acct() { j fixtures/accounts.json "d['accounts']['$1']['address_dev_root']"; }
-PAYEE="$(acct payee-rent)"; THIEF_TO="$(acct attacker-2)"
+PAYEE="${AIRLOCK_PAYEE:-$(acct payee-rent)}"; THIEF_TO="${AIRLOCK_THIEF_TO:-$(acct attacker-2)}"
 PORT="${AIRLOCK_EVIDENCE_PORT:-18787}"; API="http://127.0.0.1:$PORT"
 CODE="$(git rev-parse --short HEAD)"; TS="$(date -u +%Y-%m-%dT%H%M%SZ)"
 [[ -z "$(git status --porcelain -- airlock scripts)" ]] || CODE="$CODE-dirty"
 LOG="evidence/intents-$P-$TS.log"; J="evidence/intents-$P-$TS.jsonl"; T="evidence/thief-intents-$P-$TS.jsonl"
 TMP="$(mktemp -d)"; DB="$TMP/shared.db"; TOKEN="$TMP/owner.token"   # the token never enters the repo
-export AIRLOCK_PROFILE="$P" AIRLOCK_COLD_KEY=//AirlockDemo//cold AIRLOCK_HOT_KEY=//AirlockDemo//hot
+export AIRLOCK_PROFILE="$P" AIRLOCK_COLD_KEY="${AIRLOCK_COLD_KEY:-//AirlockDemo//cold}" AIRLOCK_HOT_KEY="${AIRLOCK_HOT_KEY:-//AirlockDemo//hot}"
 APIPID=""; WATCHER=""
 cleanup() {
   [[ -f "$LOG" ]] && python3 -c "import sys,pathlib;p=pathlib.Path(sys.argv[1]);p.write_text(p.read_text().replace(sys.argv[2],'<tmp>'))" "$LOG" "$TMP"
@@ -53,7 +60,7 @@ wait_alerts() {
     sleep 1; n=$((n+1)); [[ $n -gt 120 ]] && { say "timeout: no alert #$1 after 120 s"; exit 1; }
   done; return 0
 }
-echo "code $CODE · profile $P · vault $VAULT · delay $DELAY blocks · registry $API · payee payee-rent $PAYEE · thief payee attacker-2 $THIEF_TO" > "$LOG"
+echo "code $CODE · profile $P · vault $VAULT · delay $DELAY blocks · registry $API · payee $PAYEE · thief payee $THIEF_TO" > "$LOG"
 
 python3 -u -m airlock.api --db "$DB" --port "$PORT" >> "$LOG" 2>&1 &
 APIPID=$!
@@ -73,7 +80,7 @@ wait_alerts 1
 say "alert 1: $(sed -n 1p "$J" | python3 -c 'import json,sys;a=json.load(sys.stdin);print(a["verdict"],a["call_hash"],a["extra"].get("call"))')"
 
 say "3. thief posts the sweep's preimage without the owner token, then announces it (scripts/thief.py, no airlock code)"
-python3 scripts/thief.py --url "$WS" --vault "$VAULT" --to "$THIEF_TO" --amount all --post-intent "$API" \
+python3 scripts/thief.py --url "$WS" --hot "$AIRLOCK_HOT_KEY" --vault "$VAULT" --to "$THIEF_TO" --amount all --post-intent "$API" \
   --state ".thief-intents-$P.json" | tee -a "$T" "$LOG"
 wait_alerts 2
 say "alert 2: $(sed -n 2p "$J" | python3 -c 'import json,sys;a=json.load(sys.stdin);print(a["verdict"],a["call_hash"])')"

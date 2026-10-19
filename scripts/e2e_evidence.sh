@@ -5,23 +5,30 @@
 #   and a direct proxy.proxy fails Proxy.Unannounced -> vault balance unchanged, the thief's payee got nothing.
 # Writes evidence/e2e-<profile>-<time>.{log,jsonl} and evidence/thief-<profile>-<time>.jsonl, then re-fetches the
 # thief's and the veto's extrinsics by id over HTTP from a fresh process.
-# Dev keys only (//AirlockDemo//…): local interim chains. usage: scripts/e2e_evidence.sh [interim-sdk|interim-1002]
+# Interim chains: dev keys (//AirlockDemo//…) on the seeded vault. v3: the keys are file: specs in $AIRLOCK_COLD_KEY /
+# $AIRLOCK_HOT_KEY, and $AIRLOCK_VAULT + $AIRLOCK_DELAY (+ $AIRLOCK_THIEF_TO) name the vault instead of the seed state.
+# usage: scripts/e2e_evidence.sh [interim-sdk|interim-1002|v3]
 set -euo pipefail
 B="$(cd "$(dirname "$0")/.." && pwd)"; cd "$B"
 P="${1:-interim-sdk}"
 case "$P" in
   interim-sdk)  WS=ws://127.0.0.1:29944; HTTP=http://127.0.0.1:29944 ;;
   interim-1002) WS=ws://127.0.0.1:19944; HTTP=http://127.0.0.1:19933 ;;
+  v3)           WS=wss://test-node-v3.portaldot.dev; HTTP="$WS" ;;  # V3 answers RPC over WSS only (HTTPS: 403)
   *) echo "unknown profile $P" >&2; exit 2 ;;
 esac
-STATE="$(ls -t "${AIRLOCK_STATE_DIR:-$HOME/.local/share/airlock}"/seed-"$P"-*.json 2>/dev/null | head -1 || true)"
-[[ -n "$STATE" ]] || { echo "no seed state for $P: run scripts/seed.py --profile $P first" >&2; exit 2; }
-VAULT="$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['vault'])" "$STATE")"
-DELAY="$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['delay'])" "$STATE")"
-TO="$(python3 -c "import json;print(json.load(open('fixtures/accounts.json'))['accounts']['attacker-3']['address_dev_root'])")"
+if [[ -n "${AIRLOCK_VAULT:-}" ]]; then
+  VAULT="$AIRLOCK_VAULT"; DELAY="${AIRLOCK_DELAY:?set AIRLOCK_DELAY (blocks) with AIRLOCK_VAULT}"
+else
+  STATE="$(ls -t "${AIRLOCK_STATE_DIR:-$HOME/.local/share/airlock}"/seed-"$P"-*.json 2>/dev/null | head -1 || true)"
+  [[ -n "$STATE" ]] || { echo "no seed state for $P: run scripts/seed.py --profile $P first (or set AIRLOCK_VAULT)" >&2; exit 2; }
+  VAULT="$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['vault'])" "$STATE")"
+  DELAY="$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['delay'])" "$STATE")"
+fi
+TO="${AIRLOCK_THIEF_TO:-$(python3 -c "import json;print(json.load(open('fixtures/accounts.json'))['accounts']['attacker-3']['address_dev_root'])")}"
 CODE="$(git rev-parse --short HEAD)"; TS="$(date -u +%Y-%m-%dT%H%M%SZ)"
 LOG="evidence/e2e-$P-$TS.log"; J="evidence/e2e-$P-$TS.jsonl"; T="evidence/thief-$P-$TS.jsonl"; DB=".e2e-$P.db"
-export AIRLOCK_PROFILE="$P" AIRLOCK_COLD_KEY=//AirlockDemo//cold
+export AIRLOCK_PROFILE="$P" AIRLOCK_COLD_KEY="${AIRLOCK_COLD_KEY:-//AirlockDemo//cold}" AIRLOCK_HOT_KEY="${AIRLOCK_HOT_KEY:-//AirlockDemo//hot}"
 WATCHER=""
 cleanup() {
   [[ -n "$WATCHER" ]] && kill "$WATCHER" 2>/dev/null || true
@@ -37,7 +44,7 @@ waitfor() {
   done; return 0
 }
 [[ -z "$(git status --porcelain -- airlock scripts)" ]] || CODE="$CODE-dirty"
-echo "code $CODE · profile $P · vault $VAULT · delay $DELAY blocks · thief payee attacker-3 $TO" > "$LOG"
+echo "code $CODE · profile $P · vault $VAULT · delay $DELAY blocks · thief payee $TO" > "$LOG"
 
 balances() { python3 -c "
 import json,sys
@@ -52,7 +59,7 @@ WATCHER=$!
 waitfor "$LOG" "watching"
 
 say "thief announces a sweep of the whole vault (scripts/thief.py, no airlock code, no intent registered)"
-python3 scripts/thief.py --url "$WS" --vault "$VAULT" --to "$TO" --amount all --state ".thief-$P.json" | tee -a "$T" "$LOG"
+python3 scripts/thief.py --url "$WS" --hot "$AIRLOCK_HOT_KEY" --vault "$VAULT" --to "$TO" --amount all --state ".thief-$P.json" | tee -a "$T" "$LOG"
 wait "$WATCHER" || { say "watcher exited non-zero"; exit 1; }
 WATCHER=""
 say "alert delivered; running the veto command exactly as the alert printed it"
@@ -72,9 +79,9 @@ while s.get_block_number(None) < t:
     if time.monotonic() > end: sys.exit('chain stalled: block %d not reached' % t)
     time.sleep(1)" "$((ANN_BLOCK + DELAY + 1))" "$(( (DELAY + 2) * 30 + 60 ))"
 say "thief executes the announced sweep after the delay"
-python3 scripts/thief.py --url "$WS" --vault "$VAULT" --to "$TO" --amount all --state ".thief-$P.json" --execute | tee -a "$T" "$LOG"
+python3 scripts/thief.py --url "$WS" --hot "$AIRLOCK_HOT_KEY" --vault "$VAULT" --to "$TO" --amount all --state ".thief-$P.json" --execute | tee -a "$T" "$LOG"
 say "thief tries proxy.proxy directly (no announcement)"
-python3 scripts/thief.py --url "$WS" --vault "$VAULT" --to "$TO" --amount 1 --direct | tee -a "$T" "$LOG"
+python3 scripts/thief.py --url "$WS" --hot "$AIRLOCK_HOT_KEY" --vault "$VAULT" --to "$TO" --amount 1 --direct | tee -a "$T" "$LOG"
 say "airlock status after"; airlock status --vault "$VAULT" >> "$LOG" 2>&1
 AFTER="$(balances)"; say "balances after $AFTER"
 python3 - "$T" "$BEFORE" "$AFTER" <<'EOF' | tee -a "$LOG"

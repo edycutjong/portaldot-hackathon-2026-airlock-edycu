@@ -472,3 +472,32 @@ def test_rows_on_a_multi_validator_chain_wait_for_finality():
         s.submit_extrinsic = lambda xt, **kw: (seen.append(kw), submit(xt, kw["wait_for_inclusion"]))[1]
         sp.send("spend", "cold", COLD, spend(s))
         assert seen == [want], profile.id
+
+
+def test_the_wait_for_finality_has_a_socket_deadline_that_is_restored():
+    from airlock.chain_profile import V3
+    from airlock.ops import FINALITY_WAIT_MIN_S
+
+    class Socket:
+        def __init__(self):
+            self.timeouts = [None]
+
+        def gettimeout(self):
+            return self.timeouts[-1]
+
+        def settimeout(self, seconds):
+            self.timeouts.append(seconds)
+
+    s, sp = make()
+    sp.chain = Chain(**{**sp.chain.__dict__, "profile": V3})
+    s.websocket = Socket()
+    during = []
+    submit = s.submit_extrinsic
+    s.submit_extrinsic = lambda xt, **kw: (during.append(s.websocket.gettimeout()), submit(xt, kw["wait_for_inclusion"]))[1]
+    sp.send("spend", "cold", COLD, spend(s))
+    assert during == [max(FINALITY_WAIT_MIN_S, 20 * 3.0)] and s.websocket.gettimeout() is None
+    # a stalled finality raises out of send, and the socket's previous timeout is still restored
+    s.submit_extrinsic = lambda xt, **kw: (_ for _ in ()).throw(TimeoutError("timed out"))
+    with pytest.raises(TimeoutError):
+        sp.send("spend", "cold", COLD, spend(s))
+    assert s.websocket.gettimeout() is None

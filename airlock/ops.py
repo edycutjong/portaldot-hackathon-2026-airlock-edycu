@@ -18,6 +18,7 @@ profile label) in the same shape as the spike's evidence, so a run can be re-fet
 
 from __future__ import annotations
 
+import contextlib
 import math
 import subprocess
 import time
@@ -34,6 +35,7 @@ from .dispatch import OK, error_namer, find_event, outcome
 
 ROOT = Path(__file__).resolve().parent.parent
 MAX_DELAY = 2**32 - 1  # the pallet's BlockNumber is a u32
+FINALITY_WAIT_BLOCKS, FINALITY_WAIT_MIN_S = 20, 180.0  # how long a send waits for finality before it gives up
 
 
 class Refused(RuntimeError):
@@ -179,6 +181,22 @@ class Sender:
         self.rows: list[dict] = []
         self.echo = echo
 
+    @contextlib.contextmanager
+    def _finality_deadline(self):
+        """A socket timeout around the wait for finality, so a finality stall raises (TimeoutError: the extrinsic may
+        or may not have landed, the CLI says to check `airlock status`) instead of hanging the command for good."""
+        websocket = getattr(self.s, "websocket", None)
+        if websocket is None:
+            yield
+            return
+        block_s = (self.chain.block_time_ms or 6000) / 1000
+        previous = websocket.gettimeout()
+        websocket.settimeout(max(FINALITY_WAIT_MIN_S, FINALITY_WAIT_BLOCKS * block_s))
+        try:
+            yield
+        finally:
+            websocket.settimeout(previous)
+
     def send(self, step: str, signer_name: str, signer: Keypair, call: Any, expect: str = OK, note: str = "") -> Any:
         from substrateinterface.exceptions import SubstrateRequestException
 
@@ -188,7 +206,8 @@ class Sender:
                 receipt = self.s.submit_extrinsic(xt, wait_for_inclusion=True)
             else:  # a multi-validator chain forks: V3 orphaned a recorded inclusion block (#105046, 2026-10-19), so
                 # a row records the finalized block that holds the extrinsic, never a block that may lose a fork
-                receipt = self.s.submit_extrinsic(xt, wait_for_inclusion=True, wait_for_finalization=True)
+                with self._finality_deadline():
+                    receipt = self.s.submit_extrinsic(xt, wait_for_inclusion=True, wait_for_finalization=True)
         except SubstrateRequestException as e:  # only errors raised by the submission itself mean "not included"
             raise SubmitRejected(f"{step}: {e}") from e
         except ValueError as e:  # substrate-interface 1.8.1 reports a pool "dropped" status this way

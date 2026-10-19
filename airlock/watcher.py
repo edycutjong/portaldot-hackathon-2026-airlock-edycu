@@ -62,6 +62,9 @@ CONNECTION_ERRORS = (ChainUnreachable, WebSocketException, ConnectionError, Time
 UNKNOWN_AT_RISK = "the whole balance (unreadable)"
 
 
+EVENT_READ_ATTEMPTS = 3  # a refused get_events is retried on later headers this many times before it is a GAP
+
+
 class BlockNotYetAvailable(Exception):
     """The subscription announced a block the reads connection cannot serve yet."""
 
@@ -108,7 +111,8 @@ def delegates(proxies_value: Any) -> list[tuple[str, int]]:
 def delegate_delay(proxies_value: Any, delegate: str) -> int | None:
     """The delay of `delegate` in a Proxy.Proxies(vault) value."""
     delays = [delay for who, delay in delegates(proxies_value) if same_account(who, delegate)]
-    # a delegate can hold several proxy types; announcements are executable after the shortest of its delays
+    # a delegate can hold several proxy types and the caller of proxy_announced may force one (`force_proxy_type`), so
+    # an announcement is executable after the shortest of its delays: alerting early is the safe side
     return min(delays) if delays else None
 
 
@@ -168,6 +172,7 @@ class Watcher:
         self.on_progress: Callable[[], None] = lambda: None  # called per processed block (feeds the watchdog)
         self._attempted: set[tuple] = set()  # alerts attempted in the current pass
         self.sweep_owed = False  # a sweep that could not read storage is repeated on the next pass
+        self._event_refusals: dict[int, int] = {}  # block number -> times the node refused its events
         store.bind_chain(chain.genesis_hash, chain.profile.id)
 
     @property
@@ -206,7 +211,17 @@ class Watcher:
             events = self.s.get_events(block_hash)
         except (WebSocketException, ConnectionError, TimeoutError, OSError, json.JSONDecodeError):
             raise  # transport trouble: reconnect and retry this block
-        except Exception as e:  # pruned state, or an event this decoder cannot read: never wedge on one block
+        except SubstrateRequestException as e:  # a node refusing the read (rate limit, overload) or pruned state
+            refusals = self._event_refusals[number] = self._event_refusals.get(number, 0) + 1
+            if refusals < EVENT_READ_ATTEMPTS:  # try again on a later header before the block is given up as a gap
+                raise BlockNotYetAvailable(f"events of #{number} refused ({e}); attempt {refusals} of "
+                                           f"{EVENT_READ_ATTEMPTS}") from e
+            self._event_refusals.pop(number, None)
+            self.log(f"GAP: events of #{number} refused {refusals} times ({type(e).__name__}: {e}); "
+                     f"pending announcements will be swept instead")
+            self.store.set_last_block(number, block_hash)
+            return [], False
+        except Exception as e:  # an event this decoder cannot read: never wedge on one block
             self.log(f"GAP: events of #{number} unreadable ({type(e).__name__}: {e}); "
                      f"pending announcements will be swept instead")
             self.store.set_last_block(number, block_hash)
@@ -226,6 +241,7 @@ class Watcher:
                 continue
             alerts.append(self._alert(ann, vault, vaults[vault], number, block_hash, head))
         self.store.set_last_block(number, block_hash)
+        self._event_refusals.pop(number, None)
         return alerts, True
 
     def _proxies(self, vault: str, block_hash: str | None) -> Any:

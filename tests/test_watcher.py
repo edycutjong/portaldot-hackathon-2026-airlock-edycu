@@ -414,10 +414,37 @@ def test_unreadable_events_are_a_logged_gap_covered_by_the_sweep(tmp_path):
     w.catch_up(100)
     fake.events[102] = [announced(VAULT, HOT, H1)]
     fake.head = 103
-    alerts = w.catch_up(103)
-    assert any(m.startswith("GAP: events of #102") for m in logs)
+    assert w.catch_up(103) == [] and store.last_block == 101  # refused: the cursor stays, retried on the next header
+    assert w.catch_up(103) == [] and store.last_block == 101
+    alerts = w.catch_up(103)  # third refusal: a GAP the sweep covers
+    assert any(m.startswith("GAP: events of #102 refused 3 times") for m in logs)
     assert [(a.announced_block, a.extra["source"]) for a in alerts] == [(102, "pending sweep")]
     assert store.last_block == 103
+
+
+def test_a_refused_events_read_that_recovers_is_not_a_gap(tmp_path):
+    from substrateinterface.exceptions import SubstrateRequestException
+
+    class Busy(FakeSubstrate):
+        refusals = 2
+
+        def get_events(self, block_hash):
+            if int(block_hash, 16) == 102 and self.refusals:
+                self.refusals -= 1
+                raise SubstrateRequestException({"code": -32000, "message": "rate limited"})
+            return super().get_events(block_hash)
+
+    fake, logs = Busy(), []
+    store = Store(tmp_path / "w.db")
+    store.watch(VAULT, "interim-sdk")
+    w = Watcher(chain(fake), store, [Recorder()], log=logs.append)
+    w.catch_up(100)
+    fake.events[102] = [announced(VAULT, HOT, H1)]
+    fake.head = 102
+    assert w.catch_up(102) == [] and w.catch_up(102) == []
+    alerts = w.catch_up(102)
+    assert [(a.announced_block, a.extra["source"]) for a in alerts] == [(102, "block scan")]
+    assert not any(m.startswith("GAP") for m in logs) and store.last_block == 102
 
 
 def test_a_decoder_bug_is_a_logged_gap_not_a_lagging_node_or_a_crash_loop(setup):

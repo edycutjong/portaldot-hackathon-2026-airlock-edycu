@@ -391,6 +391,8 @@ Fresh process over http (`http://127.0.0.1:19933`) at head #8898 · `evidence/re
 
 Runtime `portaldot-v3/3002` · genesis `0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd` · endpoint `wss://test-node-v3.portaldot.dev` · demo vault `5G1jCu2ZvTkjsrGpNajJgExfAfthseLdb5EKhNjr4HA7Bhc9` · throwaway vault `5HFX8AFaLxULRMj9oz8owUT9uvs49vwXyBHwtTjBg5nQRJkx` · delay D = 10 blocks · code `489674a` · checks (fixtures/expected.json): all hold
 
+Row 13 (`105161-1`, execute books 8, outcome ok, tx `0xf5d8198ae7d29550d17f1a911c2354b0e6942e8816c84f0f8075fe94eef04425`) was deleted by hand: the block it recorded at inclusion (`0xc953983d…ec664f`) lost a fork, and the same extrinsic is in the canonical block #105161 (re-fetch by id below). From commit `8a49731` on, rows on V3 record the finalized block.
+
 | # | step | call | signer | expected | outcome | extrinsic id | block hash | tx hash | profile | explorer |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1 | create vault | `Proxy.create_pure` | cold | ok | ok | `105141-1` | `0x386ee92af1f2c82888a2f18dd8015565e1e23d1f7660b48d0e33b8a742e068e1` | `0xb2fff24331c48d8e0603dee4f38b46e8da09d00b97d80dfc127a5d2e698b6acc` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x386ee92af1f2c82888a2f18dd8015565e1e23d1f7660b48d0e33b8a742e068e1) |
@@ -405,7 +407,6 @@ Runtime `portaldot-v3/3002` · genesis `0xd4f9acbcf7f52388d8b095abe3c198d19fc510
 | 10 | execute coffee 3.2 | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | ok | ok | `105157-1` | `0x0ea2df3c9d45db05e0d6a31cba2a343dfb2357c2ab3a6934bfd76e18c77f70e5` | `0x1396c637e47a4ea4663fe9658e6830a5fc1d490655d71cf5180e4988a4465290` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x0ea2df3c9d45db05e0d6a31cba2a343dfb2357c2ab3a6934bfd76e18c77f70e5) |
 | 11 | execute internet 4.75 | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | ok | ok | `105158-1` | `0xe603fbcef1fcbffc7496ae410c2acd21b939772e7864352e079e9d22bab7b8ca` | `0x793d6ca9e68ad9aa09bea69402ade60a6ece346c573ba79e3a22731c2408cbe1` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xe603fbcef1fcbffc7496ae410c2acd21b939772e7864352e079e9d22bab7b8ca) |
 | 12 | execute coffee 3.4 | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | ok | ok | `105159-1` | `0x4e9caa1678a99c1300b546ebafced3256e4a5430140c4f885ace8527f9b75973` | `0x3f6df8b03267681353dfa42ea22aa83dae9f88841d61dba2b33226838f4d7899` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x4e9caa1678a99c1300b546ebafced3256e4a5430140c4f885ace8527f9b75973) |
-| 13 | execute books 8 | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | hot | ok | ok | `105161-1` | `0xc953983d75f78ae526c1d9a1533d2d26e7e5286be870056a9b56532180ec664f` | `0xf5d8198ae7d29550d17f1a911c2354b0e6942e8816c84f0f8075fe94eef04425` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xc953983d75f78ae526c1d9a1533d2d26e7e5286be870056a9b56532180ec664f) |
 | 14 | drain 1 announce → attacker-1 | `Proxy.announce` | hot | ok | ok | `105162-1` | `0xfa7474595be641e748f3f95fb79978806166b65e2b0adc11d60a35712aa97802` | `0x5becc36ac3d9ded8435fab1e33e7301488d227173781829d3e8cc34c8e2398af` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xfa7474595be641e748f3f95fb79978806166b65e2b0adc11d60a35712aa97802) |
 | 15 | drain 1 veto | `Proxy.proxy(Proxy.reject_announcement)` | cold | ok | ok | `105163-1` | `0x046b1aa5f782e0dac7859f4d20f7495f42cf63aec5b2983366720dba3b880f61` | `0x9e711c1368f617869f864a1e4515dba482c4a37be37aabcc73fa2af003bf8d38` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x046b1aa5f782e0dac7859f4d20f7495f42cf63aec5b2983366720dba3b880f61) |
 | 16 | drain 2 announce → attacker-2 | `Proxy.announce` | hot | ok | ok | `105164-1` | `0xf588d5dba6d790166ff45206232ee10c700ead6420bcca6614c3770211fc2ab4` | `0x66c67a07ca9599ba2b31494cb1c5223ec5c77271f20948b032a877ce58cc154a` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xf588d5dba6d790166ff45206232ee10c700ead6420bcca6614c3770211fc2ab4) |
@@ -418,3 +419,86 @@ Runtime `portaldot-v3/3002` · genesis `0xd4f9acbcf7f52388d8b095abe3c198d19fc510
 | 23 | throwaway: add delayed hot key | `Proxy.proxy(Proxy.add_proxy)` | cold | ok | ok | `105182-1` | `0x84bb6b7e98c6d583cf908c1dbba5c3b978ffb3f758b7a782c36ede39423e767b` | `0xacb57af24a278a92ec50db9c19fd0a05ef4568521ae67f468dc0c27df8e05bce` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x84bb6b7e98c6d583cf908c1dbba5c3b978ffb3f758b7a782c36ede39423e767b) |
 | 24 | throwaway: panic | `Proxy.proxy(Proxy.remove_proxy)` | cold | ok | ok | `105183-1` | `0xe0a9d65703f4358a2c5066c9ecd9e9b1ac8496565cc537e0e6ac0b47ed1260e9` | `0x4e5cc55749a7aacc89d156c1a8916cc37c51c00dac6eee60a5af3acebdce22df` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xe0a9d65703f4358a2c5066c9ecd9e9b1ac8496565cc537e0e6ac0b47ed1260e9) |
 | 25 | throwaway: hot announces after panic | `Proxy.announce` | hot | Proxy.NotProxy | Proxy.NotProxy | `105184-1` | `0x7fa304ff4e2d231b81665d155bcbe8b2c12728bc7c4419333a28e9924a4ebe50` | `0x4683509b1e3696e7fb9ab4f09abdd5b9ab51b0ac689995ca3d64d1bfe6baf177` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x7fa304ff4e2d231b81665d155bcbe8b2c12728bc7c4419333a28e9924a4ebe50) |
+
+### re-fetch — 2026-10-19T16:18:50Z — 105161-1 on v3, found by extrinsic id
+
+Fresh process over wss (`wss://test-node-v3.portaldot.dev`) at head #105215 · `evidence/refetch-v3-2026-10-19T161850Z.json` · looked up by id alone: no recorded row to compare with — the block hash, call, outcome and tx hash below are what the chain returns.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile | explorer |
+|---|---|---|---|---|---|---|
+| `105161-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0x2810ff6b79563f18b547e5ee4fd0dd1b8c7a787cda85b777527c00a1a3df2c10` | `0xf5d8198ae7d29550d17f1a911c2354b0e6942e8816c84f0f8075fe94eef04425` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x2810ff6b79563f18b547e5ee4fd0dd1b8c7a787cda85b777527c00a1a3df2c10) |
+
+### re-fetch — 2026-10-19T16:18:56Z — 105044-1, 105045-1, 105046-1, 105047-1 on v3, found by extrinsic id
+
+Fresh process over wss (`wss://test-node-v3.portaldot.dev`) at head #105216 · `evidence/refetch-v3-2026-10-19T161856Z.json` · looked up by id alone: no recorded row to compare with — the block hash, call, outcome and tx hash below are what the chain returns.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile | explorer |
+|---|---|---|---|---|---|---|
+| `105044-1` | `Balances.transfer_keep_alive` | ok | `0x61557e8ea127726cb8d8ebac5a5bcdbc2d9da9836a240e675b1a445d5c108f91` | `0xd1b42b3d22047e941d879bac8c2604ebc2dec8ff818a68d045efbfc9fef3ea50` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x61557e8ea127726cb8d8ebac5a5bcdbc2d9da9836a240e675b1a445d5c108f91) |
+| `105045-1` | `Balances.transfer_keep_alive` | ok | `0x790f53a0b70c54531e63186612581a675205abd9e62c32fc4fb201bf1cfbb0a2` | `0xc75a51800d359be5b255e0a1b83663ccc9feedd77997ecba2c2df0822ef797db` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x790f53a0b70c54531e63186612581a675205abd9e62c32fc4fb201bf1cfbb0a2) |
+| `105046-1` | `Balances.transfer_keep_alive` | ok | `0x6af0693c8690317f965a758aae478057512bc1c9fbf735536d660207ecb087c1` | `0x6c01e737915449b4fcc771dec07267a9338949f54b57c54e1c68fcc58dbd5fbc` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x6af0693c8690317f965a758aae478057512bc1c9fbf735536d660207ecb087c1) |
+| `105047-1` | `Balances.transfer_keep_alive` | ok | `0xd1e2fd60d86eb4b23d5ed6950ab348215265e55fe26f35901cf0744c8d83917b` | `0xe1032cbaefbb69b80ed336a414b4d00a01225865e062bf07f446fc76a5061f6a` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xd1e2fd60d86eb4b23d5ed6950ab348215265e55fe26f35901cf0744c8d83917b) |
+
+### re-fetch — 2026-10-19T16:19:01Z — 105053-1, 105054-1, 105055-1 on v3, found by extrinsic id
+
+Fresh process over wss (`wss://test-node-v3.portaldot.dev`) at head #105217 · `evidence/refetch-v3-2026-10-19T161901Z.json` · looked up by id alone: no recorded row to compare with — the block hash, call, outcome and tx hash below are what the chain returns.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile | explorer |
+|---|---|---|---|---|---|---|
+| `105053-1` | `Proxy.create_pure` | ok | `0x76700d7f2bf0d6b17ff6e0b46e74ca397e6fe233403919d4d0490266f25334ef` | `0x5303a3702bfc38e0b9bee41b02905b0613f0ddf9c8d37cde93b71142e9c898dc` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x76700d7f2bf0d6b17ff6e0b46e74ca397e6fe233403919d4d0490266f25334ef) |
+| `105054-1` | `Balances.transfer_keep_alive` | ok | `0xb56b1814c3ac09b4c6358f0e81eee3971ab72e8bf1a485a53c722197bdd6832a` | `0x8cdaa6ac980a8f5e97f4e44327f6e46f3bc3f949eb60f4d19e5a544aaf10b2be` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xb56b1814c3ac09b4c6358f0e81eee3971ab72e8bf1a485a53c722197bdd6832a) |
+| `105055-1` | `Proxy.proxy(Proxy.add_proxy)` | ok | `0xfa382e00c83bda320471a47f430af28fbfa554e68785ac8b08fbd106e4db97f2` | `0x45735502c35b3e02a9723785b3aa163db7cf2d0102045b4f37a67c0b1ecde132` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xfa382e00c83bda320471a47f430af28fbfa554e68785ac8b08fbd106e4db97f2) |
+
+### re-fetch — 2026-10-19T16:19:06Z — the thief-v3-2026-10-19T160243Z-FAILED v3 run, by extrinsic id
+
+Fresh process over wss (`wss://test-node-v3.portaldot.dev`; the run itself was sent over ws) at head #105218 · `evidence/refetch-v3-2026-10-19T161906Z.json` · every row: same block hash, tx hash and outcome as recorded.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile | explorer |
+|---|---|---|---|---|---|---|
+| `105066-1` | `Proxy.announce` | ok | `0x3c4ab6d2d80b5d9c9abe6973cda7fc984e9eaa76157538a230f152b18e32654d` | `0x4873c723e5f10f77db85471409e85158842be57f1a506d95453079c331d51a90` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x3c4ab6d2d80b5d9c9abe6973cda7fc984e9eaa76157538a230f152b18e32654d) |
+| `105079-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x29dac1ee37e757088a5c65781defe061226317893acd1a75c7b6d232307de8e3` | `0x6ea12acca97f081664e28ba5d6ce3accc5f9fa48c2b97fcb58b1dd5bc46225d5` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x29dac1ee37e757088a5c65781defe061226317893acd1a75c7b6d232307de8e3) |
+| `105080-1` | `Proxy.proxy(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x46b994cf1c18e2a983f7b3210f7e94f88d4c399c5a9a9e12fcef2b35015b4dcb` | `0x79a2a2253bfc420daa79a1c7b647560499bc6644c6ec1878d70ccaace09b7ca7` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x46b994cf1c18e2a983f7b3210f7e94f88d4c399c5a9a9e12fcef2b35015b4dcb) |
+
+### re-fetch — 2026-10-19T16:19:14Z — 105070-1 on v3, found by extrinsic id
+
+Fresh process over wss (`wss://test-node-v3.portaldot.dev`) at head #105219 · `evidence/refetch-v3-2026-10-19T161914Z.json` · looked up by id alone: no recorded row to compare with — the block hash, call, outcome and tx hash below are what the chain returns.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile | explorer |
+|---|---|---|---|---|---|---|
+| `105070-1` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0xe3279ef72f4067a29bcb1c3ef1b8582536543104b60d25b9580438e5dd68644b` | `0xc4aa38d06b612dbb45f7e0a79689b232c83f81d786fca480a8590372cce16eab` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xe3279ef72f4067a29bcb1c3ef1b8582536543104b60d25b9580438e5dd68644b) |
+
+### re-fetch — 2026-10-19T16:19:19Z — the thief-v3-2026-10-19T160547Z v3 run, by extrinsic id
+
+Fresh process over wss (`wss://test-node-v3.portaldot.dev`; the run itself was sent over ws) at head #105220 · `evidence/refetch-v3-2026-10-19T161919Z.json` · every row: same block hash, tx hash and outcome as recorded.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile | explorer |
+|---|---|---|---|---|---|---|
+| `105093-1` | `Proxy.announce` | ok | `0xc7c32f0a384f536f0607194de537809ed53984e270007c8f138be815b962f63b` | `0x50d56a768eae5bad9551782bc0129b89b083cdac2da928d1cb81476838e12c02` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xc7c32f0a384f536f0607194de537809ed53984e270007c8f138be815b962f63b) |
+| `105106-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0x308b11bcb174fb77a8e3b3a17019ebb6db508fbede9c2d322363c3d54a7d16ea` | `0x9dc13db91fdfa109f47c5733104d34182754682e811f5e2306334e94e40b3d84` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x308b11bcb174fb77a8e3b3a17019ebb6db508fbede9c2d322363c3d54a7d16ea) |
+| `105108-1` | `Proxy.proxy(Balances.transfer_keep_alive)` | Proxy.Unannounced | `0xa7122e9e9031b9de19586ccbf19cf7e5364aab269e20524fe3503cd769c61959` | `0xc73eaa98ac791a5ed43c56f1a653247030ef349e94ad9197e209a9399c689c00` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xa7122e9e9031b9de19586ccbf19cf7e5364aab269e20524fe3503cd769c61959) |
+
+### re-fetch — 2026-10-19T16:19:24Z — 105095-1 on v3, found by extrinsic id
+
+Fresh process over wss (`wss://test-node-v3.portaldot.dev`) at head #105221 · `evidence/refetch-v3-2026-10-19T161924Z.json` · looked up by id alone: no recorded row to compare with — the block hash, call, outcome and tx hash below are what the chain returns.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile | explorer |
+|---|---|---|---|---|---|---|
+| `105095-1` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0xc22ce38855fc2be38628387324c971153efa7ec7c52236795d36b70ec17e9e26` | `0x2d2dd69a3751fc89641cef3081a894730874bd4732b605fe3e1bb268e97289b3` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xc22ce38855fc2be38628387324c971153efa7ec7c52236795d36b70ec17e9e26) |
+
+### re-fetch — 2026-10-19T16:19:28Z — the thief-intents-v3-2026-10-19T160843Z v3 run, by extrinsic id
+
+Fresh process over wss (`wss://test-node-v3.portaldot.dev`; the run itself was sent over ws) at head #105221 · `evidence/refetch-v3-2026-10-19T161928Z.json` · every row: same block hash, tx hash and outcome as recorded.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile | explorer |
+|---|---|---|---|---|---|---|
+| `105120-1` | `Proxy.announce` | ok | `0x66b5c6a37af71f613a5fc08f6eb1da3eeea3ce5510580260aab870d60294ddb5` | `0x7d09ad20d89aaf7255d2926405568171ed222ad281a20365fe09ed0bc7474b11` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x66b5c6a37af71f613a5fc08f6eb1da3eeea3ce5510580260aab870d60294ddb5) |
+
+### re-fetch — 2026-10-19T16:19:33Z — 105118-1, 105122-1, 105129-1 on v3, found by extrinsic id
+
+Fresh process over wss (`wss://test-node-v3.portaldot.dev`) at head #105222 · `evidence/refetch-v3-2026-10-19T161933Z.json` · looked up by id alone: no recorded row to compare with — the block hash, call, outcome and tx hash below are what the chain returns.
+
+| extrinsic id | call | outcome | block hash | tx hash | profile | explorer |
+|---|---|---|---|---|---|---|
+| `105118-1` | `Proxy.announce` | ok | `0x91a9d4bb9aca399810d76c1ec9a42561cae81c9e011688848de33a3f4a665123` | `0xea7fe70c58c5689104f6f141e71fed8d5e21eb89273b66a0bf16f8fd113e8255` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x91a9d4bb9aca399810d76c1ec9a42561cae81c9e011688848de33a3f4a665123) |
+| `105122-1` | `Proxy.proxy(Proxy.reject_announcement)` | ok | `0xf873d7a22164e99b642bae31f4a48bfc4a3dff7fd7cdcc32014d49d70a043f8a` | `0x3c6be4fc7258306116810b5c1fd46216f99099bf6a8d88f2931c07f2515fd3ee` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xf873d7a22164e99b642bae31f4a48bfc4a3dff7fd7cdcc32014d49d70a043f8a) |
+| `105129-1` | `Proxy.proxy_announced(Balances.transfer_keep_alive)` | ok | `0x8e777df616dfa54fc80f2f6e7c9cfbe496a8dbcb7ee2506559bd1b75639297a9` | `0x5ebc775c8e660b451589b4a84832f932da000ab0c4ad6ac7169e024b4960ad92` | v3 | [block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x8e777df616dfa54fc80f2f6e7c9cfbe496a8dbcb7ee2506559bd1b75639297a9) |

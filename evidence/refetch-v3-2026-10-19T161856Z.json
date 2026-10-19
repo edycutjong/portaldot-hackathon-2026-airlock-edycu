@@ -1,0 +1,54 @@
+{
+  "started": "2026-10-19T16:18:56Z",
+  "endpoint": "wss://test-node-v3.portaldot.dev",
+  "transport": "wss",
+  "profile": "v3",
+  "label": "Portaldot V3 testnet",
+  "genesis_hash": "0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+  "head_at_refetch": 105216,
+  "source": null,
+  "matched": 4,
+  "total": 4,
+  "rows": [
+    {
+      "extrinsic_id": "105044-1",
+      "block_number": 105044,
+      "block_hash": "0x61557e8ea127726cb8d8ebac5a5bcdbc2d9da9836a240e675b1a445d5c108f91",
+      "extrinsic_hash": "0xd1b42b3d22047e941d879bac8c2604ebc2dec8ff818a68d045efbfc9fef3ea50",
+      "call": "Balances.transfer_keep_alive",
+      "outcome": "ok",
+      "match": null,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "105045-1",
+      "block_number": 105045,
+      "block_hash": "0x790f53a0b70c54531e63186612581a675205abd9e62c32fc4fb201bf1cfbb0a2",
+      "extrinsic_hash": "0xc75a51800d359be5b255e0a1b83663ccc9feedd77997ecba2c2df0822ef797db",
+      "call": "Balances.transfer_keep_alive",
+      "outcome": "ok",
+      "match": null,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "105046-1",
+      "block_number": 105046,
+      "block_hash": "0x6af0693c8690317f965a758aae478057512bc1c9fbf735536d660207ecb087c1",
+      "extrinsic_hash": "0x6c01e737915449b4fcc771dec07267a9338949f54b57c54e1c68fcc58dbd5fbc",
+      "call": "Balances.transfer_keep_alive",
+      "outcome": "ok",
+      "match": null,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "105047-1",
+      "block_number": 105047,
+      "block_hash": "0xd1e2fd60d86eb4b23d5ed6950ab348215265e55fe26f35901cf0744c8d83917b",
+      "extrinsic_hash": "0xe1032cbaefbb69b80ed336a414b4d00a01225865e062bf07f446fc76a5061f6a",
+      "call": "Balances.transfer_keep_alive",
+      "outcome": "ok",
+      "match": null,
+      "diffs": []
+    }
+  ]
+}

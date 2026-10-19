@@ -71,14 +71,14 @@ def derive(root: str, path: str) -> Keypair:
     return Keypair.create_from_uri(root + path)
 
 
-def amounts(chain: Chain, spends: list[dict], fee: int) -> dict[str, int]:
+def amounts(chain: Chain, spends: list[dict], fee: int, vault_fund: Decimal = VAULT_FUND) -> dict[str, int]:
     """What each demo account needs, from the chain's constants (deposits) and a measured transfer fee."""
     d = deposits(chain)
     ed = chain.existential_deposit
     proxy_create = d["ProxyDepositBase"] + d["ProxyDepositFactor"]  # reserved from cold per vault created
     hot_slot = d["ProxyDepositFactor"]  # reserved from the vault when it adds the hot key
     announce_pending = d["AnnouncementDepositBase"] + (len(spends) + 1) * d["AnnouncementDepositFactor"]
-    vault = chain.units(VAULT_FUND)
+    vault = chain.units(vault_fund)
     throwaway = 2 * ed + 2 * hot_slot
     return {
         "vault": vault,
@@ -132,7 +132,10 @@ def seed(sp: Sender, chain: Chain, args, who_keys: dict[str, Keypair], spends, a
     cold, hot = who_keys["cold"], who_keys["hot"]
     delay = args.delay if args.delay is not None else blocks_for(args.delay_s, chain.block_time_ms)
     fee = int(s.get_payment_info(transfer(chain, who["hot"], chain.existential_deposit), cold)["partialFee"])
-    need = amounts(chain, spends, fee)
+    need = amounts(chain, spends, fee, args.vault_fund)
+    floor = sum(chain.units(x["amount"]) for x in spends) + deposits(chain)["ProxyDepositFactor"] + chain.existential_deposit
+    if need["vault"] < floor:  # the vault pays the hot key's proxy deposit, then every spend, and must stay alive
+        raise SeedFailed(f"--vault-fund {args.vault_fund} is below what the spends need ({chain.fmt(floor)})")
     print(f"plan: delay D = {delay} blocks; cold needs {chain.fmt(need['cold'])}, hot {chain.fmt(need['hot'])} "
           f"(deposits read from chain, transfer fee {chain.fmt(fee)})")
     if args.plan:
@@ -215,11 +218,15 @@ def main(argv=None) -> int:
     ap.add_argument("--root", default=None, help="key root: file:<path> / env:<VAR> (default: dev phrase, interim only)")
     ap.add_argument("--index", type=int, default=0, help="create_pure index for the demo vault (throwaway: +1)")
     ap.add_argument("--fresh", action="store_true", help="seed a new demo vault even if one is recorded")
+    ap.add_argument("--vault-fund", type=Decimal, default=VAULT_FUND,
+                    help="tokens the demo vault is funded with (default %(default)s; must exceed the spends)")
     ap.add_argument("--plan", action="store_true", help="print what the accounts need and exit")
     ap.add_argument("--proof", type=Path, default=None, help="append the rows to this PROOF.md (passing runs only)")
     args = ap.parse_args(argv)
     if args.delay is not None and args.delay < 1:
         ap.error("--delay must be >= 1")
+    if not args.vault_fund.is_finite() or args.vault_fund <= 0:
+        ap.error("--vault-fund must be a positive amount")
 
     try:
         accounts, spends, attacks, expected = load_fixtures()

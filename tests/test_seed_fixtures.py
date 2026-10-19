@@ -61,6 +61,8 @@ def test_funding_covers_deposits_from_chain_constants():
     assert need["vault"] == 5000
     assert need["hot"] >= 63 + 6 * 396 + 100  # every legitimate spend pending at once, plus one more, plus ED
     assert need["cold"] >= 2 * (63 + 198) + need["vault"] + need["throwaway"]
+    small = seed.amounts(chain, [{}] * 5, fee=1, vault_fund=seed.Decimal("40"))
+    assert small["vault"] == 40 and small["cold"] - small["vault"] == need["cold"] - need["vault"]
 
 
 def test_thief_and_raw_announce_import_no_airlock_code():

@@ -12,9 +12,10 @@
 </div>
 
 > **Status: work in progress (check-in build).** Portaldot Hacker House 2026 · track: Ecosystem DApps. The Portaldot V3
-> testnet RPC (`testnetv3-node.feso-apps.xyz`) did not resolve on 2026-10-14 (`NXDOMAIN`, last checked 17:22 UTC,
-> [evidence/v3-dns.txt](evidence/v3-dns.txt)), so everything below ran on **labelled interim chains, not V3** (see
-> [docs/PROOF.md](docs/PROOF.md)). No V3 claim is made until a V3 run exists.
+> testnet was offline during the first build days (its announced RPC host did not resolve on 2026-10-14,
+> [evidence/v3-dns.txt](evidence/v3-dns.txt)), so the runs below are on **labelled interim chains, not V3** (see
+> [docs/PROOF.md](docs/PROOF.md)). V3 came back on 2026-10-19 at a new endpoint; Airlock now identifies it by genesis and
+> runtime code hash ([evidence/v3-day0-2026-10-19T150908Z.json](evidence/v3-day0-2026-10-19T150908Z.json)). No V3 transaction has been sent yet: the V3 test accounts are not funded.
 
 ## Project Name
 
@@ -87,7 +88,7 @@ flowchart LR
 
 | Layer | Choice |
 |---|---|
-| Target blockchain | **Portaldot V3 testnet** (not reachable on 2026-10-14; no run on it yet) |
+| Target blockchain | **Portaldot V3 testnet** (identified 2026-10-19; no transaction sent on it yet) |
 | Chain used so far | two local interim dev chains, both labelled "interim — not V3" (table below) |
 | Contract language | none: pallet-native (Proxy pallet) |
 | Client | Python 3.10+, `substrate-interface` 1.8.1, `scalecodec` 1.2.12 |
@@ -95,8 +96,9 @@ flowchart LR
 | Owner intent registry | Python stdlib `http.server`, bound to 127.0.0.1, sharing the watcher's SQLite file ([docs/REGISTRY.md](docs/REGISTRY.md)) |
 | Watcher | Python, SQLite (stdlib `sqlite3`), alerts on stdout / JSON lines; Telegram `sendMessage` sender built and tested against a mock Bot API, no bot connected yet |
 
-| Profile | Endpoint (local) | Chain | Runtime | Genesis hash |
+| Profile | Endpoint | Chain | Runtime | Genesis hash |
 |---|---|---|---|---|
+| `v3` | `wss://test-node-v3.portaldot.dev` | Portaldot V3 testnet (`PortaldotV3 Test`, tPOT, 14 decimals); code hash `0xedc03c9dc81d39fea5c02893cc34cf2ec898d55d7ee8f8e89eb27597a724c7c2` | `portaldot-v3/3002` | `0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd` |
 | `interim-sdk` | `ws://127.0.0.1:29944` | upstream polkadot-sdk `substrate-node` dev chain, tag `polkadot-stable2606-3` | `node/268` | `0x0c4402ef4ccc34d28b16523e1cf26831716527c61a65d8e0840ab26e1636c8a2` |
 | `interim-1002` | `ws://127.0.0.1:19944` | `portaldot_dev` from the Portaldot node repository (`portaldotVolunteer/Portaldot-node`) | `portaldot/1002` | `0x53c36c0fc46f5bb2429d701b5ad7a0577b343aa53c4964333f1922611974dd22` |
 
@@ -122,7 +124,7 @@ Airlock is **pallet-native**: there is no contract to deploy. The calls it uses,
 - Code: [airlock/](airlock/) (CLI and operations, chain profile, call hash, dispatch outcome, watcher, alerts, owner
   intent registry) and [scripts/](scripts/).
 - Deployment: nothing to deploy. `airlock create` (or `scripts/seed.py`) creates a vault.
-- IDs: vault addresses, extrinsic ids, block hashes and tx hashes are in [docs/PROOF.md](docs/PROOF.md). No V3 IDs exist yet.
+- IDs: vault addresses, extrinsic ids, block hashes and tx hashes are in [docs/PROOF.md](docs/PROOF.md). No V3 transaction IDs exist yet.
 
 ## Installation & Setup
 

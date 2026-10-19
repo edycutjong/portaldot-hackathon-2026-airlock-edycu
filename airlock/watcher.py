@@ -172,6 +172,7 @@ class Watcher:
         self.on_progress: Callable[[], None] = lambda: None  # called per processed block (feeds the watchdog)
         self._attempted: set[tuple] = set()  # alerts attempted in the current pass
         self.sweep_owed = False  # a sweep that could not read storage is repeated on the next pass
+        self.pass_incomplete = False  # the last catch_up stopped short of the head (a block not served / events refused)
         self._event_refusals: dict[int, int] = {}  # block number -> times the node refused its events
         store.bind_chain(chain.genesis_hash, chain.profile.id)
 
@@ -376,6 +377,7 @@ class Watcher:
         """Process every block from where the watcher stopped (after a reorg check) up to `head`; then sweep pending
         announcements if asked or if a block's events were unreadable; then retry undelivered alerts (new first)."""
         self._attempted = set()
+        self.pass_incomplete = False
         start = self.start_from(head, from_block)
         if head - start >= 1:
             self.log(f"catching up {head - start + 1} blocks: #{start}..#{head}")
@@ -385,6 +387,7 @@ class Watcher:
                 block_alerts, readable = self.process_block(n, head)
             except BlockNotYetAvailable as e:  # the reads node lags the subscription: pick it up on the next header
                 self.log(f"{e}; retrying on the next header")
+                self.pass_incomplete = True
                 break
             alerts += block_alerts
             sweep = sweep or not readable
@@ -467,6 +470,9 @@ def run(args, notifiers: list[Notifier], log=None) -> int:
             if args.once:
                 return 1
             sweep_owed = True
+        if args.once and watcher.pass_incomplete:  # blocks up to the head were not covered: not a finished one-shot
+            log("catch-up incomplete: a block was not served or its events were refused; run it again")
+            return 1
         if args.once or _done(watcher, args):
             return 0
         return follow(watcher, args, log, sweep_first=sweep_owed)

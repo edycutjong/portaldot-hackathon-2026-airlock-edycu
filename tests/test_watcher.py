@@ -441,8 +441,10 @@ def test_a_refused_events_read_that_recovers_is_not_a_gap(tmp_path):
     w.catch_up(100)
     fake.events[102] = [announced(VAULT, HOT, H1)]
     fake.head = 102
-    assert w.catch_up(102) == [] and w.catch_up(102) == []
+    assert w.catch_up(102) == [] and w.pass_incomplete  # a pass that stopped short says so (--once exits 1 on it)
+    assert w.catch_up(102) == [] and w.pass_incomplete
     alerts = w.catch_up(102)
+    assert not w.pass_incomplete
     assert [(a.announced_block, a.extra["source"]) for a in alerts] == [(102, "block scan")]
     assert not any(m.startswith("GAP") for m in logs) and store.last_block == 102
 
@@ -639,3 +641,29 @@ def test_a_sweep_that_cannot_read_storage_is_owed_to_the_next_pass(setup):
     alerts = setup.w.catch_up(102)  # no sweep asked for: the owed one runs
     assert [(a.announced_block, a.extra["source"]) for a in alerts] == [(99, "pending sweep")]
     assert not setup.w.sweep_owed
+
+
+def test_once_exits_1_when_a_refused_events_read_stopped_the_pass(tmp_path, monkeypatch):
+    from types import SimpleNamespace as NS
+
+    from substrateinterface.exceptions import SubstrateRequestException
+
+    from airlock import watcher as wmod
+
+    class Busy(FakeSubstrate):
+        refusals = 1
+
+        def get_events(self, block_hash):
+            if int(block_hash, 16) == 101 and self.refusals:
+                self.refusals -= 1
+                raise SubstrateRequestException({"code": -32000, "message": "rate limited"})
+            return super().get_events(block_hash)
+
+    fake, logs = Busy(), []
+    fake.head = 102
+    fake.close = lambda: None
+    monkeypatch.setattr(wmod, "_open_reads", lambda args: chain(fake))
+    args = NS(db=tmp_path / "w.db", vault=[VAULT], from_block=101, finalized=False, once=True, max_alerts=None)
+    assert wmod.run(args, [Recorder()], log=logs.append) == 1
+    assert any("catch-up incomplete" in m for m in logs)
+    assert wmod.run(args, [Recorder()], log=logs.append) == 0  # the node answers now: the one-shot completes

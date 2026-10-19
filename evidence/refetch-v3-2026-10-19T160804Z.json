@@ -1,0 +1,44 @@
+{
+  "started": "2026-10-19T16:08:04Z",
+  "endpoint": "wss://test-node-v3.portaldot.dev",
+  "transport": "wss",
+  "profile": "v3",
+  "label": "Portaldot V3 testnet",
+  "genesis_hash": "0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+  "head_at_refetch": 105110,
+  "source": "evidence/thief-v3-2026-10-19T160547Z.jsonl",
+  "matched": 3,
+  "total": 3,
+  "rows": [
+    {
+      "extrinsic_id": "105093-1",
+      "block_number": 105093,
+      "block_hash": "0xc7c32f0a384f536f0607194de537809ed53984e270007c8f138be815b962f63b",
+      "extrinsic_hash": "0x50d56a768eae5bad9551782bc0129b89b083cdac2da928d1cb81476838e12c02",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "105106-1",
+      "block_number": 105106,
+      "block_hash": "0x308b11bcb174fb77a8e3b3a17019ebb6db508fbede9c2d322363c3d54a7d16ea",
+      "extrinsic_hash": "0x9dc13db91fdfa109f47c5733104d34182754682e811f5e2306334e94e40b3d84",
+      "call": "Proxy.proxy_announced(Balances.transfer_keep_alive)",
+      "outcome": "Proxy.Unannounced",
+      "match": true,
+      "diffs": []
+    },
+    {
+      "extrinsic_id": "105108-1",
+      "block_number": 105108,
+      "block_hash": "0xa7122e9e9031b9de19586ccbf19cf7e5364aab269e20524fe3503cd769c61959",
+      "extrinsic_hash": "0xc73eaa98ac791a5ed43c56f1a653247030ef349e94ad9197e209a9399c689c00",
+      "call": "Proxy.proxy(Balances.transfer_keep_alive)",
+      "outcome": "Proxy.Unannounced",
+      "match": true,
+      "diffs": []
+    }
+  ]
+}

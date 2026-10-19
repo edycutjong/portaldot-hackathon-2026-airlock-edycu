@@ -1,0 +1,24 @@
+{
+  "started": "2026-10-19T16:08:14Z",
+  "endpoint": "wss://test-node-v3.portaldot.dev",
+  "transport": "wss",
+  "profile": "v3",
+  "label": "Portaldot V3 testnet",
+  "genesis_hash": "0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+  "head_at_refetch": 105110,
+  "source": null,
+  "matched": 1,
+  "total": 1,
+  "rows": [
+    {
+      "extrinsic_id": "105095-1",
+      "block_number": 105095,
+      "block_hash": "0xc22ce38855fc2be38628387324c971153efa7ec7c52236795d36b70ec17e9e26",
+      "extrinsic_hash": "0x2d2dd69a3751fc89641cef3081a894730874bd4732b605fe3e1bb268e97289b3",
+      "call": "Proxy.proxy(Proxy.reject_announcement)",
+      "outcome": "ok",
+      "match": null,
+      "diffs": []
+    }
+  ]
+}

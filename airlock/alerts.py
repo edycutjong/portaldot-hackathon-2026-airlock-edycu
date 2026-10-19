@@ -129,7 +129,7 @@ def format_text(a: Alert) -> str:
                if not a.is_interim else "polkadot.js Apps > Developer > Extrinsics")
     lines += [f"Call hash {a.call_hash} (an announcement publishes only the hash: the call itself is not on chain, and "
               f"it may change the vault's proxies as well as move funds, so veto whatever the amount shown)",
-              "Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY, e.g. file:~/.config/airlock/cold.seed):",
+              "Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY):",
               a.veto_command(),
               f"or in {console}, signed by the cold key:",
               f"proxy.proxy(real={a.vault}, forceProxyType=None, "

@@ -11,6 +11,11 @@
 
 </div>
 
+A POT holder who keeps funds on one hot key loses them in one block when that seed leaks. Airlock is a keyless Portaldot
+vault: the hot key can only announce a spend and wait out a delay, and the cold key can veto it first. On the Portaldot
+V3 testnet that flow has already refused a 12.92 tPOT sweep (`Proxy.Unannounced`, vault total unchanged); see
+[Demo](#demo) for the evidence files and [docs/PROOF.md](docs/PROOF.md) for every extrinsic id.
+
 > **Status: work in progress (check-in build).** Portaldot Hacker House 2026 · track: Ecosystem DApps. The Portaldot V3
 > testnet was offline during the first build days (its announced RPC host did not resolve on 2026-10-14,
 > [evidence/v3-dns.txt](evidence/v3-dns.txt)), so the runs below are on **labelled interim chains, not V3** (see
@@ -142,6 +147,9 @@ Airlock is **pallet-native**: there is no contract to deploy. The calls it uses,
 - `curl` and `shasum` (the launcher downloads the node binary and checks its sha256)
 
 ### Steps
+
+The first block runs anywhere with no tokens, against a local dev chain. To run the same tools on the Portaldot V3 testnet
+(needs tPOT), jump to the V3 block below.
 
 (The repository is private until the public flip; until then clone with access.)
 

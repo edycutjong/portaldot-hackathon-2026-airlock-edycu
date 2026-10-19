@@ -76,7 +76,7 @@ flowchart LR
   subgraph planned["planned"]
     REV["Revive.call as a held call"]
   end
-  N[("Proxy pallet<br/>interim chain")]
+  N[("Proxy pallet<br/>Portaldot V3 testnet")]
   CLI -->|"signed extrinsics"| N
   SEED --> CLI
   TH -->|"announce / execute"| N

@@ -29,7 +29,7 @@ announcement) against a control vault whose hot key has delay 0 — what a vault
 runs once per invocation and empties the control vault's sweepable balance (the existential deposit and the reserved
 proxy deposit stay: a keep-alive transfer cannot take them).
 
-**Scope.** Local interim chains only — **not V3** (the V3 testnet RPC did not resolve; see `PROOF.md`). Dev keys
+**Scope.** Local interim chains only — **not V3** (the V3 testnet RPC did not resolve when these runs were made, 2026-10-14; V3 came back on 2026-10-19 and this benchmark has not been run on it, see `PROOF.md`). Dev keys
 `//AirlockBench//…`, funded by `//Alice` (`//Dave` on `interim-1002`).
 
 ## Runs

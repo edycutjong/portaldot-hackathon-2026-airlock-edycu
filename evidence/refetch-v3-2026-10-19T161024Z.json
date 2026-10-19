@@ -1,0 +1,24 @@
+{
+  "started": "2026-10-19T16:10:24Z",
+  "endpoint": "wss://test-node-v3.portaldot.dev",
+  "transport": "wss",
+  "profile": "v3",
+  "label": "Portaldot V3 testnet",
+  "genesis_hash": "0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+  "head_at_refetch": 105131,
+  "source": "evidence/thief-intents-v3-2026-10-19T160843Z.jsonl",
+  "matched": 1,
+  "total": 1,
+  "rows": [
+    {
+      "extrinsic_id": "105120-1",
+      "block_number": 105120,
+      "block_hash": "0x66b5c6a37af71f613a5fc08f6eb1da3eeea3ce5510580260aab870d60294ddb5",
+      "extrinsic_hash": "0x7d09ad20d89aaf7255d2926405568171ed222ad281a20365fe09ed0bc7474b11",
+      "call": "Proxy.announce",
+      "outcome": "ok",
+      "match": true,
+      "diffs": []
+    }
+  ]
+}

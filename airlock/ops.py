@@ -184,7 +184,7 @@ class Sender:
         self.echo = echo
 
     @contextlib.contextmanager
-    def _finality_deadline(self):
+    def _finality_deadline(self, tx_hash: str | None = None):
         """A deadline around the wait for finality, so a finality stall raises instead of hanging the command for good.
         A socket timeout alone is not one: a node that keeps sending ping frames never lets it fire (the watcher's
         docstring), so a timer also shuts the raw socket down once the deadline passes. The wait then raises
@@ -215,8 +215,9 @@ class Sender:
             yield
         except Exception as e:
             if expired.is_set():
+                where = f"; look it up by its hash {tx_hash}" if tx_hash else ""
                 raise TimeoutError(f"no finality within {limit:.0f} s ({type(e).__name__}); the extrinsic may or may "
-                                   f"not have landed") from e
+                                   f"not have landed{where}") from e
             raise
         finally:
             timer.cancel()
@@ -231,7 +232,7 @@ class Sender:
                 receipt = self.s.submit_extrinsic(xt, wait_for_inclusion=True)
             else:  # a multi-validator chain forks: V3 orphaned a recorded inclusion block (#105046, 2026-10-19), so
                 # a row records the finalized block that holds the extrinsic, never a block that may lose a fork
-                with self._finality_deadline():
+                with self._finality_deadline(getattr(xt, "extrinsic_hash", None)):
                     receipt = self.s.submit_extrinsic(xt, wait_for_inclusion=True, wait_for_finalization=True)
         except SubstrateRequestException as e:  # only errors raised by the submission itself mean "not included"
             raise SubmitRejected(f"{step}: {e}") from e

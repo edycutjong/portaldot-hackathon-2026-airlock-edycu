@@ -538,5 +538,7 @@ def test_a_finality_wait_on_a_pinging_node_is_cut_off_by_the_timer(monkeypatch):
         raise ConnectionResetError("socket closed under the wait")
 
     s.submit_extrinsic = never_finalizes
-    with pytest.raises(TimeoutError, match="no finality within"):
+    create = s.create_signed_extrinsic
+    s.create_signed_extrinsic = lambda **kw: SimpleNamespace(extrinsic_hash="0xabc123", xt=create(**kw))
+    with pytest.raises(TimeoutError, match="no finality within.*hash 0xabc123"):
         sp.send("spend", "cold", COLD, spend(s))

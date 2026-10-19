@@ -456,3 +456,19 @@ def test_pool_dropped_is_a_submit_rejection():
     s.submit_extrinsic = dropped
     with pytest.raises(SubmitRejected, match="dropped"):
         announce(tx, HOT, VAULT, spend(s))
+
+
+def test_rows_on_a_multi_validator_chain_wait_for_finality():
+    # V3 forks (an inclusion block was orphaned on 2026-10-19), so off the interim chains a row records the finalized
+    # block; the single-authority interim chains keep the faster inclusion wait.
+    from airlock.chain_profile import V3
+
+    for profile, want in ((INTERIM_SDK, {"wait_for_inclusion": True}),
+                          (V3, {"wait_for_inclusion": True, "wait_for_finalization": True})):
+        s, sp = make()
+        sp.chain = Chain(**{**sp.chain.__dict__, "profile": profile})
+        seen = []
+        submit = s.submit_extrinsic
+        s.submit_extrinsic = lambda xt, **kw: (seen.append(kw), submit(xt, kw["wait_for_inclusion"]))[1]
+        sp.send("spend", "cold", COLD, spend(s))
+        assert seen == [want], profile.id

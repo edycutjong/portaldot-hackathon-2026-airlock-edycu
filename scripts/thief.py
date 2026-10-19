@@ -187,7 +187,9 @@ def main(argv=None):
             status = post_intent(args.post_intent, args.vault, bytes(sweep.data.data), call_hash)
             out(step="post-intent", script="scripts/thief.py (no airlock imports)", registry=args.post_intent,
                 vault=args.vault, call_hash=call_hash, http_status=status, token="none")
-    receipt = s.submit_extrinsic(s.create_signed_extrinsic(call=call, keypair=hot), wait_for_inclusion=True)
+    # off the local interim chains, record the finalized block: V3 forks, and an inclusion block can be orphaned
+    receipt = s.submit_extrinsic(s.create_signed_extrinsic(call=call, keypair=hot), wait_for_inclusion=True,
+                                 **({} if genesis in INTERIM_GENESES else {"wait_for_finalization": True}))
     try:
         result = verdict(s, receipt)
     except Exception as e:  # never lose the evidence line of a transaction that was sent

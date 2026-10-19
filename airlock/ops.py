@@ -184,7 +184,11 @@ class Sender:
 
         xt = self.s.create_signed_extrinsic(call=call, keypair=signer)
         try:
-            receipt = self.s.submit_extrinsic(xt, wait_for_inclusion=True)
+            if self.chain.profile.is_interim:  # one local authority: a block is never orphaned
+                receipt = self.s.submit_extrinsic(xt, wait_for_inclusion=True)
+            else:  # a multi-validator chain forks: V3 orphaned a recorded inclusion block (#105046, 2026-10-19), so
+                # a row records the finalized block that holds the extrinsic, never a block that may lose a fork
+                receipt = self.s.submit_extrinsic(xt, wait_for_inclusion=True, wait_for_finalization=True)
         except SubstrateRequestException as e:  # only errors raised by the submission itself mean "not included"
             raise SubmitRejected(f"{step}: {e}") from e
         except ValueError as e:  # substrate-interface 1.8.1 reports a pool "dropped" status this way

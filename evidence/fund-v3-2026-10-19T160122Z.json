@@ -1,0 +1,67 @@
+{
+  "started": "2026-10-19T16:01:22Z",
+  "status": "passed",
+  "failure": null,
+  "code": "0e37a2e",
+  "profile": "v3",
+  "label": "Portaldot V3 testnet",
+  "endpoint": "wss://test-node-v3.portaldot.dev",
+  "genesis_hash": "0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+  "code_hash": "0xedc03c9dc81d39fea5c02893cc34cf2ec898d55d7ee8f8e89eb27597a724c7c2",
+  "runtime": "portaldot-v3/3002",
+  "funder": "5CFgzauuUXbpDG72qXVaAavBhXCEVnAxEzwH9Z1LKHnym5AY",
+  "rows": [
+    {
+      "step": "fund 5EnJxVLr\u2026",
+      "call": "Balances.transfer_keep_alive",
+      "signer": "funder",
+      "expected": "ok",
+      "outcome": "ok",
+      "extrinsic_id": "105044-1",
+      "block_hash": "0x61557e8ea127726cb8d8ebac5a5bcdbc2d9da9836a240e675b1a445d5c108f91",
+      "block": 105044,
+      "extrinsic_hash": "0xd1b42b3d22047e941d879bac8c2604ebc2dec8ff818a68d045efbfc9fef3ea50",
+      "profile": "v3",
+      "note": "20.0000 tPOT"
+    },
+    {
+      "step": "fund 5Cwitu8f\u2026",
+      "call": "Balances.transfer_keep_alive",
+      "signer": "funder",
+      "expected": "ok",
+      "outcome": "ok",
+      "extrinsic_id": "105045-1",
+      "block_hash": "0x790f53a0b70c54531e63186612581a675205abd9e62c32fc4fb201bf1cfbb0a2",
+      "block": 105045,
+      "extrinsic_hash": "0xc75a51800d359be5b255e0a1b83663ccc9feedd77997ecba2c2df0822ef797db",
+      "profile": "v3",
+      "note": "12.0000 tPOT"
+    },
+    {
+      "step": "fund 5HH3L4jL\u2026",
+      "call": "Balances.transfer_keep_alive",
+      "signer": "funder",
+      "expected": "ok",
+      "outcome": "ok",
+      "extrinsic_id": "105046-1",
+      "block_hash": "0xa84e2470228b8ba4c4bfe459f95378f40f06b4949a4fbc33ab603e9eb12550b9",
+      "block": 105046,
+      "extrinsic_hash": "0x6c01e737915449b4fcc771dec07267a9338949f54b57c54e1c68fcc58dbd5fbc",
+      "profile": "v3",
+      "note": "53.0000 tPOT"
+    },
+    {
+      "step": "fund 5HDjewxm\u2026",
+      "call": "Balances.transfer_keep_alive",
+      "signer": "funder",
+      "expected": "ok",
+      "outcome": "ok",
+      "extrinsic_id": "105047-1",
+      "block_hash": "0xd1e2fd60d86eb4b23d5ed6950ab348215265e55fe26f35901cf0744c8d83917b",
+      "block": 105047,
+      "extrinsic_hash": "0xe1032cbaefbb69b80ed336a414b4d00a01225865e062bf07f446fc76a5061f6a",
+      "profile": "v3",
+      "note": "28.0000 tPOT"
+    }
+  ]
+}

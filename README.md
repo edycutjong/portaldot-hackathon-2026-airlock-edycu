@@ -5,17 +5,19 @@
 **A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.**
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Tests: 341 passing](https://img.shields.io/badge/tests-341%20passing-brightgreen)
+![Tests: 344 passing](https://img.shields.io/badge/tests-344%20passing-brightgreen)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)
-![Chain: interim, not V3](https://img.shields.io/badge/chain-interim%20%E2%80%94%20not%20V3-orange)
+![Chain: Portaldot V3 testnet](https://img.shields.io/badge/chain-Portaldot%20V3%20testnet-blue)
 
 </div>
 
 > **Status: work in progress (check-in build).** Portaldot Hacker House 2026 · track: Ecosystem DApps. The Portaldot V3
 > testnet was offline during the first build days (its announced RPC host did not resolve on 2026-10-14,
 > [evidence/v3-dns.txt](evidence/v3-dns.txt)), so the runs below are on **labelled interim chains, not V3** (see
-> [docs/PROOF.md](docs/PROOF.md)). V3 came back on 2026-10-19 at a new endpoint; Airlock now identifies it by genesis and
-> runtime code hash ([evidence/v3-day0-2026-10-19T150908Z.json](evidence/v3-day0-2026-10-19T150908Z.json)). No V3 transaction has been sent yet: the V3 test accounts are not funded.
+> [docs/PROOF.md](docs/PROOF.md)). V3 came back on 2026-10-19 at a new endpoint; Airlock identifies it by genesis and
+> runtime code hash ([evidence/v3-day0-2026-10-19T150908Z.json](evidence/v3-day0-2026-10-19T150908Z.json)), and the core
+> flow, the owner intent registry and the seeded demo history have since run **on V3** (rows labelled `v3` in PROOF.md).
+> The interim rows keep their labels; the benchmark has not run on V3.
 
 ## Project Name
 
@@ -46,8 +48,10 @@ thief an announcement that the owner sees and cancels. A legitimate payment is t
 ### Blockchain Relevance
 
 Everything is enforced by the chain's own Proxy pallet; Airlock adds no custom runtime code. The proof is a set of real
-extrinsics from local interim chains, listed by extrinsic id in [docs/PROOF.md](docs/PROOF.md) and re-fetched by id
-from a fresh process over HTTP. `interim-sdk` keeps its state on disk (archive node), so its rows stay re-fetchable;
+extrinsics on the Portaldot V3 testnet (profile `v3`, since 2026-10-19) and, before V3 was back, on local interim
+chains, all listed by extrinsic id in [docs/PROOF.md](docs/PROOF.md) and re-fetched by id from a fresh process (over
+WSS on V3, which answers RPC on WSS only; over HTTP on the interim nodes). On V3 each row links to the block on the
+organisers' explorer. `interim-sdk` keeps its state on disk (archive node), so its rows stay re-fetchable;
 `interim-1002` runs with `--tmp`, so its rows are a run log once that node stops.
 
 ## Technical Architecture
@@ -88,8 +92,8 @@ flowchart LR
 
 | Layer | Choice |
 |---|---|
-| Target blockchain | **Portaldot V3 testnet** (identified 2026-10-19; no transaction sent on it yet) |
-| Chain used so far | two local interim dev chains, both labelled "interim — not V3" (table below) |
+| Target blockchain | **Portaldot V3 testnet** (identified and used since 2026-10-19) |
+| Chains used | V3 (profile `v3`) since 2026-10-19; before that two local interim dev chains labelled "interim — not V3" (table below) |
 | Contract language | none: pallet-native (Proxy pallet) |
 | Client | Python 3.10+, `substrate-interface` 1.8.1, `scalecodec` 1.2.12 |
 | Owner interface | the `airlock` command line ([docs/CLI.md](docs/CLI.md)); no web UI |
@@ -124,7 +128,7 @@ Airlock is **pallet-native**: there is no contract to deploy. The calls it uses,
 - Code: [airlock/](airlock/) (CLI and operations, chain profile, call hash, dispatch outcome, watcher, alerts, owner
   intent registry) and [scripts/](scripts/).
 - Deployment: nothing to deploy. `airlock create` (or `scripts/seed.py`) creates a vault.
-- IDs: vault addresses, extrinsic ids, block hashes and tx hashes are in [docs/PROOF.md](docs/PROOF.md). No V3 transaction IDs exist yet.
+- IDs: vault addresses, extrinsic ids, block hashes and tx hashes are in [docs/PROOF.md](docs/PROOF.md) (V3 rows labelled `v3`). V3 vaults: core `5F4rPFqS6PQEKUHacHtR5mLrDMVZ8RjCfJpYmfiktERhsmE1`, seeded demo `5G1jCu2ZvTkjsrGpNajJgExfAfthseLdb5EKhNjr4HA7Bhc9`.
 
 ## Installation & Setup
 
@@ -147,7 +151,7 @@ cd portaldot-hackathon-2026-airlock-edycu
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'                 # also installs the `airlock` command
 
-pytest -q                               # 341 passed, 4 skipped: no chain or network needed (the 4 are the live-chain tests)
+pytest -q                               # 344 passed, 4 skipped: no chain or network needed (the 4 are the live-chain tests)
 
 scripts/interim_node.sh interim-sdk     # terminal 1: dev chain on ws://127.0.0.1:29944 (archive state)
 
@@ -171,6 +175,20 @@ python scripts/thief.py --vault <demo vault> --to <same address> --amount all --
 airlock status --vault <demo vault>
 ```
 
+On the Portaldot V3 testnet (profile `v3`, `wss://test-node-v3.portaldot.dev`) the same tools run with your own keys:
+each `file:` path holds a mnemonic (mode 600, outside the repository), and the accounts need tPOT first.
+
+```bash
+export AIRLOCK_PROFILE=v3 K=~/.config/airlock
+python scripts/fund.py --from file:$K/v3-funder.seed --to <cold address>=20 --to <hot address>=12   # top-ups, recorded
+airlock create --cold file:$K/v3-cold.seed --hot <hot address> --delay-s 60 --fund 15          # prints the vault
+export AIRLOCK_COLD_KEY=file:$K/v3-cold.seed AIRLOCK_HOT_KEY=file:$K/v3-hot.seed AIRLOCK_VAULT=<vault> AIRLOCK_DELAY=10
+AIRLOCK_THIEF_TO=<any address> scripts/e2e_evidence.sh v3
+AIRLOCK_THIEF_TO=<any address> AIRLOCK_PAYEE=<payee address> scripts/intent_evidence.sh v3
+python scripts/seed.py --root file:$K/v3-demo-root.seed --vault-fund 40 --plan   # what its cold and hot need; drop --plan to seed
+python scripts/verify_onchain.py docs/PROOF.md --skip-unreachable               # re-fetch every row by id
+```
+
 `seed.py` prints the demo vault and hot-key addresses. Run it once per chain: on an already-seeded chain it only re-checks, and
 once `intent_evidence.sh` has executed an owner spend from the vault the re-check reports that drift and exits 1. The other tools: `scripts/spike_proxy.py` (the 10-extrinsic
 protocol walk-through, `--vesting` adds 4 at-risk steps), `scripts/refetch.py` (re-read recorded extrinsics by id),
@@ -179,7 +197,17 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
 ## Demo
 
 - **Video:** coming at check-in.
-- **Live demo:** none yet (local chains only).
+- **Live demo:** no hosted UI; the CLI and watcher run against the public V3 endpoint (see Installation).
+- **On V3** (2026-10-19, profile `v3`, D = 10 blocks = 60 s, independent cold and hot keys from `file:` specs):
+  `airlock create` made the core vault (`evidence/create-v3-2026-10-19T160150Z.jsonl`); end to end at commit `b4d379d`
+  the thief's sweep of 12.92 tPOT was alerted NOT YOURS, vetoed by the alert's own command, and its `proxy_announced`
+  and a direct `proxy.proxy` both failed `Proxy.Unannounced` with vault and thief-payee totals unchanged
+  (`evidence/e2e-v3-2026-10-19T160547Z.log`, `E2E PASS`); the owner intent registry passed all 7 checks at `890fcfb`
+  (`evidence/intents-v3-2026-10-19T160843Z.log`, `INTENTS PASS`); the seed wrote 25 extrinsics of 8 call types with
+  every [fixtures/expected.json](fixtures/expected.json) check holding (`evidence/seed-v3-2026-10-19T161053Z.json`);
+  `scripts/verify_onchain.py` re-fetched all 44 V3 rows in PROOF.md by id, 44/44 matched
+  (`evidence/verify-onchain-2026-10-19T161943Z.json`). An earlier end-to-end run lost its websocket after the on-chain
+  steps and is kept as `…160243Z-FAILED.log`.
 - **End to end** ([scripts/e2e_evidence.sh](scripts/e2e_evidence.sh), logs in [evidence/](evidence/)), on both interim
   chains at commit `93c16fb` (and earlier at `c6acae1`, `ab8a03d`): [scripts/thief.py](scripts/thief.py), which imports no
   Airlock code, announces a `transfer_keep_alive` sweep of the demo vault's free balance minus locks and one existential deposit
@@ -207,14 +235,15 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
   Telegram delivery. The control (`--ablate`): the same thief against a delay-0 vault moved 100 UNIT (`interim-sdk`) /
   100 POT (`interim-1002`) in one extrinsic.
 - **Proof:** [docs/PROOF.md](docs/PROOF.md) — every row with extrinsic id, block hash, tx hash and the profile label.
-- **Tests:** 341 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
+- **Tests:** 344 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
   I2: a vetoed announcement never executes, also after the delay; the control; panic) that pass on both interim chains
   (`evidence/integration-*-2026-10-14T154*Z.json`, `…T155*Z.json` and, after the intent registry, `…T171*Z.json`,
   `"status": "passed"`; the two earlier `…T1522*Z.json` runs predate that field).
 - **Watcher:** [docs/WATCHER.md](docs/WATCHER.md) — also shown live after a watcher restart, a node restart and a node
   freeze (recorded by [scripts/watcher_evidence.sh](scripts/watcher_evidence.sh)). No alert has reached a phone yet
   (no Telegram bot token configured).
-- **Test accounts:** dev keys only, on the interim chains: the demo accounts `//AirlockDemo//cold`, `//AirlockDemo//hot`,
+- **Test accounts:** on V3, fresh keys kept outside the repository (`file:` specs, mode 600), funded by one testnet
+  funder account (`scripts/fund.py`, `evidence/fund-v3-2026-10-19T160122Z.json`). On the interim chains, dev keys: the demo accounts `//AirlockDemo//cold`, `//AirlockDemo//hot`,
   … ([fixtures/accounts.json](fixtures/accounts.json)) funded by `//Alice` (`//Dave` on `interim-1002`); the spike and
   watcher runs use `//Alice`–`//Ferdie`.
 

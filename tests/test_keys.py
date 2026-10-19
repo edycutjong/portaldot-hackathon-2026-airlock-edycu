@@ -43,11 +43,19 @@ def test_dev_phrase_in_a_file_refused_off_interim(tmp_path):
     assert load_key(f"file:{f}", INTERIM_SDK, "cold").ss58_address == load_key("//cold", INTERIM_SDK, "x").ss58_address
 
 
-def test_file_readable_by_others_warns(tmp_path, capsys):
+def test_file_readable_by_others_is_refused_on_v3(tmp_path):
     f = tmp_path / "cold.seed"
     f.write_text(fresh_phrase())
     os.chmod(f, 0o644)
-    load_key(f"file:{f}", V3, "cold")
+    with pytest.raises(KeyRefused, match="chmod 600"):
+        load_key(f"file:{f}", V3, "cold")
+
+
+def test_file_readable_by_others_warns_on_interim(tmp_path, capsys):
+    f = tmp_path / "cold.seed"
+    f.write_text(fresh_phrase())
+    os.chmod(f, 0o644)
+    load_key(f"file:{f}", INTERIM_SDK, "cold")
     assert "chmod 600" in capsys.readouterr().err
 
 

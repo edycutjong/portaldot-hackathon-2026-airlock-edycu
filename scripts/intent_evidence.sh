@@ -19,7 +19,7 @@ P="${1:-interim-sdk}"
 case "$P" in
   interim-sdk)  WS=ws://127.0.0.1:29944; HTTP=http://127.0.0.1:29944 ;;
   interim-1002) WS=ws://127.0.0.1:19944; HTTP=http://127.0.0.1:19933 ;;
-  v3)           WS=wss://test-node-v3.portaldot.dev; HTTP="$WS" ;;  # V3 answers RPC over WSS only (HTTPS: 403)
+  v3)           WS=wss://test-node-v3.portaldot.dev; HTTP="$WS" ;;  # V3 re-fetch over WSS: HTTPS throttles bulk reads (503)
   *) echo "unknown profile $P" >&2; exit 2 ;;
 esac
 j() { python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print(eval(sys.argv[2]))" "$@"; }

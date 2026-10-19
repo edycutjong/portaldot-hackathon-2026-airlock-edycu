@@ -73,7 +73,7 @@ V3 = Profile(
     decimals_fallback=14,
     symbol_fallback="tPOT",
     is_interim=False,
-    # The organisers' explorer is a polkadot-js Apps build: ?rpc= picks the chain, #/explorer/query/ opens the block.
+    # The V3 explorer is a polkadot-js Apps build: ?rpc= picks the chain, #/explorer/query/ opens the block.
     explorer_block_url="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev"
                        "#/explorer/query/{block_hash}",
 )

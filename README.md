@@ -50,8 +50,8 @@ thief an announcement that the owner sees and cancels. A legitimate payment is t
 Everything is enforced by the chain's own Proxy pallet; Airlock adds no custom runtime code. The proof is a set of real
 extrinsics on the Portaldot V3 testnet (profile `v3`, since 2026-10-19) and, before V3 was back, on local interim
 chains, all listed by extrinsic id in [docs/PROOF.md](docs/PROOF.md) and re-fetched by id from a fresh process (over
-WSS on V3, which answers RPC on WSS only; over HTTP on the interim nodes). On V3 each row links to the block on the
-organisers' explorer. `interim-sdk` keeps its state on disk (archive node), so its rows stay re-fetchable;
+WSS on V3, where HTTPS JSON-RPC answered 503 to bulk re-fetches, [evidence/v3-rpc-transport-2026-10-19T162540Z.txt](evidence/v3-rpc-transport-2026-10-19T162540Z.txt); over HTTP on the interim nodes). On
+V3 each row links to the block on the V3 testnet's public explorer (`node-console.portaldot.dev`). `interim-sdk` keeps its state on disk (archive node), so its rows stay re-fetchable;
 `interim-1002` runs with `--tmp`, so its rows are a run log once that node stops.
 
 ## Technical Architecture

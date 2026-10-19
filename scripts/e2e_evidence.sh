@@ -4,7 +4,7 @@
 #   run as printed (airlock CLI, cold key) -> after the delay the thief's proxy_announced fails Proxy.Unannounced,
 #   and a direct proxy.proxy fails Proxy.Unannounced -> vault balance unchanged, the thief's payee got nothing.
 # Writes evidence/e2e-<profile>-<time>.{log,jsonl} and evidence/thief-<profile>-<time>.jsonl, then re-fetches the
-# thief's and the veto's extrinsics by id over HTTP from a fresh process.
+# thief's and the veto's extrinsics by id over HTTP (WSS on v3) from a fresh process.
 # Interim chains: dev keys (//AirlockDemo//…) on the seeded vault. v3: the keys are file: specs in $AIRLOCK_COLD_KEY /
 # $AIRLOCK_HOT_KEY, and $AIRLOCK_VAULT + $AIRLOCK_DELAY (+ $AIRLOCK_THIEF_TO) name the vault instead of the seed state.
 # usage: scripts/e2e_evidence.sh [interim-sdk|interim-1002|v3]
@@ -14,7 +14,7 @@ P="${1:-interim-sdk}"
 case "$P" in
   interim-sdk)  WS=ws://127.0.0.1:29944; HTTP=http://127.0.0.1:29944 ;;
   interim-1002) WS=ws://127.0.0.1:19944; HTTP=http://127.0.0.1:19933 ;;
-  v3)           WS=wss://test-node-v3.portaldot.dev; HTTP="$WS" ;;  # V3 answers RPC over WSS only (HTTPS: 403)
+  v3)           WS=wss://test-node-v3.portaldot.dev; HTTP="$WS" ;;  # V3 re-fetch over WSS: HTTPS throttles bulk reads (503)
   *) echo "unknown profile $P" >&2; exit 2 ;;
 esac
 if [[ -n "${AIRLOCK_VAULT:-}" ]]; then

@@ -501,3 +501,42 @@ def test_the_wait_for_finality_has_a_socket_deadline_that_is_restored():
     with pytest.raises(TimeoutError):
         sp.send("spend", "cold", COLD, spend(s))
     assert s.websocket.gettimeout() is None
+
+
+def test_a_finality_wait_on_a_pinging_node_is_cut_off_by_the_timer(monkeypatch):
+    """A node that keeps the socket alive never trips a recv timeout; the timer shuts the socket down instead."""
+    import threading
+
+    from airlock import ops
+    from airlock.chain_profile import V3
+
+    class Raw:
+        def __init__(self):
+            self.dead = threading.Event()
+
+        def shutdown(self, how):
+            self.dead.set()
+
+    class Socket:
+        def __init__(self):
+            self.sock = Raw()
+
+        def gettimeout(self):
+            return None
+
+        def settimeout(self, seconds):
+            pass
+
+    monkeypatch.setattr(ops, "FINALITY_WAIT_MIN_S", 0.2)
+    monkeypatch.setattr(ops, "FINALITY_WAIT_BLOCKS", 0)
+    s, sp = make()
+    sp.chain = Chain(**{**sp.chain.__dict__, "profile": V3})
+    s.websocket = Socket()
+
+    def never_finalizes(xt, **kw):
+        assert s.websocket.sock.dead.wait(5), "the timer never shut the socket down"
+        raise ConnectionResetError("socket closed under the wait")
+
+    s.submit_extrinsic = never_finalizes
+    with pytest.raises(TimeoutError, match="no finality within"):
+        sp.send("spend", "cold", COLD, spend(s))

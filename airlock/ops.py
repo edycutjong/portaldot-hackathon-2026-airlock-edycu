@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import contextlib
 import math
+import socket
 import subprocess
+import threading
 import time
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
@@ -183,18 +185,41 @@ class Sender:
 
     @contextlib.contextmanager
     def _finality_deadline(self):
-        """A socket timeout around the wait for finality, so a finality stall raises (TimeoutError: the extrinsic may
-        or may not have landed, the CLI says to check `airlock status`) instead of hanging the command for good."""
+        """A deadline around the wait for finality, so a finality stall raises instead of hanging the command for good.
+        A socket timeout alone is not one: a node that keeps sending ping frames never lets it fire (the watcher's
+        docstring), so a timer also shuts the raw socket down once the deadline passes. The wait then raises
+        TimeoutError: the extrinsic may or may not have landed, the CLI says to check `airlock status`."""
         websocket = getattr(self.s, "websocket", None)
         if websocket is None:
             yield
             return
         block_s = (self.chain.block_time_ms or 6000) / 1000
+        limit = max(FINALITY_WAIT_MIN_S, FINALITY_WAIT_BLOCKS * block_s)
+        expired = threading.Event()
+
+        def expire() -> None:
+            expired.set()
+            try:
+                raw = getattr(websocket, "sock", None)
+                if raw is not None:
+                    raw.shutdown(socket.SHUT_RDWR)  # wakes a recv blocked in the main thread
+            except OSError:
+                pass
+
+        timer = threading.Timer(limit, expire)
+        timer.daemon = True
         previous = websocket.gettimeout()
-        websocket.settimeout(max(FINALITY_WAIT_MIN_S, FINALITY_WAIT_BLOCKS * block_s))
+        websocket.settimeout(limit)  # a silent node: the recv itself times out
+        timer.start()
         try:
             yield
+        except Exception as e:
+            if expired.is_set():
+                raise TimeoutError(f"no finality within {limit:.0f} s ({type(e).__name__}); the extrinsic may or may "
+                                   f"not have landed") from e
+            raise
         finally:
+            timer.cancel()
             websocket.settimeout(previous)
 
     def send(self, step: str, signer_name: str, signer: Keypair, call: Any, expect: str = OK, note: str = "") -> Any:

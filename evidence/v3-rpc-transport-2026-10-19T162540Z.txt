@@ -1,0 +1,6 @@
+# V3 substrate RPC transports, 2026-10-19T162540Z (curl + python websocket)
+GET  https://test-node-v3.portaldot.dev -> HTTP 405
+POST https://test-node-v3.portaldot.dev system_chain -> HTTP 200 body {"jsonrpc":"2.0","id":1,"result":"PortaldotV3 Test"}
+grandpa_roundState: setId 29 totalWeight 2
+Session.Validators: 2 ['5F4ZyJJ8R3QHZKRLAfDXdUuVE4w3Q7uq7tCNfAtvf2XEBfYY', '5Grj5uKAoduL2EDfgizp2MMbURJKa4rL6Q5pGUnVhhhjhwjk']
+verify_onchain docs/PROOF.md --url v3=https://test-node-v3.portaldot.dev at 16:25:50Z: 2/44 v3 rows matched, the other 42 MISSING with 'RPC request failed with HTTP status code 503' (bulk reads over HTTPS throttled); over wss the same rows match 44/44 (evidence/verify-onchain-2026-10-19T161943Z.json)

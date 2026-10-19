@@ -6,10 +6,17 @@ produced them (`scripts/spike_proxy.py`, `scripts/seed.py` and `scripts/refetch.
 never added by hand (a stale row may be deleted by hand); each spike and seed run names the commit that produced it,
 each end-to-end log (`evidence/e2e-*.log`) names it on its first line, and every run's JSON or log is in `evidence/`.
 
-**Profile labels.** The target is the Portaldot V3 testnet. Its RPC host `testnetv3-node.feso-apps.xyz` did not
-resolve in the checks on 2026-10-14 logged in `evidence/v3-dns.txt` (at 12:44 UTC the
-resolver answered `NXDOMAIN`), so these rows come from
-**interim chains — not V3**:
+**Profile labels.** The target is the Portaldot V3 testnet. Its first announced RPC host `testnetv3-node.feso-apps.xyz`
+did not resolve in the checks on 2026-10-14 logged in `evidence/v3-dns.txt` (at 12:44 UTC the resolver answered
+`NXDOMAIN`), so the rows up to 2026-10-14 come from **interim chains — not V3** (table below). V3 came back on
+2026-10-19 at `wss://test-node-v3.portaldot.dev` (genesis `0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd`,
+runtime `portaldot-v3/3002`, `evidence/v3-day0-2026-10-19T150908Z.json`); rows from then on are labelled `v3`, are
+signed with fresh keys kept outside the repository, link to the block on the organisers' explorer, and are re-fetched
+over WSS (the V3 node answers RPC on WSS only). V3 has several validators and forks now and then: two rows recorded
+at inclusion on 2026-10-19 named a block that lost its fork (`105046-1`, `105161-1`), so V3 rows now record the
+finalized block, and the re-fetch tables show both extrinsics in their canonical blocks.
+
+Interim chains:
 
 | Profile | Chain | Runtime | Genesis hash |
 |---|---|---|---|

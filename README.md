@@ -5,7 +5,7 @@
 **A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.**
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Tests: 344 passing](https://img.shields.io/badge/tests-344%20passing-brightgreen)
+![Tests: 348 passing](https://img.shields.io/badge/tests-348%20passing-brightgreen)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)
 ![Chain: Portaldot V3 testnet](https://img.shields.io/badge/chain-Portaldot%20V3%20testnet-blue)
 
@@ -151,7 +151,7 @@ cd portaldot-hackathon-2026-airlock-edycu
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'                 # also installs the `airlock` command
 
-pytest -q                               # 344 passed, 4 skipped: no chain or network needed (the 4 are the live-chain tests)
+pytest -q                               # 348 passed, 4 skipped: no chain or network needed (the 4 are the live-chain tests)
 
 scripts/interim_node.sh interim-sdk     # terminal 1: dev chain on ws://127.0.0.1:29944 (archive state)
 
@@ -235,7 +235,7 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
   Telegram delivery. The control (`--ablate`): the same thief against a delay-0 vault moved 100 UNIT (`interim-sdk`) /
   100 POT (`interim-1002`) in one extrinsic.
 - **Proof:** [docs/PROOF.md](docs/PROOF.md) — every row with extrinsic id, block hash, tx hash and the profile label.
-- **Tests:** 344 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
+- **Tests:** 348 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
   I2: a vetoed announcement never executes, also after the delay; the control; panic) that pass on both interim chains
   (`evidence/integration-*-2026-10-14T154*Z.json`, `…T155*Z.json` and, after the intent registry, `…T171*Z.json`,
   `"status": "passed"`; the two earlier `…T1522*Z.json` runs predate that field).
@@ -267,9 +267,18 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
 - `scripts/bench.py` (thief drains, alert and veto latency, a delay-0 control drain; [docs/BENCH.md](docs/BENCH.md)) and
   `scripts/verify_onchain.py` (every PROOF.md row re-fetched by extrinsic id, label checked against the chain).
 
+**Completed (2026-10-19) — on the Portaldot V3 testnet**
+
+- Profile `v3` pinned by genesis and runtime code hash; the cold-key `create`, the thief → NOT YOURS → veto →
+  `Unannounced` run (`b4d379d`), the owner intent registry run (`890fcfb`) and the seed history, each recorded in
+  PROOF.md as `v3` rows and re-fetched by extrinsic id (see the Demo section for the counts).
+- Finality-aware sends: a row records the finalized block, because V3 has two validators and forks (see PROOF.md).
+- Hardening: a refused events read is retried before it becomes a gap; V3 key files must
+  be mode 600; the finality wait has a deadline; the NOT YOURS alert says the call body is off chain.
+
 **Next**
 
-- Run the same flow on the Portaldot V3 testnet as soon as its RPC is reachable, and label those rows `v3`.
+- Run the benchmark (`scripts/bench.py`) on V3; it has only run on the interim chains.
 - Telegram alerts on a real phone once a bot token is configured.
 - A demo video with live transactions, and the check-in submission (Oct 24).
 - `Revive.call` as a held call type, only if it can be proven through a vault origin on a chain.

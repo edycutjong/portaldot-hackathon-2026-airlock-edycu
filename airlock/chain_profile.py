@@ -14,7 +14,9 @@ from dataclasses import dataclass, field
 from decimal import Context, Decimal, InvalidOperation
 from typing import Any, Mapping
 
-CONNECT_TIMEOUT_S = 15  # handshake + identification only; cleared once connected so subscriptions never time out
+# Handshake + identification + metadata only; cleared once connected so subscriptions never time out. 15 s was enough
+# for a local node but not for the public V3 endpoint, whose metadata download timed out once at 15 s (2026-10-19).
+CONNECT_TIMEOUT_S = 60
 U128_MAX = 2**128 - 1
 CODE_KEY = "0x3a636f6465"  # the well-known storage key ":code" (the runtime wasm)
 

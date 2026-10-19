@@ -361,3 +361,12 @@ def test_at_risk_keeps_the_existential_deposit_when_the_account_cannot_be_reaped
     assert cannot_be_reaped({"consumers": 1, "providers": 1}) is True
     assert cannot_be_reaped({"consumers": 0, "providers": 1}) is False
     assert cannot_be_reaped({"consumers": 2, "providers": 2}) is False
+
+
+def test_explorer_link_only_where_the_profile_has_an_explorer():
+    from airlock.chain_profile import explorer_link
+
+    link = explorer_link(V3, "0xabc")
+    assert link.startswith("[block](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev")
+    assert link.endswith("#/explorer/query/0xabc)")
+    assert explorer_link(INTERIM_SDK, "0xabc") == "" and explorer_link(V3, None) == ""

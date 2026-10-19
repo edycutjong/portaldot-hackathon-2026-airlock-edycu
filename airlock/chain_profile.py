@@ -56,6 +56,8 @@ class Profile:
     decimals_fallback: int | None = None
     symbol_fallback: str | None = None
     is_interim: bool = True
+    # Block explorer page for a block hash (`{block_hash}` is substituted); None = no public explorer.
+    explorer_block_url: str | None = None
 
 
 # Pinned from the live chain at the V3 day-0 check (2026-10-19, block ~#104518): chain_getBlockHash(0),
@@ -71,6 +73,9 @@ V3 = Profile(
     decimals_fallback=14,
     symbol_fallback="tPOT",
     is_interim=False,
+    # The organisers' explorer is a polkadot-js Apps build: ?rpc= picks the chain, #/explorer/query/ opens the block.
+    explorer_block_url="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev"
+                       "#/explorer/query/{block_hash}",
 )
 
 INTERIM_SDK = Profile(
@@ -129,6 +134,13 @@ def identify(genesis_hash: str, code_hash: str) -> Profile:
             )
         return profile
     raise UnknownChain(f"no Airlock profile for genesis {genesis_hash} (code {code_hash})")
+
+
+def explorer_link(profile: Profile, block_hash: str | None) -> str:
+    """A markdown link to the block on the profile's explorer, or "" when it has none."""
+    if not profile.explorer_block_url or not block_hash:
+        return ""
+    return f"[block]({profile.explorer_block_url.format(block_hash=block_hash)})"
 
 
 def missing_proxy_calls(profile: Profile, call_names: list[str] | set[str]) -> list[str]:

@@ -21,7 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from airlock.chain_profile import ProfileMismatch, UnknownChain, connect  # noqa: E402
+from airlock.chain_profile import ProfileMismatch, UnknownChain, connect, explorer_link  # noqa: E402
 from airlock.dispatch import error_namer  # noqa: E402
 from airlock.receipts import as_dict, compare, refetch  # noqa: E402
 
@@ -126,6 +126,7 @@ def main(argv=None) -> int:
     if bad:
         return 1
     if args.proof:
+        explore = bool(chain.profile.explorer_block_url)
         if recorded:
             title = f"the {recorded['started']} {chain.profile.id} run, by extrinsic id"
             detail = (f"Fresh process over {transport(chain.url)} (`{chain.url}`; the run itself was sent over "
@@ -137,10 +138,11 @@ def main(argv=None) -> int:
                       f"looked up by id alone: no recorded row to compare with — the block hash, call, outcome and tx "
                       f"hash below are what the chain returns.")
         lines = [f"### re-fetch — {started} — {title}", "", detail, "",
-                 "| extrinsic id | call | outcome | block hash | tx hash | profile |",
-                 "|---|---|---|---|---|---|"]
+                 "| extrinsic id | call | outcome | block hash | tx hash | profile |" + (" explorer |" if explore else ""),
+                 "|---|---|---|---|---|---|" + ("---|" if explore else "")]
         lines += [f"| `{r['extrinsic_id']}` | `{r['call']}` | {r['outcome']} | `{r['block_hash']}` | "
-                  f"`{r['extrinsic_hash']}` | {label} |" for r in results]
+                  f"`{r['extrinsic_hash']}` | {label} |"
+                  + (f" {explorer_link(chain.profile, r['block_hash'])} |" if explore else "") for r in results]
         with args.proof.open("a") as f:
             f.write("\n" + "\n".join(lines) + "\n")
         print(f"re-fetch table appended to {args.proof}")

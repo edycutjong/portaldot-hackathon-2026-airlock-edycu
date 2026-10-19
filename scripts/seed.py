@@ -38,7 +38,8 @@ sys.path.insert(0, str(ROOT))
 
 from substrateinterface import Keypair  # noqa: E402
 
-from airlock.chain_profile import Chain, ChainUnreachable, ProfileMismatch, UnknownChain, connect  # noqa: E402
+from airlock.chain_profile import (Chain, ChainUnreachable, ProfileMismatch, UnknownChain, connect,  # noqa: E402
+                                   explorer_link)
 from airlock.keys import KeyRefused, secret_of  # noqa: E402
 from airlock.ops import (NotConfirmed, Refused, Sender, TxFailed, announce, blocks_for,  # noqa: E402
                          code_version, create_vault, delay_of, deposits, execute, panic, pending_for, transfer, veto,
@@ -195,16 +196,19 @@ def seed(sp: Sender, chain: Chain, args, who_keys: dict[str, Keypair], spends, a
 
 
 def proof_markdown(chain: Chain, rows: list[dict], st: dict, started: str, version: str, checks: list[str]) -> str:
+    explore = bool(chain.profile.explorer_block_url)
     lines = [f"### seed — {started} — {chain.profile.label}", "",
              f"Runtime `{chain.spec_name}/{chain.spec_version}` · genesis `{chain.genesis_hash}` · endpoint "
              f"`{chain.url}` · demo vault `{st['vault']}` · throwaway vault `{st['throwaway']}` · delay D = "
              f"{st['delay']} blocks · code `{version}` · checks (fixtures/expected.json): "
              f"{'all hold' if not checks else '; '.join(checks)}", "",
-             "| # | step | call | signer | expected | outcome | extrinsic id | block hash | tx hash | profile |",
-             "|---|---|---|---|---|---|---|---|---|---|"]
+             "| # | step | call | signer | expected | outcome | extrinsic id | block hash | tx hash | profile |"
+             + (" explorer |" if explore else ""),
+             "|---|---|---|---|---|---|---|---|---|---|" + ("---|" if explore else "")]
     for i, r in enumerate(rows, 1):
         lines.append(f"| {i} | {r['step']} | `{r['call']}` | {r['signer']} | {r['expected']} | {r['outcome']} | "
-                     f"`{r['extrinsic_id']}` | `{r['block_hash']}` | `{r['extrinsic_hash']}` | {r['profile']} |")
+                     f"`{r['extrinsic_id']}` | `{r['block_hash']}` | `{r['extrinsic_hash']}` | {r['profile']} |"
+                     + (f" {explorer_link(chain.profile, r['block_hash'])} |" if explore else ""))
     return "\n".join(lines) + "\n"
 
 

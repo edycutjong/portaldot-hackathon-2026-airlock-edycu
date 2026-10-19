@@ -1,0 +1,57 @@
+{
+ "checked_utc": "2026-10-19T15:09:13Z",
+ "endpoint": "wss://test-node-v3.portaldot.dev",
+ "profile": "v3",
+ "label": "Portaldot V3 testnet",
+ "chain": "PortaldotV3 Test",
+ "genesis_hash": "0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+ "code_hash": "0xedc03c9dc81d39fea5c02893cc34cf2ec898d55d7ee8f8e89eb27597a724c7c2",
+ "spec_name": "portaldot-v3",
+ "spec_version": 3002,
+ "properties": {
+  "ss58Format": 42,
+  "tokenDecimals": 14,
+  "tokenSymbol": "tPOT"
+ },
+ "decimals": 14,
+ "symbol": "tPOT",
+ "head": 104532,
+ "head_hash": "0x20b0b437cbc3b9f3169dd998819001f90af1a66e5299a7753cb4e4864fde2745",
+ "block_time_ms": 6000,
+ "block_time_source": "consensus constant",
+ "has_revive": true,
+ "pallets_present": {
+  "Proxy": true,
+  "Multisig": true,
+  "Revive": true,
+  "Assets": true,
+  "Utility": true,
+  "Scheduler": true,
+  "Identity": true,
+  "Balances": true,
+  "Timestamp": true
+ },
+ "proxy_calls": [
+  "proxy",
+  "add_proxy",
+  "remove_proxy",
+  "remove_proxies",
+  "create_pure",
+  "kill_pure",
+  "announce",
+  "remove_announcement",
+  "reject_announcement",
+  "proxy_announced",
+  "poke_deposit"
+ ],
+ "constants_planck": {
+  "Proxy.ProxyDepositBase": 63000000000000,
+  "Proxy.ProxyDepositFactor": 198000000000000,
+  "Proxy.AnnouncementDepositBase": 63000000000000,
+  "Proxy.AnnouncementDepositFactor": 396000000000000,
+  "Proxy.MaxPending": 32,
+  "Proxy.MaxProxies": 32,
+  "Balances.ExistentialDeposit": 10000000000000
+ },
+ "how": "airlock.chain_profile.connect(profile_id='v3'): chain_getBlockHash(0) + state_getStorageHash(:code) -> identify(); state_getRuntimeVersion; system_properties; metadata"
+}

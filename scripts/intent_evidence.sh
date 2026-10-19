@@ -135,7 +135,7 @@ ok = all(checks.values())
 print("INTENTS", "PASS" if ok else "FAIL")
 sys.exit(0 if ok else 1)
 EOF
-say "re-fetching the thief's extrinsics and the owner's/veto's by id over HTTP"
+say "re-fetching the thief's extrinsics and the owner's/veto's by id from a fresh process ($HTTP)"
 retry python3 scripts/refetch.py "$T" --profile "$P" --url "$HTTP" | tail -2 | tee -a "$LOG"
 IDS=$(grep -o 'id [0-9][0-9]*-[0-9][0-9]*' "$TMP/own" "$TMP/exec" | cut -d' ' -f2 | sed 's/^/--id /' | tr '\n' ' ')
 retry python3 scripts/refetch.py $IDS --id "$VETO_ID" --profile "$P" --url "$HTTP" | tail -6 | tee -a "$LOG"

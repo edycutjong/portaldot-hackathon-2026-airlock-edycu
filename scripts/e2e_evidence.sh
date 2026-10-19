@@ -96,7 +96,7 @@ ok = got == want and before == after
 print("E2E", "PASS" if ok else "FAIL", got, "· vault total and thief payee total unchanged:", before == after)
 sys.exit(0 if ok else 1)
 EOF
-say "re-fetching the thief's extrinsics by id over HTTP"
+say "re-fetching the thief's extrinsics by id from a fresh process ($HTTP)"
 retry python3 scripts/refetch.py "$T" --profile "$P" --url "$HTTP" | tail -2 | tee -a "$LOG"
 retry python3 scripts/refetch.py --id "$VETO_ID" --profile "$P" --url "$HTTP" | tail -3 | tee -a "$LOG"
 echo "DONE code $CODE ts $TS"

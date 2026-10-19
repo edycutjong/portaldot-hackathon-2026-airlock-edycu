@@ -5,7 +5,7 @@
 **A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.**
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Tests: 348 passing](https://img.shields.io/badge/tests-348%20passing-brightgreen)
+![Tests: 350 passing](https://img.shields.io/badge/tests-350%20passing-brightgreen)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)
 ![Chain: Portaldot V3 testnet](https://img.shields.io/badge/chain-Portaldot%20V3%20testnet-blue)
 
@@ -151,7 +151,7 @@ cd portaldot-hackathon-2026-airlock-edycu
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'                 # also installs the `airlock` command
 
-pytest -q                               # 348 passed, 4 skipped: no chain or network needed (the 4 are the live-chain tests)
+pytest -q                               # 350 passed, 4 skipped: no chain or network needed (the 4 are the live-chain tests)
 
 scripts/interim_node.sh interim-sdk     # terminal 1: dev chain on ws://127.0.0.1:29944 (archive state)
 
@@ -235,7 +235,7 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
   Telegram delivery. The control (`--ablate`): the same thief against a delay-0 vault moved 100 UNIT (`interim-sdk`) /
   100 POT (`interim-1002`) in one extrinsic.
 - **Proof:** [docs/PROOF.md](docs/PROOF.md) — every row with extrinsic id, block hash, tx hash and the profile label.
-- **Tests:** 348 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
+- **Tests:** 350 offline tests, plus 4 live-chain integration tests (I1: a delayed hot key cannot spend unannounced;
   I2: a vetoed announcement never executes, also after the delay; the control; panic) that pass on both interim chains
   (`evidence/integration-*-2026-10-14T154*Z.json`, `…T155*Z.json` and, after the intent registry, `…T171*Z.json`,
   `"status": "passed"`; the two earlier `…T1522*Z.json` runs predate that field).
@@ -275,9 +275,9 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
 - Finality-aware sends (from `8a49731`): off the interim chains a send waits for finality and records the finalized block,
   because V3 has two validators and forks. The V3 rows already in PROOF.md were recorded at inclusion and re-fetched by
   id (44/44), with the two orphaned blocks corrected (see PROOF.md).
-- Hardening, unit-tested and not yet exercised by a V3 run: a refused events read is retried before it becomes a gap;
-  key files readable by group or others are refused off the interim chains; the finality wait has a deadline; the
-  NOT YOURS alert says the call body is off chain.
+- Hardening, unit-tested and not yet exercised by a V3 run: a refused events read is retried before it becomes a gap,
+  and a one-shot watcher exits 1 if its catch-up stopped short; key files readable by group or others are refused off
+  the interim chains; the finality wait has a timer deadline; the NOT YOURS alert says the call body is off chain.
 
 **Next**
 

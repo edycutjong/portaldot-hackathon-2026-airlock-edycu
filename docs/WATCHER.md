@@ -62,7 +62,8 @@ from a watched vault. It never signs anything.
 The `airlock veto` command in the alert runs as printed once `$AIRLOCK_COLD_KEY` names the cold key (`file:<path>`,
 or a `//dev` URI on an interim chain; see [CLI.md](CLI.md)) — `scripts/e2e_evidence.sh` runs the printed line verbatim
 with `AIRLOCK_COLD_KEY=//AirlockDemo//cold`. The alert also gives the same veto as a
-polkadot.js Apps extrinsic signed by the cold key, for an owner without the CLI:
+extrinsic signed by the cold key (on V3 in the node console, https://node-console.portaldot.dev/; on the interim
+chains in polkadot.js Apps), for an owner without the CLI:
 `proxy.proxy(real=<vault>, forceProxyType=None, call=proxy.rejectAnnouncement(delegate, callHash))`.
 
 ## Run it

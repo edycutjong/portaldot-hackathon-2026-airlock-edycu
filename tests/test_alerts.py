@@ -64,6 +64,13 @@ def test_v3_chain_is_named_with_its_profile_id():
     assert "Chain: Portaldot V3 testnet (v3)" in text
 
 
+def test_not_yours_alert_says_the_call_is_opaque_and_names_the_node_console_on_v3():
+    v3 = format_text(alert(profile_id="v3", profile_label="Portaldot V3 testnet", is_interim=False))
+    assert "the call itself is not on chain" in v3 and "proxies as well as move funds" in v3
+    assert "https://node-console.portaldot.dev/" in v3 and "polkadot.js" not in v3
+    assert "polkadot.js Apps" in format_text(alert())  # the interim chains have no public console
+
+
 def test_long_countdowns_are_in_minutes():
     assert "(≈ 50 min)" in format_text(alert(release_block=1102, block_time_ms=3000))
 

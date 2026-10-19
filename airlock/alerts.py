@@ -125,10 +125,13 @@ def format_text(a: Alert) -> str:
     if a.verdict == YOURS:
         lines += [f"Call hash {a.call_hash}", "Not yours after all? Cancel it with the cold key:", a.veto_command()]
         return "\n".join(lines)
-    lines += [f"Call hash {a.call_hash} (an announcement publishes only the hash)",
+    console = ("the Portaldot node console (https://node-console.portaldot.dev/) > Developer > Extrinsics"
+               if not a.is_interim else "polkadot.js Apps > Developer > Extrinsics")
+    lines += [f"Call hash {a.call_hash} (an announcement publishes only the hash: the call itself is not on chain, and "
+              f"it may change the vault's proxies as well as move funds, so veto whatever the amount shown)",
               "Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY, e.g. file:~/.config/airlock/cold.seed):",
               a.veto_command(),
-              "or in polkadot.js Apps > Developer > Extrinsics, signed by the cold key:",
+              f"or in {console}, signed by the cold key:",
               f"proxy.proxy(real={a.vault}, forceProxyType=None, "
               f"call=proxy.rejectAnnouncement(delegate={a.delegate}, callHash={a.call_hash}))"]
     return "\n".join(lines)

@@ -35,7 +35,7 @@ class ProfileMismatch(RuntimeError):
 class Profile:
     id: str
     label: str
-    genesis_hash: str | None  # None = not filled yet (v3 until gate G2)
+    genesis_hash: str | None  # None = not pinned yet; nothing can match it
     code_hashes: tuple[str, ...]
     spec: tuple[str, int] | None
     default_endpoint: str | None
@@ -56,17 +56,18 @@ class Profile:
     is_interim: bool = True
 
 
-# Everything below except the label is UNVERIFIED until gate G2 runs against the live chain: endpoint (baseline V1),
-# 14 decimals / tPOTv3 (V2, documented), runtime portaldotV3/3000 (V4, third-party measurement).
+# Pinned from the live chain at the V3 day-0 check (2026-10-19, block ~#104518): chain_getBlockHash(0),
+# state_getStorageHash(:code), state_getRuntimeVersion, system_properties (14 decimals, tPOT, ss58 42).
+# The pre-launch documentation said portaldotV3/3000/tPOTv3 at testnetv3-node.feso-apps.xyz; the live chain differs.
 V3 = Profile(
     id="v3",
     label="Portaldot V3 testnet",
-    genesis_hash=None,  # filled at the V3 day-0 check (G2); until then nothing can match it
-    code_hashes=(),
-    spec=("portaldotV3", 3000),
-    default_endpoint="wss://testnetv3-node.feso-apps.xyz",
+    genesis_hash="0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd",
+    code_hashes=("0xedc03c9dc81d39fea5c02893cc34cf2ec898d55d7ee8f8e89eb27597a724c7c2",),
+    spec=("portaldot-v3", 3002),
+    default_endpoint="wss://test-node-v3.portaldot.dev",
     decimals_fallback=14,
-    symbol_fallback="tPOTv3",
+    symbol_fallback="tPOT",
     is_interim=False,
 )
 

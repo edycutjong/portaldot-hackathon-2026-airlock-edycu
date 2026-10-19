@@ -44,9 +44,16 @@ def test_known_genesis_with_unverified_runtime_fails_loudly():
         identify(INTERIM_SDK.genesis_hash, "0x" + "33" * 32)
 
 
-def test_v3_stub_never_matches_until_filled():
-    assert V3.genesis_hash is None and not V3.is_interim
-    assert V3.label == "Portaldot V3 testnet"
+def test_v3_is_pinned_to_the_live_chain():
+    assert not V3.is_interim and V3.label == "Portaldot V3 testnet"
+    assert V3.spec == ("portaldot-v3", 3002) and V3.symbol_fallback == "tPOT" and V3.decimals_fallback == 14
+    assert V3.default_endpoint == "wss://test-node-v3.portaldot.dev"
+    assert identify(V3.genesis_hash, V3.code_hashes[0]) is V3
+
+
+def test_v3_genesis_with_another_runtime_is_refused():
+    with pytest.raises(UnknownChain, match="not one Airlock has verified"):
+        identify(V3.genesis_hash, "0x" + "44" * 32)
 
 
 def test_interim_labels_say_not_v3():

@@ -89,7 +89,9 @@ echo "\$ $CMD" | tee -a "$LOG"
 $CMD 2>&1 | tee -a "$LOG" "$TMP/veto"
 VETO_ID="$(grep -o 'id [0-9][0-9]*-[0-9][0-9]*' "$TMP/veto" | head -1 | cut -d' ' -f2)"
 
-pending_count() { airlock --json status --vault "$VAULT" 2>/dev/null | tail -1 | python3 -c 'import json,sys;print(len(json.load(sys.stdin)["result"]["pending"]))'; }
+# read-only checks only: the public V3 endpoint drops an idle websocket now and then (2026-10-19), so retry a read
+retry() { local i; for i in 1 2 3; do "$@" && return 0; sleep 5; done; "$@"; }
+pending_count() { retry airlock --json status --vault "$VAULT" 2>/dev/null | tail -1 | python3 -c 'import json,sys;print(len(json.load(sys.stdin)["result"]["pending"]))'; }
 BEFORE_PENDING="$(pending_count)"
 say "4. registry stalled mid-request (SIGSTOP $APIPID): owner announce must refuse after the timeout"
 kill -STOP "$APIPID"
@@ -134,7 +136,7 @@ print("INTENTS", "PASS" if ok else "FAIL")
 sys.exit(0 if ok else 1)
 EOF
 say "re-fetching the thief's extrinsics and the owner's/veto's by id over HTTP"
-python3 scripts/refetch.py "$T" --profile "$P" --url "$HTTP" | tail -2 | tee -a "$LOG"
+retry python3 scripts/refetch.py "$T" --profile "$P" --url "$HTTP" | tail -2 | tee -a "$LOG"
 IDS=$(grep -o 'id [0-9][0-9]*-[0-9][0-9]*' "$TMP/own" "$TMP/exec" | cut -d' ' -f2 | sed 's/^/--id /' | tr '\n' ' ')
-python3 scripts/refetch.py $IDS --id "$VETO_ID" --profile "$P" --url "$HTTP" | tail -6 | tee -a "$LOG"
+retry python3 scripts/refetch.py $IDS --id "$VETO_ID" --profile "$P" --url "$HTTP" | tail -6 | tee -a "$LOG"
 echo "DONE code $CODE ts $TS"

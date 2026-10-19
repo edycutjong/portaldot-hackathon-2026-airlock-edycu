@@ -272,9 +272,12 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
 - Profile `v3` pinned by genesis and runtime code hash; the cold-key `create`, the thief → NOT YOURS → veto →
   `Unannounced` run (`b4d379d`), the owner intent registry run (`890fcfb`) and the seed history, each recorded in
   PROOF.md as `v3` rows and re-fetched by extrinsic id (see the Demo section for the counts).
-- Finality-aware sends: a row records the finalized block, because V3 has two validators and forks (see PROOF.md).
-- Hardening: a refused events read is retried before it becomes a gap; V3 key files must
-  be mode 600; the finality wait has a deadline; the NOT YOURS alert says the call body is off chain.
+- Finality-aware sends (from `8a49731`): off the interim chains a send waits for finality and records the finalized block,
+  because V3 has two validators and forks. The V3 rows already in PROOF.md were recorded at inclusion and re-fetched by
+  id (44/44), with the two orphaned blocks corrected (see PROOF.md).
+- Hardening, unit-tested and not yet exercised by a V3 run: a refused events read is retried before it becomes a gap;
+  key files readable by group or others are refused off the interim chains; the finality wait has a deadline; the
+  NOT YOURS alert says the call body is off chain.
 
 **Next**
 

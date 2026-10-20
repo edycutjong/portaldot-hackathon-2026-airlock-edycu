@@ -26,3 +26,6 @@ brag-output/
 !evidence/*.log
 .e2e-*.db
 .thief-*.json
+
+# local Vercel link (project/org ids)
+.vercel/

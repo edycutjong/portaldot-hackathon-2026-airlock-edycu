@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Airlock</title>
+<meta name="description" content="A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.">
+<style>
+  :root { --bg: #f6f5f1; --fg: #16181d; --muted: #5b6070; --line: #d9d6cc; --accent: #b4441f; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1115; --fg: #e9e7e1; --muted: #9aa0ad; --line: #2a2e37; --accent: #f08a5d; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 17px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 72px 16px 56px; }
+  .eyebrow { font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em;
+             text-transform: uppercase; color: var(--accent); }
+  h1 { font-size: clamp(40px, 9vw, 64px); line-height: 1; margin: 16px 0 20px; letter-spacing: -.02em; }
+  .lede { font-size: 20px; margin: 0 0 32px; }
+  ol { padding: 0; margin: 0 0 32px; list-style: none; border-top: 1px solid var(--line); }
+  li { padding: 14px 0; border-bottom: 1px solid var(--line); display: flex; gap: 16px; }
+  li b { font: 600 14px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); min-width: 72px; }
+  p { color: var(--muted); }
+  .links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+  a.btn { color: var(--fg); text-decoration: none; border: 1px solid var(--fg); padding: 10px 16px; border-radius: 6px;
+          transition: background .15s ease, color .15s ease; }
+  a.btn:hover, a.btn:focus-visible { background: var(--fg); color: var(--bg); }
+  a.btn.primary { background: var(--fg); color: var(--bg); }
+  a.btn.primary:hover, a.btn.primary:focus-visible { background: var(--accent); border-color: var(--accent); }
+  footer { margin-top: 56px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Portaldot Hacker House 2026 · Ecosystem DApps</div>
+  <h1>Airlock</h1>
+  <p class="lede">A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay,
+    and your cold key can veto it first.</p>
+  <ol>
+    <li><b>announce</b><span>The hot key can only announce a spend. It cannot move funds directly.</span></li>
+    <li><b>wait</b><span>The spend waits out an on-chain delay, and the watcher alerts the owner.</span></li>
+    <li><b>veto</b><span>The cold key rejects anything the owner didn't intend before the delay ends.</span></li>
+  </ol>
+  <p>Built on the Substrate Proxy pallet's time-delayed proxies. On the Portaldot V3 testnet this flow has already
+    refused a 12.92 tPOT sweep (<code>Proxy.Unannounced</code>, vault total unchanged). Every extrinsic id is listed in
+    the proof log.</p>
+  <p>Work in progress (check-in build). Airlock is a command-line tool; this page is not the product.</p>
+  <div class="links">
+    <a class="btn primary" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu">Source on GitHub</a>
+    <a class="btn" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/PROOF.md">Proof log</a>
+    <a class="btn" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/CLI.md">CLI reference</a>
+  </div>
+  <footer>MIT licensed.</footer>
+</main>
+</body>
+</html>

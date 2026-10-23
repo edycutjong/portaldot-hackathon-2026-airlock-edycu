@@ -12,8 +12,9 @@
           index.html#4 opens slide 4. Click the right half of the screen for next, the left half for previous.
   PDF:    print (Cmd/Ctrl+P), margins none, background graphics on: one slide per page.
           docs/pitch-deck.pdf is printed from this file by headless Chromium.
-  Images: none. The mark and the QR code are inline SVG; the terminal text on slide 4 is copied from
-          evidence/e2e-v3-2026-10-19T160547Z.log (long values shortened with "…").
+  Images: none. The mark and the QR code are inline SVG. The terminal text on slide 4 is an excerpt of
+          evidence/e2e-v3-2026-10-19T160547Z.log: long values shortened with "…", omitted lines marked "⋯",
+          column padding collapsed, long lines wrapped with a two-space indent.
   Fonts:  Big Shoulders Display, Public Sans, IBM Plex Mono (Google Fonts); tokens = the project's design tokens.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -61,7 +62,7 @@ h2 { font-size: 104px; line-height: .9; letter-spacing: .004em; color: var(--on-
 .lede.muted, .muted { color: var(--on-bg-muted); }
 .cap { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: .14em;
        font-size: 19px; color: var(--on-bg-muted); }
-.label-interim { font-family: var(--font-data); font-size: 18px; color: var(--on-bg-muted);
+.label-interim { font-family: var(--font-data); font-size: 20px; color: var(--on-bg-muted);
                  border: 1px solid var(--bg-rule); padding: 3px 10px; display: inline-block; }
 a { color: inherit; text-decoration: underline; text-decoration-color: var(--bg-rule); text-underline-offset: 5px;
     text-decoration-thickness: 2px; transition: color .15s ease, text-decoration-color .15s ease; }
@@ -69,7 +70,7 @@ a:hover, a:focus-visible { color: var(--on-bg); text-decoration-color: var(--aft
 
 /* footer, added to every slide by the script below */
 .foot { position: absolute; left: 120px; right: 120px; bottom: 44px; display: flex; justify-content: space-between;
-        font-family: var(--font-data); font-size: 15px; letter-spacing: .02em; color: var(--on-bg-muted);
+        font-family: var(--font-data); font-size: 16px; letter-spacing: .02em; color: var(--on-bg-muted);
         border-top: 1px solid var(--bg-rule); padding-top: 14px; }
 
 /* ── the hold ticket (signature element) ─────────────────────────────── */
@@ -151,7 +152,7 @@ a:hover, a:focus-visible { color: var(--on-bg); text-decoration-color: var(--aft
 .station.s1 { border-top-color: var(--before); }
 .station.s2 { border-top-color: var(--before); }
 .station.s3 { border-top-color: var(--after); }
-.station .num { font-family: var(--font-display); font-weight: 900; font-size: 100px; line-height: .9; }
+.station .num { font-family: var(--font-display); font-weight: 900; font-size: 100px; line-height: .9; text-transform: uppercase; }
 .station.s3 .num { color: var(--after); }
 .station .who { font-family: var(--font-data); font-size: 22px; color: var(--on-bg-muted); margin: 12px 0 16px; }
 .station p { font-size: 31px; line-height: 1.36; }
@@ -165,39 +166,40 @@ a:hover, a:focus-visible { color: var(--on-bg); text-decoration-color: var(--aft
 
 /* ── slide 4: proof ──────────────────────────────────────────────────── */
 .proof { display: grid; grid-template-columns: 900px 1fr; gap: 56px; margin-top: 40px; }
-.proof .ticket { width: 900px; height: 430px; }
+.proof .ticket { width: 900px; height: 470px; }
 .proof .count { font-size: 160px; margin-top: 18px; }
 .proof .amount { font-size: 68px; margin-bottom: 16px; }
-.proof .stamp { bottom: 22px; }
-.proof .stamp b { font-size: 104px; }
-.ids { margin-top: 28px; width: 900px; border-collapse: collapse; font-size: 19px; }
-.ids td { padding: 9px 10px 9px 0; border-top: 1px solid var(--bg-rule); vertical-align: baseline; }
+.proof .stamp { bottom: 30px; right: 24px; }
+.proof .stamp b { font-size: 88px; }
+.ids { margin-top: 26px; width: 900px; border-collapse: collapse; font-size: 22px; }
+.ids td { padding: 10px 10px 10px 0; border-top: 1px solid var(--bg-rule); vertical-align: baseline; }
 .ids td:first-child { font-family: var(--font-data); font-weight: 600; width: 130px; }
 .ids .who { color: var(--on-bg-muted); }
 .ids .ok-held { color: var(--before); font-family: var(--font-data); }
 .ids .veto { color: var(--after); font-family: var(--font-data); font-weight: 600; }
 .ids .refused { font-family: var(--font-data); }
 .ids td:last-child { text-align: right; white-space: nowrap; font-family: var(--font-data); }
-.term { background: #0F0D0B; border: 1px solid var(--bg-rule); border-radius: 10px; overflow: hidden; height: 100%; }
+.term { background: var(--bg); border: 1px solid var(--bg-rule); border-radius: 10px; overflow: hidden; height: 100%; }
 .term-bar { display: flex; align-items: center; gap: 9px; padding: 14px 18px; border-bottom: 1px solid var(--bg-rule);
             font-family: var(--font-data); font-size: 15px; color: var(--on-bg-muted); }
 .term-bar i { width: 13px; height: 13px; border-radius: 50%; background: var(--bg-rule); display: inline-block; }
 .term-bar span { margin-left: 10px; }
-.term pre { font-family: var(--font-data); font-size: 17px; line-height: 1.5; padding: 20px 22px; white-space: pre;
+.term pre { font-family: var(--font-data); font-size: 20px; line-height: 1.5; padding: 20px 22px; white-space: pre;
             color: var(--on-bg); }
 .term .t-alert { color: var(--after); font-weight: 600; }
 .term .t-held { color: var(--before); }
 .term .t-dim { color: var(--on-bg-muted); }
 .term .t-ok { color: var(--settled-on-bg); font-weight: 600; }
-.totals { margin-top: 14px; font-family: var(--font-data); font-size: 17px; color: var(--on-bg-muted); }
+.term b { font-weight: 600; color: var(--on-bg); background: var(--bg-raised); }
+.totals { margin-top: 14px; font-family: var(--font-data); font-size: 19px; color: var(--on-bg-muted); }
 
 /* ── slide 5: architecture ───────────────────────────────────────────── */
 .arch { margin-top: 44px; width: 1680px; height: 650px; display: block; }
 .arch text { font-family: var(--font-body); }
-.arch .t-title { font-family: var(--font-display); font-weight: 800; font-size: 30px; letter-spacing: .06em; text-transform: uppercase; }
-.arch .t-mono { font-family: var(--font-data); font-size: 17px; }
-.arch .t-lab { font-family: var(--font-data); font-size: 16px; }
-.archnote { font-size: 20px; color: var(--on-bg-muted); margin-top: 6px; }
+.arch .t-title { font-family: var(--font-display); font-weight: 800; font-size: 32px; letter-spacing: .06em; text-transform: uppercase; }
+.arch .t-mono { font-family: var(--font-data); font-size: 19px; }
+.arch .t-lab { font-family: var(--font-data); font-size: 18px; }
+.archnote { font-size: 24px; color: var(--on-bg-muted); margin-top: 6px; }
 
 /* ── slide 6: why new ────────────────────────────────────────────────── */
 .cmp { width: 1680px; border-collapse: collapse; font-size: 30px; }
@@ -216,19 +218,21 @@ a:hover, a:focus-visible { color: var(--on-bg); text-decoration-color: var(--aft
 .calls td:first-child { font-family: var(--font-data); font-size: 28px; font-weight: 600; width: 500px; color: var(--on-bg); }
 .calls tr.v td:first-child { color: var(--after); }
 .calls tr.a td:first-child { color: var(--before); }
+.calls tr.more td { font-size: 22px; color: var(--on-bg-muted); font-family: var(--font-body); font-weight: 400; }
+.calls tr.more .mono { font-size: 21px; }
 .side p { font-size: 29px; line-height: 1.4; padding: 26px 0; border-top: 1px solid var(--bg-rule); }
-.side p .mono { font-size: 25px; }
+.side p .mono { font-size: 25px; white-space: nowrap; }
+.plan-inline { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--on-bg-muted); }
 
 /* ── slide 8: users ──────────────────────────────────────────────────── */
 .users { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 48px; }
 .user { border-top: 6px solid var(--bg-rule); padding-top: 22px; }
-.user .display { font-size: 62px; line-height: .95; letter-spacing: .02em; }
+.user .display { font-size: 54px; line-height: .95; letter-spacing: .02em; }
 .user p { font-size: 28px; line-height: 1.4; margin-top: 18px; color: var(--on-bg-muted); }
 .plan { margin-top: 72px; background: var(--bg-raised); border: 1px solid var(--bg-rule); padding: 30px 36px;
         display: grid; grid-template-columns: 250px 1fr 1fr 1fr; gap: 40px; align-items: start; }
 .plan .tag { font-family: var(--font-display); font-weight: 900; font-size: 40px; text-transform: uppercase;
-             border: 4px solid var(--on-bg-muted); color: var(--on-bg-muted); padding: 4px 14px; text-align: center;
-             transform: rotate(-3deg); }
+             border: 2px solid var(--on-bg-muted); color: var(--on-bg-muted); padding: 4px 14px; text-align: center; }
 .plan p { font-size: 27px; line-height: 1.4; }
 .plan b { display: block; font-family: var(--font-display); text-transform: uppercase; letter-spacing: .1em;
           font-size: 19px; color: var(--on-bg-muted); margin-bottom: 6px; }
@@ -254,11 +258,12 @@ a:hover, a:focus-visible { color: var(--on-bg); text-decoration-color: var(--aft
 .links { border-collapse: collapse; width: 100%; }
 .links td { padding: 20px 0; border-top: 1px solid var(--bg-rule); font-size: 27px; vertical-align: baseline; }
 .links td:first-child { width: 230px; }
-.links .mono { font-size: 26px; }
+.links .mono { font-size: 24px; }
 .qr { background: var(--paper); padding: 28px; width: 440px; }
 .qr svg { width: 384px; height: 384px; display: block; }
 .qr .cap { color: var(--muted); margin-top: 16px; text-align: center; font-size: 17px; }
-.ai { margin-top: 44px; font-size: 21px; line-height: 1.45; color: var(--on-bg-muted); max-width: 1140px; }
+.ai b { color: var(--on-bg); font-weight: 700; }
+.ai { margin-top: 44px; font-size: 23px; line-height: 1.45; color: var(--on-bg-muted); max-width: 1140px; }
 
 /* presenter notes (P) */
 .speaker-notes { display: none; }
@@ -366,6 +371,7 @@ body.debug-contrast .contrast-check, body.debug-contrast .slide :is(h1, h2, h3, 
       <div class="num">2 · Wait</div>
       <div class="who">D = 10 blocks = 60 s on V3</div>
       <p>The watcher alerts: YOURS, or NOT YOURS with the amount and a veto line.</p>
+      <code>event Proxy.Announced</code>
     </div>
     <div class="arrow">→</div>
     <div class="station s3">
@@ -406,34 +412,33 @@ body.debug-contrast .contrast-check, body.debug-contrast .slide :is(h1, h2, h3, 
         </div>
       </div>
       <table class="ids">
-        <tr><td>105093-1</td><td><span class="who">thief</span> Proxy.announce</td><td class="ok-held">ok · held</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xc7c32f0a384f536f0607194de537809ed53984e270007c8f138be815b962f63b">block ↗</a></td></tr>
-        <tr><td>105095-1</td><td><span class="who">cold</span> reject_announcement</td><td class="veto">ok · VETO</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xc22ce38855fc2be38628387324c971153efa7ec7c52236795d36b70ec17e9e26">block ↗</a></td></tr>
-        <tr><td>105106-1</td><td><span class="who">thief</span> proxy_announced</td><td class="refused">Proxy.Unannounced</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x308b11bcb174fb77a8e3b3a17019ebb6db508fbede9c2d322363c3d54a7d16ea">block ↗</a></td></tr>
-        <tr><td>105108-1</td><td><span class="who">thief</span> proxy.proxy, direct</td><td class="refused">Proxy.Unannounced</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xa7122e9e9031b9de19586ccbf19cf7e5364aab269e20524fe3503cd769c61959">block ↗</a></td></tr>
+        <tr><td>105093-1</td><td><span class="who">thief</span> Proxy.announce</td><td class="ok-held">ok · held</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xc7c32f0a384f536f0607194de537809ed53984e270007c8f138be815b962f63b">0xc7c3…f63b ↗</a></td></tr>
+        <tr><td>105095-1</td><td><span class="who">cold</span> reject_announcement</td><td class="veto">ok · VETO</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xc22ce38855fc2be38628387324c971153efa7ec7c52236795d36b70ec17e9e26">0xc22c…9e26 ↗</a></td></tr>
+        <tr><td>105106-1</td><td><span class="who">thief</span> proxy_announced</td><td class="refused">Proxy.Unannounced</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x308b11bcb174fb77a8e3b3a17019ebb6db508fbede9c2d322363c3d54a7d16ea">0x308b…16ea ↗</a></td></tr>
+        <tr><td>105108-1</td><td><span class="who">thief</span> proxy.proxy, direct</td><td class="refused">Proxy.Unannounced</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xa7122e9e9031b9de19586ccbf19cf7e5364aab269e20524fe3503cd769c61959">0xa712…1959 ↗</a></td></tr>
       </table>
     </div>
     <div>
       <div class="term">
-        <div class="term-bar"><i></i><i></i><i></i><span>evidence/e2e-v3-2026-10-19T160547Z.log · commit b4d379d</span></div>
+        <div class="term-bar"><i></i><i></i><i></i><span>excerpt · evidence/e2e-v3-2026-10-19T160547Z.log · b4d379d</span></div>
 <pre><span class="t-alert">NOT YOURS — VETO</span>
-Vault 5F4rPFqS6PQEKUHacHtR5mLrDMVZ8RjCfJpYmfiktERhsmE1
+Vault 5F4rPF…smE1
 Chain: Portaldot V3 testnet (v3)
 <span class="t-held">Up to 12.9200 tPOT at risk</span> <span class="t-dim">(…)</span>
 Announced by delegate 5Cwitu…ZULN at block #105093;
-executable from #105103. <span class="t-held">Veto must land by #105102:</span>
-<span class="t-held">9 blocks (≈ 54 s) from head #105093</span>
-Veto with the cold key — Airlock CLI <span class="t-dim">(…)</span>:
+  executable from #105103. <span class="t-held">Veto must land by #105102:</span>
+  <span class="t-held">9 blocks (≈ 54 s) from head #105093</span>
+<span class="t-dim">⋯</span>
 airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
   --hash 0x6f24…9572
-<span class="t-dim">[driver 16:06:20] alert delivered; running the veto
-  command exactly as the alert printed it</span>
+<span class="t-dim">⋯</span>
 <span class="t-alert">[v3] ok  veto  Proxy.proxy(Proxy.reject_announcement)
-  by cold #105095 id 105095-1</span>
-<span class="t-dim">[driver 16:07:24] thief executes the announced sweep
-  after the delay</span>
-<span class="t-ok">E2E PASS</span> [('announce', 'ok'), ('execute',
-  'Proxy.Unannounced'), ('direct', 'Proxy.Unannounced')]
-  · vault total and thief payee total unchanged: True</pre>
+  by cold #105095 id 105095-1 tx 0x2d2d…89b3</span>
+<span class="t-dim">⋯</span>
+<span class="t-ok">E2E PASS</span> [('announce', 'ok'),
+  <b>('execute', 'Proxy.Unannounced')</b>,
+  <b>('direct', 'Proxy.Unannounced')</b>] · vault total
+  and thief payee total unchanged: True</pre>
       </div>
       <p class="totals">vault_total 1500000000000000 → 1500000000000000 planck<br>payee_total 0 → 0 planck</p>
     </div>
@@ -460,8 +465,8 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
 
     <rect x="64" y="262" width="456" height="128" fill="#211D19" stroke="#3B352E" stroke-width="2"/>
     <text x="90" y="306" class="t-title" fill="#F5F1E8">intent registry</text>
-    <text x="90" y="340" class="t-mono" fill="#A39C90">127.0.0.1 · owner token · single-use</text>
-    <text x="90" y="366" class="t-mono" fill="#A39C90">intents (YOURS vs NOT YOURS)</text>
+    <text x="90" y="340" class="t-mono" fill="#A39C90">127.0.0.1 · owner token</text>
+    <text x="90" y="366" class="t-mono" fill="#A39C90">single-use intents: YOURS / NOT YOURS</text>
 
     <rect x="64" y="462" width="456" height="128" fill="#211D19" stroke="#3B352E" stroke-width="2"/>
     <text x="90" y="506" class="t-title" fill="#F5F1E8">alerts</text>
@@ -469,7 +474,7 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
     <text x="90" y="566" class="t-mono" fill="#A39C90">Telegram sender built, no bot yet</text>
 
     <!-- watcher -->
-    <rect x="680" y="262" width="440" height="160" fill="#211D19" stroke="#B7791F" stroke-width="2"/>
+    <rect x="680" y="262" width="464" height="160" fill="#211D19" stroke="#B7791F" stroke-width="2"/>
     <text x="706" y="306" class="t-title" fill="#F5F1E8">watcher</text>
     <text x="706" y="340" class="t-mono" fill="#A39C90">Proxy.Announced → YOURS / NOT YOURS</text>
     <text x="706" y="366" class="t-mono" fill="#A39C90">catch-up · reconnect · stall watchdog</text>
@@ -487,7 +492,7 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
     <text x="1248" y="308" class="t-mono" fill="#6E6A5E">the veto; Airlock adds</text>
     <text x="1248" y="334" class="t-mono" fill="#6E6A5E">no runtime code</text>
     <rect x="1248" y="350" width="404" height="1" fill="#CFC5AE"/>
-    <text x="1248" y="376" class="t-mono" fill="#6E6A5E" font-size="15">planned: Revive.call as a held call</text>
+    <text x="1248" y="376" class="t-lab" fill="#6E6A5E">planned: Revive.call as a held call</text>
 
     <!-- thief -->
     <rect x="1220" y="470" width="460" height="120" fill="#211D19" stroke="#3B352E" stroke-width="2" stroke-dasharray="10 7"/>
@@ -501,31 +506,31 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
     <line x1="520" y1="150" x2="1214" y2="150" stroke="#E8402F" stroke-width="3" marker-end="url(#ah-v)"/>
     <text x="560" y="178" class="t-lab" fill="#E8402F">cold key: reject_announcement (veto) · remove_proxy (panic)</text>
 
-    <line x1="1220" y1="330" x2="1128" y2="330" stroke="#A39C90" stroke-width="3" marker-end="url(#ah)"/>
-    <text x="1140" y="312" class="t-lab" fill="#A39C90">events</text>
+    <line x1="1220" y1="330" x2="1152" y2="330" stroke="#A39C90" stroke-width="3" marker-end="url(#ah)"/>
+    <text x="1153" y="312" class="t-lab" fill="#A39C90">events</text>
 
     <line x1="292" y1="190" x2="292" y2="256" stroke="#A39C90" stroke-width="3" marker-end="url(#ah)"/>
-    <text x="306" y="232" class="t-lab" fill="#A39C90">register intent first</text>
+    <text x="318" y="232" class="t-lab" fill="#A39C90">register intent first</text>
 
     <line x1="520" y1="330" x2="674" y2="330" stroke="#A39C90" stroke-width="3" marker-end="url(#ah)"/>
     <text x="532" y="316" class="t-lab" fill="#A39C90">same SQLite</text>
 
     <polyline points="900,422 900,526 526,526" fill="none" stroke="#A39C90" stroke-width="3" marker-end="url(#ah)"/>
-    <text x="596" y="514" class="t-lab" fill="#A39C90">YOURS / NOT YOURS + veto line</text>
+    <text x="560" y="514" class="t-lab" fill="#A39C90">YOURS / NOT YOURS + veto line</text>
 
     <polyline points="64,560 30,560 30,120 58,120" fill="none" stroke="#E8402F" stroke-width="3" marker-end="url(#ah-v)"/>
-    <text x="22" y="620" class="t-lab" fill="#E8402F">owner pastes the veto line into the CLI</text>
+    <text x="64" y="624" class="t-lab" fill="#E8402F">owner pastes the veto line into the CLI</text>
 
     <line x1="1450" y1="470" x2="1450" y2="396" stroke="#B7791F" stroke-width="3" marker-end="url(#ah-a)"/>
     <text x="1464" y="440" class="t-lab" fill="#B7791F">announce / execute</text>
   </svg>
-  <p class="archnote">Every tool pins the chain by genesis hash and runtime code hash before signing, and refuses an unknown chain.</p>
+  <p class="archnote">The CLI and the watcher pin the chain by genesis hash and runtime code hash before signing, and refuse an unknown chain. The thief script is deliberately independent.</p>
   <aside class="speaker-notes">Redrawn from the README diagram. The only lit object is the chain: the Proxy pallet holds the delay and the veto. Everything we run is on the owner side and can fail without losing funds: a dead watcher means no alert, never a shorter delay.</aside>
 </section>
 
 <!-- 6 · WHY IT'S NEW -->
 <section class="slide" data-title="Why it's new">
-  <h2>Already in the runtime.</h2>
+  <h2>The primitive existed.<br>The product didn't.</h2>
   <p class="lede contrast-check">Delayed proxies with announce and reject ship in the Proxy pallet. In our search (not a market survey) we found no product built on that path.</p>
   <table class="cmp mid">
     <tr><th class="cap">Setup</th><th class="cap">Signers per payment</th><th class="cap">A leaked hot key…</th><th class="cap">The owner acts…</th></tr>
@@ -533,12 +538,12 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
     <tr><td>Two-key multisig</td><td><span class="n">2</span></td><td>cannot spend alone</td><td>on every payment</td></tr>
     <tr class="us"><td>Airlock</td><td><span class="n">1</span>, then wait D</td><td>can only announce; the cold key vetoes</td><td>only on NOT YOURS</td></tr>
   </table>
-  <aside class="speaker-notes">The new part is not a primitive, it is the product around one. The pallet has had announce and reject for years; what was missing is a vault layout that uses them, and a watcher that tells the owner which announcement to reject.</aside>
+  <aside class="speaker-notes">The new part is not a primitive, it is the product around one. The pallet already had announce and reject; what was missing is a vault layout that uses them, and a watcher that tells the owner which announcement to reject.</aside>
 </section>
 
 <!-- 7 · ECOSYSTEM FIT -->
 <section class="slide" data-title="Ecosystem fit">
-  <h2>Six pallet calls are the product.</h2>
+  <h2>The Proxy pallet is the product.</h2>
   <div class="eco mid">
     <table class="calls">
       <tr><td>Proxy.create_pure</td><td>the keyless vault</td></tr>
@@ -547,21 +552,22 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
       <tr><td>Proxy.proxy_announced</td><td>runs after D, if not vetoed</td></tr>
       <tr class="v"><td>Proxy.reject_announcement</td><td>the veto</td></tr>
       <tr class="v"><td>Proxy.remove_proxy</td><td>panic: retire the hot key</td></tr>
+      <tr class="more"><td colspan="2">plus <span class="mono">Proxy.proxy</span> (the cold key's wrapper), <span class="mono">remove_announcement</span>, <span class="mono">Balances.transfer_keep_alive</span></td></tr>
     </table>
     <div class="side">
-      <p>The security is Portaldot's consensus, not our server.</p>
-      <p>A compromised server can mislabel or drop an alert, but cannot move funds or shorten the delay.</p>
-      <p>Reads <span class="mono">Proxy.Proxies</span> and <span class="mono">Proxy.Announcements</span>; deploys no contract.</p>
+      <p>Security is Portaldot's consensus: a compromised server can mislabel or drop an alert, but cannot move funds or shorten the delay.</p>
+      <p>Running on Portaldot V3 (<span class="mono">portaldot-v3/3002</span>) since 2026-10-19. No contract deployed.</p>
+      <p><span class="plan-inline">Plan, not built:</span> the hold-ticket flow inside Portaldot Wallet; <span class="mono">Revive.call</span> as a held call.</p>
     </div>
   </div>
-  <aside class="speaker-notes">Remove Portaldot and the product disappears: these six calls and two storage maps are all of it. That also means the trust model is the chain's. Our watcher and registry can be wrong or down; the delay and the veto are still enforced by consensus.</aside>
+  <aside class="speaker-notes">Remove Portaldot and the product disappears: the Proxy pallet's calls and two storage maps are all of it. That also means the trust model is the chain's. Our watcher and registry can be wrong or down; the delay and the veto are still enforced by consensus.</aside>
 </section>
 
 <!-- 8 · USERS + MODEL -->
 <section class="slide" data-title="Users and model">
   <h2>Whoever keeps a hot key.</h2>
-  <div class="mid"><div class="users">
-    <div class="user"><div class="display">POT holders</div><p>Daily key on the phone, savings behind a veto. Open source today: CLI + watcher, MIT.</p></div>
+  <div class="mid"><p class="lede muted" style="margin:0 0 40px">Intended users. Open source today: the CLI and the watcher, MIT.</p><div class="users">
+    <div class="user"><div class="display">POT holders</div><p>A daily hot key for spending; the vault behind it only pays out after a veto window.</p></div>
     <div class="user"><div class="display">Grantees</div><p>Vested payouts land in a vault, so a leaked laptop key cannot sweep them.</p></div>
     <div class="user"><div class="display">Stashes &amp; treasuries</div><p>Validator stash funds and small team wallets, one operator key each.</p></div>
   </div>
@@ -571,7 +577,7 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
     <p><b>Paid</b>a hosted watcher with phone alerts.</p>
     <p><b>Wallet</b>the hold-ticket flow is small enough for Portaldot Wallet to adopt.</p>
   </div></div>
-  <aside class="speaker-notes">The first users are people like the grantee we designed for: real POT on a hot key, no second signer. The business side is a plan only: the watcher stays free and open source, and the paid tier is hosting it with phone alerts. Nothing on the plan line is built yet.</aside>
+  <aside class="speaker-notes">The first users are people like the grantee we designed for: POT on a hot key, no second signer. The business side is a plan only: the watcher stays free and open source, and the paid tier is hosting it with phone alerts. Nothing on the plan line is built yet.</aside>
 </section>
 
 <!-- 9 · STATUS -->
@@ -582,7 +588,7 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
       <h3 class="v3">On V3 · 2026-10-19</h3>
       <table class="ledger">
         <tr><td class="n">E2E PASS</td><td>thief → NOT YOURS → veto → refused</td><td class="ref">b4d379d</td></tr>
-        <tr><td class="n">7 / 7</td><td>intent registry checks</td><td class="ref">890fcfb</td></tr>
+        <tr><td class="n">7 / 7</td><td>intent registry checks, run against V3</td><td class="ref">890fcfb</td></tr>
         <tr><td class="n">25 · 8</td><td>seed extrinsics · call types</td><td class="ref">seed-v3</td></tr>
         <tr><td class="n">44 / 44</td><td>V3 proof rows re-fetched by id</td><td class="ref">PROOF.md</td></tr>
       </table>
@@ -592,7 +598,7 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
       </table>
     </div>
     <div>
-      <h3 class="op">Open before the final · Nov 6</h3>
+      <h3 class="op">Open before the final submission</h3>
       <ul class="open">
         <li>Benchmark on V3 <span>(interim chains only so far)</span></li>
         <li>Phone alerts <span>(Telegram sender built, no bot)</span></li>
@@ -602,7 +608,7 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
       </ul>
     </div>
   </div>
-  <aside class="speaker-notes">Left is what already ran on V3, each line backed by an evidence file and a commit. The benchmark is the honest gap: twenty drains per chain, all vetoed, but on our labelled interim chains, not on V3 yet. Right is what is still open before November 6.</aside>
+  <aside class="speaker-notes">Left is what already ran on V3, each line backed by an evidence file and a commit. The benchmark is the honest gap: twenty drains per chain, all vetoed, but on our labelled interim chains, not on V3 yet. Right is what is still open before the final submission.</aside>
 </section>
 
 <!-- 10 · LINKS + ASK -->
@@ -613,11 +619,11 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
       <table class="links">
         <tr><td class="cap">Source</td><td><a class="mono" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu">github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu</a></td></tr>
         <tr><td class="cap">Proof log</td><td><a class="mono" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/PROOF.md">docs/PROOF.md</a> <span class="muted">· every row: id, block, tx</span></td></tr>
-        <tr><td class="cap">Demo video</td><td><a class="mono" href="https://youtu.be/3kbXcX7UWwU">youtu.be/3kbXcX7UWwU</a> <span class="muted">· real V3 run</span></td></tr>
+        <tr><td class="cap">Demo video</td><td><a class="mono" href="https://youtu.be/3kbXcX7UWwU">youtu.be/3kbXcX7UWwU</a> <span class="muted">· V3 run, ids in evidence/checkin-video-run-v3-2026-10-20.md</span></td></tr>
         <tr><td class="cap">Page</td><td><a class="mono" href="https://airlock.edycu.dev">airlock.edycu.dev</a></td></tr>
         <tr><td class="cap">Vault on V3</td><td><a class="mono" href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x76700d7f2bf0d6b17ff6e0b46e74ca397e6fe233403919d4d0490266f25334ef">5F4rPF…smE1</a> <span class="muted">· created 105053-1</span></td></tr>
       </table>
-      <p class="ai">AI assistance: most of the code, tests, README and this deck were drafted with Claude (Claude Code) and reviewed by the author. The Proxy-pallet mechanism and the on-chain design decisions are the author's (edycu, solo).</p>
+      <p class="ai"><b>AI assistance.</b> Drafted with Claude (Claude Code) and reviewed by the author: most of the code, the tests, the README and this deck. The author's own: the choice of the Proxy-pallet mechanism, the vault layout and the on-chain design decisions (edycu, solo).</p>
     </div>
     <div class="qr">
       <svg role="img" shape-rendering="crispEdges" viewBox="0 0 37 37" class="segno"><title>QR code: github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu</title><path class="qrline" stroke="#15120f" d="M0 0.5h7m2 0h2m3 0h3m1 0h1m1 0h4m4 0h1m1 0h7m-37 1h1m5 0h1m2 0h3m2 0h1m1 0h1m2 0h1m1 0h2m2 0h1m1 0h1m2 0h1m5 0h1m-37 1h1m1 0h3m1 0h1m1 0h2m1 0h3m1 0h2m1 0h4m1 0h2m1 0h1m3 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h2m1 0h3m2 0h2m1 0h2m1 0h1m2 0h3m2 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m1 0h2m1 0h1m1 0h2m1 0h4m1 0h1m1 0h1m2 0h1m1 0h1m1 0h3m1 0h1m-37 1h1m5 0h1m1 0h1m5 0h1m1 0h1m1 0h1m2 0h2m3 0h2m2 0h1m5 0h1m-37 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-29 1h2m2 0h1m1 0h1m1 0h1m2 0h1m1 0h2m5 0h1m-29 1h1m1 0h5m2 0h2m2 0h3m2 0h1m1 0h2m2 0h3m1 0h1m1 0h5m-35 1h2m1 0h1m4 0h2m1 0h2m1 0h3m6 0h1m1 0h1m2 0h2m3 0h1m1 0h1m-36 1h3m1 0h1m1 0h7m1 0h1m3 0h1m1 0h1m4 0h6m1 0h1m2 0h2m-37 1h2m5 0h1m3 0h2m3 0h1m4 0h1m2 0h1m1 0h2m1 0h1m6 0h1m-37 1h2m2 0h7m1 0h1m1 0h1m2 0h1m2 0h1m1 0h2m1 0h2m2 0h2m1 0h1m1 0h3m-37 1h6m2 0h1m1 0h1m1 0h3m1 0h6m1 0h1m1 0h1m5 0h1m-29 1h1m2 0h1m1 0h3m1 0h1m1 0h2m1 0h1m2 0h2m3 0h3m2 0h4m1 0h2m-37 1h1m1 0h3m2 0h1m2 0h2m1 0h1m1 0h1m1 0h5m1 0h2m1 0h1m3 0h3m2 0h1m-32 1h1m1 0h1m2 0h3m2 0h1m1 0h1m2 0h1m1 0h1m3 0h3m2 0h3m1 0h1m-33 1h4m1 0h1m1 0h5m1 0h1m1 0h2m1 0h1m2 0h1m1 0h1m2 0h2m5 0h1m-34 1h1m2 0h3m3 0h1m1 0h1m1 0h2m2 0h1m2 0h1m1 0h1m1 0h3m2 0h1m1 0h1m1 0h2m-37 1h1m1 0h1m1 0h1m2 0h2m1 0h1m2 0h3m2 0h5m3 0h2m1 0h4m3 0h1m-37 1h1m2 0h1m1 0h5m1 0h2m2 0h1m1 0h1m1 0h1m2 0h1m1 0h2m1 0h1m1 0h2m1 0h3m-35 1h1m1 0h2m1 0h1m3 0h2m5 0h1m1 0h3m2 0h1m4 0h2m3 0h1m-31 1h1m2 0h1m3 0h2m1 0h1m1 0h2m1 0h1m3 0h1m2 0h1m1 0h2m1 0h4m1 0h2m-37 1h1m1 0h3m3 0h2m1 0h1m3 0h2m7 0h1m1 0h3m2 0h2m2 0h1m-34 1h1m1 0h1m1 0h5m1 0h1m1 0h1m3 0h1m1 0h8m2 0h1m1 0h1m1 0h1m1 0h1m-37 1h1m2 0h2m3 0h2m1 0h1m1 0h4m6 0h1m1 0h1m2 0h2m3 0h2m-35 1h1m3 0h3m2 0h3m1 0h2m5 0h1m1 0h1m2 0h6m1 0h2m1 0h2m-37 1h1m1 0h1m1 0h2m2 0h7m1 0h1m1 0h1m2 0h1m4 0h3m1 0h3m3 0h1m-37 1h1m1 0h1m1 0h4m1 0h1m1 0h2m1 0h1m2 0h1m2 0h1m1 0h1m2 0h2m1 0h9m-29 1h1m1 0h2m2 0h1m2 0h5m1 0h1m1 0h1m2 0h1m3 0h2m-34 1h7m5 0h1m2 0h1m1 0h1m2 0h2m2 0h2m2 0h1m1 0h1m1 0h1m1 0h3m-37 1h1m5 0h1m1 0h4m1 0h10m3 0h1m1 0h1m3 0h2m1 0h2m-37 1h1m1 0h3m1 0h1m1 0h1m1 0h1m3 0h3m2 0h1m1 0h1m2 0h2m1 0h6m1 0h1m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m2 0h3m1 0h1m1 0h2m1 0h4m3 0h1m1 0h2m1 0h1m1 0h1m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h6m1 0h1m2 0h1m3 0h3m5 0h3m-37 1h1m5 0h1m4 0h1m2 0h2m3 0h4m3 0h5m1 0h1m3 0h1m-37 1h7m1 0h2m2 0h2m1 0h3m1 0h1m3 0h5m4 0h5"/></svg>
@@ -639,7 +645,7 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
     const f = document.createElement('footer');
     f.className = 'foot';
     f.innerHTML = '<span>AIRLOCK · PORTALDOT HACKER HOUSE 2026 · ECOSYSTEM DAPPS</span>' +
-      '<span><span class="ver">v0.0.0-dev</span> · facts at build 775c284 · ' + pad(i + 1) + ' / ' + pad(N) + '</span>';
+      '<span><span class="ver">v0.0.1</span> · facts at build 775c284 · ' + pad(i + 1) + ' / ' + pad(N) + '</span>';
     s.appendChild(f);
   });
   let cur = 0;

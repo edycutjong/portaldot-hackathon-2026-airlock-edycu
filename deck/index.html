@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Airlock: a veto window for your POT (pitch deck)</title>
+<meta name="description" content="Airlock pitch deck, Portaldot Hacker House 2026, Ecosystem DApps. A stolen hot key can only announce a spend; the cold key vetoes it before it executes.">
+<!--
+  Airlock pitch deck. One file, 10 slides on a fixed 1920x1080 stage (scaled to fit, letterboxed).
+  Keys:   Right / Space / PageDown = next · Left / PageUp = previous · Home / End · 1-9, 0 = jump to slide
+          F = fullscreen · P = presenter notes · C = contrast debug (outlines every text block)
+          index.html#4 opens slide 4. Click the right half of the screen for next, the left half for previous.
+  PDF:    print (Cmd/Ctrl+P), margins none, background graphics on: one slide per page.
+          docs/pitch-deck.pdf is printed from this file by headless Chromium.
+  Images: none. The mark and the QR code are inline SVG; the terminal text on slide 4 is copied from
+          evidence/e2e-v3-2026-10-19T160547Z.log (long values shortened with "…").
+  Fonts:  Big Shoulders Display, Public Sans, IBM Plex Mono (Google Fonts); tokens = the project's design tokens.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #15120F;  /* stamp-pad black mat — warm carbon, deliberately NOT the #0B0E14 blue-black cluster */
+  --bg-raised: #211D19;  /* a card lying on the mat */
+  --on-bg:     #F5F1E8;  /* paper-white type on the mat */
+  --on-bg-muted: #A39C90;/* captions on the mat */
+  --bg-rule:   #3B352E;  /* hairlines on the mat */
+  --paper:     #F5F1E8;  /* the hold ticket — the only light object */
+  --ink:       #15120F;  /* type printed on the ticket (same black as the mat) */
+  --muted:     #6E6A5E;  /* printed captions on the ticket */
+  --before:    #B7791F;  /* state: announced / held — amber hold-tag, the countdown colour */
+  --after:     #E8402F;  /* state: vetoed — vermilion VOID stamp; the hero accent, fires on reject_announcement */
+  --settled:   #2F6B4F;  /* executed after the delay — ledger green on paper */
+  --settled-on-bg: #5FA37E; /* the same state on the mat */
+  --rule:      #CFC5AE;  /* perforation lines on the ticket */
+  --font-display: "Big Shoulders Display", "Oswald", "Arial Narrow", sans-serif;  /* condensed caps of printed bank forms and rubber stamps; reads at 64px */
+  --font-body:    "Public Sans", "Helvetica Neue", Arial, sans-serif;  /* plain form-body face, drawn for public-sector forms */
+  --font-data:    "IBM Plex Mono", ui-monospace, Menlo, monospace;  /* ONLY amounts, block numbers, SS58 addresses, call hashes, tx hashes */
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--on-bg); }
+body { font-family: var(--font-body); -webkit-font-smoothing: antialiased; overflow: hidden;
+       -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+/* stage: fixed 1920x1080, scaled to the browser, never restacked */
+.viewport { position: fixed; inset: 0; overflow: hidden; }
+.stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
+         transform: translate(-50%, -50%); transform-origin: center center; }
+.slide { position: absolute; inset: 0; display: none; padding: 92px 120px 120px; overflow: hidden;
+         background: var(--bg); }
+.slide.active { display: flex; flex-direction: column; }
+.mid { margin-top: auto !important; margin-bottom: auto !important; }
+
+/* type */
+.mono { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+h1, h2, .display { font-family: var(--font-display); text-transform: uppercase; font-weight: 900; }
+h2 { font-size: 104px; line-height: .9; letter-spacing: .004em; color: var(--on-bg); max-width: 1500px; }
+.lede { font-size: 30px; line-height: 1.38; color: var(--on-bg); max-width: 1180px; margin-top: 30px; }
+.lede.muted, .muted { color: var(--on-bg-muted); }
+.cap { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: .14em;
+       font-size: 19px; color: var(--on-bg-muted); }
+.label-interim { font-family: var(--font-data); font-size: 18px; color: var(--on-bg-muted);
+                 border: 1px solid var(--bg-rule); padding: 3px 10px; display: inline-block; }
+a { color: inherit; text-decoration: underline; text-decoration-color: var(--bg-rule); text-underline-offset: 5px;
+    text-decoration-thickness: 2px; transition: color .15s ease, text-decoration-color .15s ease; }
+a:hover, a:focus-visible { color: var(--on-bg); text-decoration-color: var(--after); outline: none; }
+
+/* footer, added to every slide by the script below */
+.foot { position: absolute; left: 120px; right: 120px; bottom: 44px; display: flex; justify-content: space-between;
+        font-family: var(--font-data); font-size: 15px; letter-spacing: .02em; color: var(--on-bg-muted);
+        border-top: 1px solid var(--bg-rule); padding-top: 14px; }
+
+/* ── the hold ticket (signature element) ─────────────────────────────── */
+.ticket { position: relative; display: grid; grid-template-columns: 290px 1fr; width: 900px; height: 480px;
+          background: var(--paper); color: var(--ink); border-radius: 6px; }
+.ticket .cap { color: var(--muted); font-size: 17px; }
+.stub { position: relative; padding: 34px 30px 30px 36px; border-right: 3px dashed var(--rule); }
+.stub::before, .stub::after { content: ""; position: absolute; right: -19px; width: 36px; height: 36px;
+          border-radius: 50%; background: var(--bg); }
+.stub::before { top: -18px; } .stub::after { bottom: -18px; }
+.stub .hash { font-size: 22px; font-weight: 500; margin: 8px 0 22px; }
+.stub .arr { font-size: 22px; font-weight: 500; margin: 6px 0 0; }
+.count { font-family: var(--font-display); font-weight: 900; font-size: 190px; line-height: .82; color: var(--before);
+         margin-top: 26px; font-variant-numeric: tabular-nums; }
+.count-cap { margin-top: 10px; line-height: 1.35; }
+.tbody { position: relative; padding: 34px 40px 30px 40px; }
+.amount { font-size: 76px; font-weight: 600; line-height: 1; margin: 8px 0 22px; letter-spacing: -.01em; }
+.amount small { font-size: 34px; font-weight: 500; color: var(--muted); }
+.trow { display: grid; grid-template-columns: 150px 1fr; align-items: baseline; padding: 7px 0;
+        border-top: 1px solid var(--rule); }
+.trow .mono { font-size: 21px; font-weight: 500; }
+.blocks { position: relative; display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; margin-top: 26px; height: 40px; }
+.blocks i { display: block; border: 3px solid var(--muted); opacity: .55; }
+.blocks i.held { background: var(--before); border-color: var(--before); opacity: 1; }
+.cut { position: absolute; top: -26px; bottom: -26px; left: calc(20% - 1px); width: 8px; background: var(--after);
+       transform-origin: top center; }
+.cut::before, .cut::after { content: ""; position: absolute; left: 50%; transform: translateX(-50%);
+       border-left: 12px solid transparent; border-right: 12px solid transparent; }
+.cut::before { top: -14px; border-top: 16px solid var(--after); }
+.cut::after { bottom: -14px; border-bottom: 16px solid var(--after); }
+.blk-scale { position: relative; height: 20px; font-family: var(--font-data); font-size: 15px;
+             color: var(--muted); margin-top: 30px; }
+.blk-scale span { position: absolute; left: 0; }
+.blk-scale b { position: absolute; left: calc(20% + 18px); }
+.blk-scale b { color: var(--after); font-weight: 600; }
+.stamp { position: absolute; right: 26px; bottom: 26px; transform: rotate(-9deg); border: 7px solid var(--after);
+         color: var(--after); padding: 2px 22px 10px; text-align: center; mix-blend-mode: multiply; opacity: .94;
+         border-radius: 4px; }
+.stamp b { display: block; font-family: var(--font-display); font-weight: 900; font-size: 112px; line-height: .95;
+           letter-spacing: .08em; }
+.stamp span { display: block; font-family: var(--font-data); font-size: 15px; font-weight: 600; letter-spacing: .02em;
+              border-top: 3px solid var(--after); padding-top: 6px; }
+
+/* entry motion: blocks fill, the cut drops, the stamp lands — once, then rests */
+@media (prefers-reduced-motion: no-preference) {
+  .slide.active .anim .blocks i.held { animation: fill .35s ease-out both; }
+  .slide.active .anim .blocks i.held:nth-child(1) { animation-delay: .25s; }
+  .slide.active .anim .blocks i.held:nth-child(2) { animation-delay: .65s; }
+  .slide.active .anim .cut { animation: drop .3s cubic-bezier(.2,.8,.2,1) 1.15s both; }
+  .slide.active .anim .stamp { animation: land .32s cubic-bezier(.3,1.4,.5,1) 1.55s both; }
+}
+@keyframes fill { from { background: transparent; border-color: var(--muted); opacity: .55; } }
+@keyframes drop { from { transform: scaleY(0); } }
+@keyframes land { from { opacity: 0; transform: rotate(-16deg) scale(1.7); } }
+
+/* ── slide 1: cover ──────────────────────────────────────────────────── */
+.cover { display: grid; grid-template-columns: 1fr 900px; gap: 70px; align-items: center; flex: 1; }
+.cover h1 { font-size: 236px; line-height: .8; letter-spacing: .01em; margin-top: 26px; }
+.cover .tag { font-size: 44px; font-weight: 500; line-height: 1.15; margin-top: 34px; }
+.cover .sub { font-size: 27px; line-height: 1.4; color: var(--on-bg-muted); margin-top: 22px; max-width: 640px; }
+.cover .chain { font-family: var(--font-data); font-size: 18px; color: var(--on-bg-muted); margin-top: 40px;
+                border-left: 4px solid var(--before); padding-left: 14px; }
+.mark { width: 112px; height: 112px; display: block; }
+
+/* ── slide 2: problem ────────────────────────────────────────────────── */
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 64px; }
+.slip { background: var(--bg-raised); border: 1px solid var(--bg-rule); padding: 40px 44px 38px; position: relative; }
+.slip.paper { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+.slip.paper .cap { color: var(--muted); }
+.slip { padding: 52px 56px 50px; }
+.slip .big { font-family: var(--font-data); font-weight: 600; font-size: 108px; line-height: 1; margin: 22px 0 20px; }
+.slip .big.word { font-family: var(--font-display); font-weight: 900; text-transform: uppercase; font-size: 124px; line-height: .9; }
+.slip p { font-size: 30px; line-height: 1.35; }
+.slip .label-interim { margin-top: 22px; color: var(--muted); border-color: var(--rule); }
+
+/* ── slide 3: the flow ───────────────────────────────────────────────── */
+.flow { display: grid; grid-template-columns: 1fr 70px 1fr 70px 1fr; align-items: stretch; }
+.station { border-top: 10px solid var(--bg-rule); padding-top: 26px; }
+.station.s1 { border-top-color: var(--before); }
+.station.s2 { border-top-color: var(--before); }
+.station.s3 { border-top-color: var(--after); }
+.station .num { font-family: var(--font-display); font-weight: 900; font-size: 100px; line-height: .9; }
+.station.s3 .num { color: var(--after); }
+.station .who { font-family: var(--font-data); font-size: 22px; color: var(--on-bg-muted); margin: 12px 0 16px; }
+.station p { font-size: 31px; line-height: 1.36; }
+.station code { font-family: var(--font-data); font-size: 22px; display: block; margin-top: 16px; color: var(--on-bg);
+                background: var(--bg-raised); border: 1px solid var(--bg-rule); padding: 12px 14px; line-height: 1.45; }
+.arrow { display: flex; align-items: flex-start; justify-content: center; padding-top: 34px;
+         font-family: var(--font-display); font-size: 54px; color: var(--on-bg-muted); }
+.ownspend { margin-top: 64px; font-size: 30px; color: var(--on-bg-muted); border-left: 6px solid var(--settled-on-bg);
+            padding-left: 18px; }
+.ownspend b { color: var(--settled-on-bg); font-weight: 700; }
+
+/* ── slide 4: proof ──────────────────────────────────────────────────── */
+.proof { display: grid; grid-template-columns: 900px 1fr; gap: 56px; margin-top: 40px; }
+.proof .ticket { width: 900px; height: 430px; }
+.proof .count { font-size: 160px; margin-top: 18px; }
+.proof .amount { font-size: 68px; margin-bottom: 16px; }
+.proof .stamp { bottom: 22px; }
+.proof .stamp b { font-size: 104px; }
+.ids { margin-top: 28px; width: 900px; border-collapse: collapse; font-size: 19px; }
+.ids td { padding: 9px 10px 9px 0; border-top: 1px solid var(--bg-rule); vertical-align: baseline; }
+.ids td:first-child { font-family: var(--font-data); font-weight: 600; width: 130px; }
+.ids .who { color: var(--on-bg-muted); }
+.ids .ok-held { color: var(--before); font-family: var(--font-data); }
+.ids .veto { color: var(--after); font-family: var(--font-data); font-weight: 600; }
+.ids .refused { font-family: var(--font-data); }
+.ids td:last-child { text-align: right; white-space: nowrap; font-family: var(--font-data); }
+.term { background: #0F0D0B; border: 1px solid var(--bg-rule); border-radius: 10px; overflow: hidden; height: 100%; }
+.term-bar { display: flex; align-items: center; gap: 9px; padding: 14px 18px; border-bottom: 1px solid var(--bg-rule);
+            font-family: var(--font-data); font-size: 15px; color: var(--on-bg-muted); }
+.term-bar i { width: 13px; height: 13px; border-radius: 50%; background: var(--bg-rule); display: inline-block; }
+.term-bar span { margin-left: 10px; }
+.term pre { font-family: var(--font-data); font-size: 17px; line-height: 1.5; padding: 20px 22px; white-space: pre;
+            color: var(--on-bg); }
+.term .t-alert { color: var(--after); font-weight: 600; }
+.term .t-held { color: var(--before); }
+.term .t-dim { color: var(--on-bg-muted); }
+.term .t-ok { color: var(--settled-on-bg); font-weight: 600; }
+.totals { margin-top: 14px; font-family: var(--font-data); font-size: 17px; color: var(--on-bg-muted); }
+
+/* ── slide 5: architecture ───────────────────────────────────────────── */
+.arch { margin-top: 44px; width: 1680px; height: 650px; display: block; }
+.arch text { font-family: var(--font-body); }
+.arch .t-title { font-family: var(--font-display); font-weight: 800; font-size: 30px; letter-spacing: .06em; text-transform: uppercase; }
+.arch .t-mono { font-family: var(--font-data); font-size: 17px; }
+.arch .t-lab { font-family: var(--font-data); font-size: 16px; }
+.archnote { font-size: 20px; color: var(--on-bg-muted); margin-top: 6px; }
+
+/* ── slide 6: why new ────────────────────────────────────────────────── */
+.cmp { width: 1680px; border-collapse: collapse; font-size: 30px; }
+.cmp th { text-align: left; padding: 0 24px 16px 0; }
+.cmp td { padding: 32px 24px 32px 0; border-top: 1px solid var(--bg-rule); vertical-align: top; line-height: 1.35; }
+.cmp td:first-child { font-family: var(--font-display); font-weight: 800; font-size: 44px; text-transform: uppercase;
+                      letter-spacing: .03em; width: 400px; }
+.cmp tr.us td { border-top: 3px solid var(--after); }
+.cmp tr.us td:first-child { color: var(--after); }
+.cmp .n { font-family: var(--font-data); font-weight: 600; }
+
+/* ── slide 7: ecosystem ──────────────────────────────────────────────── */
+.eco { display: grid; grid-template-columns: 1fr 600px; gap: 80px; }
+.calls { border-collapse: collapse; width: 100%; }
+.calls td { padding: 20px 0; border-top: 1px solid var(--bg-rule); font-size: 28px; vertical-align: baseline; }
+.calls td:first-child { font-family: var(--font-data); font-size: 28px; font-weight: 600; width: 500px; color: var(--on-bg); }
+.calls tr.v td:first-child { color: var(--after); }
+.calls tr.a td:first-child { color: var(--before); }
+.side p { font-size: 29px; line-height: 1.4; padding: 26px 0; border-top: 1px solid var(--bg-rule); }
+.side p .mono { font-size: 25px; }
+
+/* ── slide 8: users ──────────────────────────────────────────────────── */
+.users { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 48px; }
+.user { border-top: 6px solid var(--bg-rule); padding-top: 22px; }
+.user .display { font-size: 62px; line-height: .95; letter-spacing: .02em; }
+.user p { font-size: 28px; line-height: 1.4; margin-top: 18px; color: var(--on-bg-muted); }
+.plan { margin-top: 72px; background: var(--bg-raised); border: 1px solid var(--bg-rule); padding: 30px 36px;
+        display: grid; grid-template-columns: 250px 1fr 1fr 1fr; gap: 40px; align-items: start; }
+.plan .tag { font-family: var(--font-display); font-weight: 900; font-size: 40px; text-transform: uppercase;
+             border: 4px solid var(--on-bg-muted); color: var(--on-bg-muted); padding: 4px 14px; text-align: center;
+             transform: rotate(-3deg); }
+.plan p { font-size: 27px; line-height: 1.4; }
+.plan b { display: block; font-family: var(--font-display); text-transform: uppercase; letter-spacing: .1em;
+          font-size: 19px; color: var(--on-bg-muted); margin-bottom: 6px; }
+
+/* ── slide 9: status ─────────────────────────────────────────────────── */
+.status { display: grid; grid-template-columns: 1.05fr 1fr; gap: 80px; }
+.ledger { border-collapse: collapse; width: 100%; }
+.ledger td { padding: 17px 0; border-top: 1px solid var(--bg-rule); font-size: 28px; vertical-align: baseline; }
+.ledger td.n { font-family: var(--font-data); font-weight: 600; font-size: 30px; width: 230px; color: var(--settled-on-bg); }
+.ledger.interim td.n { color: var(--on-bg-muted); }
+.ledger td.ref { font-family: var(--font-data); font-size: 18px; color: var(--on-bg-muted); text-align: right; white-space: nowrap; }
+.open li { list-style: none; font-size: 28px; line-height: 1.35; padding: 18px 0 18px 48px; border-top: 1px solid var(--bg-rule);
+           position: relative; }
+.open li::before { content: ""; position: absolute; left: 0; top: 26px; width: 22px; height: 22px; border: 3px solid var(--before); }
+.open li span { color: var(--on-bg-muted); }
+.status h3 { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
+             font-size: 34px; margin-bottom: 14px; }
+.status h3.v3 { color: var(--settled-on-bg); }
+.status h3.op { color: var(--before); }
+
+/* ── slide 10: links ─────────────────────────────────────────────────── */
+.close { display: grid; grid-template-columns: 1fr 440px; gap: 90px; align-items: center; }
+.links { border-collapse: collapse; width: 100%; }
+.links td { padding: 20px 0; border-top: 1px solid var(--bg-rule); font-size: 27px; vertical-align: baseline; }
+.links td:first-child { width: 230px; }
+.links .mono { font-size: 26px; }
+.qr { background: var(--paper); padding: 28px; width: 440px; }
+.qr svg { width: 384px; height: 384px; display: block; }
+.qr .cap { color: var(--muted); margin-top: 16px; text-align: center; font-size: 17px; }
+.ai { margin-top: 44px; font-size: 21px; line-height: 1.45; color: var(--on-bg-muted); max-width: 1140px; }
+
+/* presenter notes (P) */
+.speaker-notes { display: none; }
+body.presenter .slide.active .speaker-notes { display: block; position: absolute; left: 0; right: 0; bottom: 0;
+  background: rgba(21,18,15,.96); border-top: 2px solid var(--before); padding: 22px 120px 30px; font-size: 24px;
+  line-height: 1.45; color: var(--on-bg); z-index: 5; }
+
+/* Press C to toggle contrast debug mode */
+body.debug-contrast .contrast-check, body.debug-contrast .slide :is(h1, h2, h3, p, td, li, pre, .cap) {
+  outline: 1px dashed rgba(255, 0, 255, .75); outline-offset: 2px; }
+
+/* print: one slide per page, final state, no chrome */
+@page { size: 20in 11.25in; margin: 0; }
+@media print {
+  html, body { height: auto; overflow: visible; background: var(--bg); }
+  .viewport { position: static; overflow: visible; }
+  .stage { position: static; transform: none !important; width: 1920px; height: auto; }
+  .slide { position: relative; display: flex !important; flex-direction: column; width: 1920px; height: 1080px; break-after: page; page-break-after: always; }
+  .speaker-notes { display: none !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="viewport">
+<div class="stage">
+
+<!-- 1 · COVER -->
+<section class="slide" data-title="Cover">
+  <div class="cover">
+    <div>
+      <svg class="mark" viewBox="0 0 512 512" role="img" aria-label="Airlock mark: a hold ticket whose block countdown is cut at the now line">
+        <rect x="0" y="0" width="512" height="512" rx="112" fill="#211D19"/>
+        <path d="M40 112 H472 V206 A50 50 0 0 0 472 306 V400 H40 V306 A50 50 0 0 0 40 206 Z" fill="#F5F1E8"/>
+        <rect x="92" y="170" width="68" height="172" fill="#B7791F"/>
+        <rect x="176" y="170" width="68" height="172" fill="#B7791F"/>
+        <rect x="298" y="177" width="54" height="158" fill="none" stroke="#8A8378" stroke-width="14"/>
+        <rect x="376" y="177" width="54" height="158" fill="none" stroke="#8A8378" stroke-width="14"/>
+        <rect x="258" y="96" width="26" height="320" fill="#E8402F"/>
+        <path d="M233 30 H309 L271 84 Z M233 482 H309 L271 428 Z" fill="#E8402F"/>
+      </svg>
+      <h1 class="contrast-check">Airlock</h1>
+      <p class="tag contrast-check">A veto window for your POT.</p>
+      <p class="sub contrast-check">A stolen hot key can only announce a spend. Your cold key vetoes it before it executes.</p>
+      <p class="chain">Portaldot V3 testnet · Proxy pallet · no custom runtime code</p>
+    </div>
+    <div class="anim">
+      <div class="ticket" role="img" aria-label="Hold ticket: 12.92 tPOT announced at block 105093, vetoed at block 105095, stamped VOID">
+        <div class="stub">
+          <div class="cap">Hold ticket</div>
+          <div class="mono hash">0x6f24…9572</div>
+          <div class="cap">Arrived</div>
+          <div class="mono arr">#105093</div>
+          <div class="count">8</div>
+          <div class="cap count-cap">blocks left<br>frozen at #105095</div>
+        </div>
+        <div class="tbody">
+          <div class="cap">Amount</div>
+          <div class="mono amount">12.92 <small>tPOT</small></div>
+          <div class="trow"><span class="cap">Payee</span><span class="mono">5CFCWZ…ZHJV</span></div>
+          <div class="trow"><span class="cap">From vault</span><span class="mono">5F4rPF…smE1</span></div>
+          <div class="trow"><span class="cap">Release at</span><span class="mono">#105103</span></div>
+          <div class="blocks"><i class="held"></i><i class="held"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="cut"></span></div>
+          <div class="blk-scale"><span>#105093</span><b>#105095</b></div>
+          <div class="stamp"><b>VOID</b><span>veto 105095-1 · 0x2d2d…89b3</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <aside class="speaker-notes">Airlock turns the Proxy pallet's announce-and-reject path into a vault you can live with. The ticket on the right is a real announcement on the V3 testnet from October 19: a thief's 12.92 tPOT sweep, vetoed two blocks after it arrived.</aside>
+</section>
+
+<!-- 2 · PROBLEM -->
+<section class="slide" data-title="Problem">
+  <h2>One leaked seed. One block.</h2>
+  <p class="lede contrast-check">POT on a single hot key leaves in one extrinsic once its seed leaks. A multisig stops that, but asks a second signer for every payment.</p>
+  <div class="pair mid">
+    <div class="slip paper">
+      <div class="cap">Hot key, no delay</div>
+      <div class="big">100 UNIT</div>
+      <p>moved to the thief in one extrinsic.</p>
+      <span class="label-interim">control run (bench --ablate) · interim chain, not V3</span>
+    </div>
+    <div class="slip">
+      <div class="cap">Two-key multisig</div>
+      <div class="big word">2 signers</div>
+      <p class="muted">on every payment, for one person.</p>
+    </div>
+  </div>
+  <aside class="speaker-notes">The left card is our own control: the same thief script against a vault with delay zero moved 100 UNIT in a single extrinsic. That is the default for anyone holding POT on one key. A multisig fixes it, but makes every coffee a two-signature job.</aside>
+</section>
+
+<!-- 3 · WHAT IT DOES -->
+<section class="slide" data-title="What it does">
+  <h2>Announce. Wait. Veto.</h2>
+  <div class="mid"><div class="flow">
+    <div class="station s1">
+      <div class="num">1 · Announce</div>
+      <div class="who">hot key · delay D</div>
+      <p>It cannot spend directly. It can only publish a call hash.</p>
+      <code>proxy.announce(vault, hash)</code>
+    </div>
+    <div class="arrow">→</div>
+    <div class="station s2">
+      <div class="num">2 · Wait</div>
+      <div class="who">D = 10 blocks = 60 s on V3</div>
+      <p>The watcher alerts: YOURS, or NOT YOURS with the amount and a veto line.</p>
+    </div>
+    <div class="arrow">→</div>
+    <div class="station s3">
+      <div class="num">3 · Veto</div>
+      <div class="who">cold key · delay 0</div>
+      <p>The thief's execute then fails <span class="mono">Proxy.Unannounced</span>.</p>
+      <code>reject_announcement(hot, hash)</code>
+    </div>
+  </div>
+  <p class="ownspend"><b>Your own spend:</b> register the intent, announce, wait D, execute. No co-signer.</p></div>
+  <aside class="speaker-notes">Two keys, two roles. The hot key is registered with a delay, so the chain only lets it announce. The cold key has no delay and can reject any announcement as the vault. The watcher is what makes the window usable: it tells you which announcement is not yours, and prints the command to kill it.</aside>
+</section>
+
+<!-- 4 · PROOF (frozen slide) -->
+<section class="slide" data-title="Live V3 proof">
+  <h2>Refused on V3.</h2>
+  <div class="proof">
+    <div>
+      <div class="anim">
+        <div class="ticket" role="img" aria-label="Hold ticket for the 12.92 tPOT sweep, cut at block 105095 and stamped VOID">
+          <div class="stub">
+            <div class="cap">Hold ticket</div>
+            <div class="mono hash">0x6f24…9572</div>
+            <div class="cap">Arrived</div>
+            <div class="mono arr">#105093</div>
+            <div class="count">8</div>
+            <div class="cap count-cap">blocks left<br>(#105103 − #105095)</div>
+          </div>
+          <div class="tbody">
+            <div class="cap">Amount</div>
+            <div class="mono amount">12.92 <small>tPOT</small></div>
+            <div class="trow"><span class="cap">Payee</span><span class="mono">5CFCWZ…ZHJV</span></div>
+            <div class="trow"><span class="cap">Release at</span><span class="mono">#105103</span></div>
+            <div class="blocks"><i class="held"></i><i class="held"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="cut"></span></div>
+            <div class="blk-scale"><span>#105093</span><b>#105095</b></div>
+            <div class="stamp"><b>VOID</b><span>veto 105095-1 · 0x2d2d…89b3</span></div>
+          </div>
+        </div>
+      </div>
+      <table class="ids">
+        <tr><td>105093-1</td><td><span class="who">thief</span> Proxy.announce</td><td class="ok-held">ok · held</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xc7c32f0a384f536f0607194de537809ed53984e270007c8f138be815b962f63b">block ↗</a></td></tr>
+        <tr><td>105095-1</td><td><span class="who">cold</span> reject_announcement</td><td class="veto">ok · VETO</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xc22ce38855fc2be38628387324c971153efa7ec7c52236795d36b70ec17e9e26">block ↗</a></td></tr>
+        <tr><td>105106-1</td><td><span class="who">thief</span> proxy_announced</td><td class="refused">Proxy.Unannounced</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x308b11bcb174fb77a8e3b3a17019ebb6db508fbede9c2d322363c3d54a7d16ea">block ↗</a></td></tr>
+        <tr><td>105108-1</td><td><span class="who">thief</span> proxy.proxy, direct</td><td class="refused">Proxy.Unannounced</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xa7122e9e9031b9de19586ccbf19cf7e5364aab269e20524fe3503cd769c61959">block ↗</a></td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>evidence/e2e-v3-2026-10-19T160547Z.log · commit b4d379d</span></div>
+<pre><span class="t-alert">NOT YOURS — VETO</span>
+Vault 5F4rPFqS6PQEKUHacHtR5mLrDMVZ8RjCfJpYmfiktERhsmE1
+Chain: Portaldot V3 testnet (v3)
+<span class="t-held">Up to 12.9200 tPOT at risk</span> <span class="t-dim">(…)</span>
+Announced by delegate 5Cwitu…ZULN at block #105093;
+executable from #105103. <span class="t-held">Veto must land by #105102:</span>
+<span class="t-held">9 blocks (≈ 54 s) from head #105093</span>
+Veto with the cold key — Airlock CLI <span class="t-dim">(…)</span>:
+airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
+  --hash 0x6f24…9572
+<span class="t-dim">[driver 16:06:20] alert delivered; running the veto
+  command exactly as the alert printed it</span>
+<span class="t-alert">[v3] ok  veto  Proxy.proxy(Proxy.reject_announcement)
+  by cold #105095 id 105095-1</span>
+<span class="t-dim">[driver 16:07:24] thief executes the announced sweep
+  after the delay</span>
+<span class="t-ok">E2E PASS</span> [('announce', 'ok'), ('execute',
+  'Proxy.Unannounced'), ('direct', 'Proxy.Unannounced')]
+  · vault total and thief payee total unchanged: True</pre>
+      </div>
+      <p class="totals">vault_total 1500000000000000 → 1500000000000000 planck<br>payee_total 0 → 0 planck</p>
+    </div>
+  </div>
+  <aside class="speaker-notes">This is the slide to remember. Block 105093: a thief with the hot key announces a sweep of 12.92 tPOT. The watcher prints NOT YOURS with the deadline and the exact veto command; the command lands at 105095. After the delay the thief's execute and a direct call both fail Proxy.Unannounced. Every id opens on node-console.</aside>
+</section>
+
+<!-- 5 · ARCHITECTURE -->
+<section class="slide" data-title="Architecture">
+  <h2>The chain enforces. We watch.</h2>
+  <svg class="arch" viewBox="0 0 1680 650" role="img" aria-label="Airlock architecture: CLI, intent registry and alerts on the owner side; watcher; Proxy pallet on the Portaldot V3 testnet; thief script">
+    <defs>
+      <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#A39C90"/></marker>
+      <marker id="ah-v" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#E8402F"/></marker>
+      <marker id="ah-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#B7791F"/></marker>
+    </defs>
+    <!-- owner side -->
+    <text x="64" y="22" class="t-lab" fill="#A39C90">OWNER SIDE · Python · substrate-interface</text>
+    <rect x="64" y="40" width="456" height="150" fill="#211D19" stroke="#3B352E" stroke-width="2"/>
+    <text x="90" y="86" class="t-title" fill="#F5F1E8">airlock CLI</text>
+    <text x="90" y="122" class="t-mono" fill="#A39C90">create · enroll · announce · execute</text>
+    <text x="90" y="148" class="t-mono" fill="#A39C90">veto · panic · status</text>
+    <text x="90" y="174" class="t-mono" fill="#A39C90">reads the chain before signing</text>
+
+    <rect x="64" y="262" width="456" height="128" fill="#211D19" stroke="#3B352E" stroke-width="2"/>
+    <text x="90" y="306" class="t-title" fill="#F5F1E8">intent registry</text>
+    <text x="90" y="340" class="t-mono" fill="#A39C90">127.0.0.1 · owner token · single-use</text>
+    <text x="90" y="366" class="t-mono" fill="#A39C90">intents (YOURS vs NOT YOURS)</text>
+
+    <rect x="64" y="462" width="456" height="128" fill="#211D19" stroke="#3B352E" stroke-width="2"/>
+    <text x="90" y="506" class="t-title" fill="#F5F1E8">alerts</text>
+    <text x="90" y="540" class="t-mono" fill="#A39C90">stdout · JSON lines</text>
+    <text x="90" y="566" class="t-mono" fill="#A39C90">Telegram sender built, no bot yet</text>
+
+    <!-- watcher -->
+    <rect x="680" y="262" width="440" height="160" fill="#211D19" stroke="#B7791F" stroke-width="2"/>
+    <text x="706" y="306" class="t-title" fill="#F5F1E8">watcher</text>
+    <text x="706" y="340" class="t-mono" fill="#A39C90">Proxy.Announced → YOURS / NOT YOURS</text>
+    <text x="706" y="366" class="t-mono" fill="#A39C90">catch-up · reconnect · stall watchdog</text>
+    <text x="706" y="392" class="t-mono" fill="#A39C90">SQLite</text>
+
+    <!-- chain: the one lit object -->
+    <rect x="1220" y="40" width="460" height="350" rx="6" fill="#F5F1E8"/>
+    <text x="1248" y="92" class="t-title" fill="#15120F">Proxy pallet</text>
+    <text x="1248" y="126" class="t-mono" fill="#6E6A5E">Portaldot V3 testnet</text>
+    <text x="1248" y="152" class="t-mono" fill="#6E6A5E">portaldot-v3 / 3002</text>
+    <line x1="1248" y1="176" x2="1652" y2="176" stroke="#CFC5AE" stroke-width="2" stroke-dasharray="8 6"/>
+    <text x="1248" y="212" class="t-mono" fill="#15120F">Proxy.Proxies</text>
+    <text x="1248" y="240" class="t-mono" fill="#15120F">Proxy.Announcements</text>
+    <text x="1248" y="282" class="t-mono" fill="#6E6A5E">enforces the delay and</text>
+    <text x="1248" y="308" class="t-mono" fill="#6E6A5E">the veto; Airlock adds</text>
+    <text x="1248" y="334" class="t-mono" fill="#6E6A5E">no runtime code</text>
+    <rect x="1248" y="350" width="404" height="1" fill="#CFC5AE"/>
+    <text x="1248" y="376" class="t-mono" fill="#6E6A5E" font-size="15">planned: Revive.call as a held call</text>
+
+    <!-- thief -->
+    <rect x="1220" y="470" width="460" height="120" fill="#211D19" stroke="#3B352E" stroke-width="2" stroke-dasharray="10 7"/>
+    <text x="1248" y="514" class="t-title" fill="#F5F1E8">thief.py</text>
+    <text x="1248" y="548" class="t-mono" fill="#A39C90">raw announce / execute</text>
+    <text x="1248" y="574" class="t-mono" fill="#A39C90">imports no Airlock code</text>
+
+    <!-- edges -->
+    <line x1="520" y1="96" x2="1214" y2="96" stroke="#A39C90" stroke-width="3" marker-end="url(#ah)"/>
+    <text x="560" y="84" class="t-lab" fill="#A39C90">signed extrinsics: create · announce · execute</text>
+    <line x1="520" y1="150" x2="1214" y2="150" stroke="#E8402F" stroke-width="3" marker-end="url(#ah-v)"/>
+    <text x="560" y="178" class="t-lab" fill="#E8402F">cold key: reject_announcement (veto) · remove_proxy (panic)</text>
+
+    <line x1="1220" y1="330" x2="1128" y2="330" stroke="#A39C90" stroke-width="3" marker-end="url(#ah)"/>
+    <text x="1140" y="312" class="t-lab" fill="#A39C90">events</text>
+
+    <line x1="292" y1="190" x2="292" y2="256" stroke="#A39C90" stroke-width="3" marker-end="url(#ah)"/>
+    <text x="306" y="232" class="t-lab" fill="#A39C90">register intent first</text>
+
+    <line x1="520" y1="330" x2="674" y2="330" stroke="#A39C90" stroke-width="3" marker-end="url(#ah)"/>
+    <text x="532" y="316" class="t-lab" fill="#A39C90">same SQLite</text>
+
+    <polyline points="900,422 900,526 526,526" fill="none" stroke="#A39C90" stroke-width="3" marker-end="url(#ah)"/>
+    <text x="596" y="514" class="t-lab" fill="#A39C90">YOURS / NOT YOURS + veto line</text>
+
+    <polyline points="64,560 30,560 30,120 58,120" fill="none" stroke="#E8402F" stroke-width="3" marker-end="url(#ah-v)"/>
+    <text x="22" y="620" class="t-lab" fill="#E8402F">owner pastes the veto line into the CLI</text>
+
+    <line x1="1450" y1="470" x2="1450" y2="396" stroke="#B7791F" stroke-width="3" marker-end="url(#ah-a)"/>
+    <text x="1464" y="440" class="t-lab" fill="#B7791F">announce / execute</text>
+  </svg>
+  <p class="archnote">Every tool pins the chain by genesis hash and runtime code hash before signing, and refuses an unknown chain.</p>
+  <aside class="speaker-notes">Redrawn from the README diagram. The only lit object is the chain: the Proxy pallet holds the delay and the veto. Everything we run is on the owner side and can fail without losing funds: a dead watcher means no alert, never a shorter delay.</aside>
+</section>
+
+<!-- 6 · WHY IT'S NEW -->
+<section class="slide" data-title="Why it's new">
+  <h2>Already in the runtime.</h2>
+  <p class="lede contrast-check">Delayed proxies with announce and reject ship in the Proxy pallet. In our search (not a market survey) we found no product built on that path.</p>
+  <table class="cmp mid">
+    <tr><th class="cap">Setup</th><th class="cap">Signers per payment</th><th class="cap">A leaked hot key…</th><th class="cap">The owner acts…</th></tr>
+    <tr><td>One hot key</td><td><span class="n">1</span></td><td>drains the account in one extrinsic</td><td>after the money is gone</td></tr>
+    <tr><td>Two-key multisig</td><td><span class="n">2</span></td><td>cannot spend alone</td><td>on every payment</td></tr>
+    <tr class="us"><td>Airlock</td><td><span class="n">1</span>, then wait D</td><td>can only announce; the cold key vetoes</td><td>only on NOT YOURS</td></tr>
+  </table>
+  <aside class="speaker-notes">The new part is not a primitive, it is the product around one. The pallet has had announce and reject for years; what was missing is a vault layout that uses them, and a watcher that tells the owner which announcement to reject.</aside>
+</section>
+
+<!-- 7 · ECOSYSTEM FIT -->
+<section class="slide" data-title="Ecosystem fit">
+  <h2>Six pallet calls are the product.</h2>
+  <div class="eco mid">
+    <table class="calls">
+      <tr><td>Proxy.create_pure</td><td>the keyless vault</td></tr>
+      <tr><td>Proxy.add_proxy</td><td>hot key with delay D, cold key with 0</td></tr>
+      <tr class="a"><td>Proxy.announce</td><td>the hot key publishes a call hash</td></tr>
+      <tr><td>Proxy.proxy_announced</td><td>runs after D, if not vetoed</td></tr>
+      <tr class="v"><td>Proxy.reject_announcement</td><td>the veto</td></tr>
+      <tr class="v"><td>Proxy.remove_proxy</td><td>panic: retire the hot key</td></tr>
+    </table>
+    <div class="side">
+      <p>The security is Portaldot's consensus, not our server.</p>
+      <p>A compromised server can mislabel or drop an alert, but cannot move funds or shorten the delay.</p>
+      <p>Reads <span class="mono">Proxy.Proxies</span> and <span class="mono">Proxy.Announcements</span>; deploys no contract.</p>
+    </div>
+  </div>
+  <aside class="speaker-notes">Remove Portaldot and the product disappears: these six calls and two storage maps are all of it. That also means the trust model is the chain's. Our watcher and registry can be wrong or down; the delay and the veto are still enforced by consensus.</aside>
+</section>
+
+<!-- 8 · USERS + MODEL -->
+<section class="slide" data-title="Users and model">
+  <h2>Whoever keeps a hot key.</h2>
+  <div class="mid"><div class="users">
+    <div class="user"><div class="display">POT holders</div><p>Daily key on the phone, savings behind a veto. Open source today: CLI + watcher, MIT.</p></div>
+    <div class="user"><div class="display">Grantees</div><p>Vested payouts land in a vault, so a leaked laptop key cannot sweep them.</p></div>
+    <div class="user"><div class="display">Stashes &amp; treasuries</div><p>Validator stash funds and small team wallets, one operator key each.</p></div>
+  </div>
+  <div class="plan">
+    <div class="tag">Plan, not built</div>
+    <p><b>Free</b>the open-source CLI and watcher.</p>
+    <p><b>Paid</b>a hosted watcher with phone alerts.</p>
+    <p><b>Wallet</b>the hold-ticket flow is small enough for Portaldot Wallet to adopt.</p>
+  </div></div>
+  <aside class="speaker-notes">The first users are people like the grantee we designed for: real POT on a hot key, no second signer. The business side is a plan only: the watcher stays free and open source, and the paid tier is hosting it with phone alerts. Nothing on the plan line is built yet.</aside>
+</section>
+
+<!-- 9 · STATUS -->
+<section class="slide" data-title="Status vs the final">
+  <h2>Built. Still open.</h2>
+  <div class="status mid">
+    <div>
+      <h3 class="v3">On V3 · 2026-10-19</h3>
+      <table class="ledger">
+        <tr><td class="n">E2E PASS</td><td>thief → NOT YOURS → veto → refused</td><td class="ref">b4d379d</td></tr>
+        <tr><td class="n">7 / 7</td><td>intent registry checks</td><td class="ref">890fcfb</td></tr>
+        <tr><td class="n">25 · 8</td><td>seed extrinsics · call types</td><td class="ref">seed-v3</td></tr>
+        <tr><td class="n">44 / 44</td><td>V3 proof rows re-fetched by id</td><td class="ref">PROOF.md</td></tr>
+      </table>
+      <table class="ledger interim" style="margin-top:26px">
+        <tr><td class="n">20 / 20</td><td>bench drains vetoed, 0 planck moved</td><td class="ref">interim, not V3</td></tr>
+        <tr><td class="n">350</td><td>offline tests pass · 164 commits</td><td class="ref">775c284</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3 class="op">Open before the final · Nov 6</h3>
+      <ul class="open">
+        <li>Benchmark on V3 <span>(interim chains only so far)</span></li>
+        <li>Phone alerts <span>(Telegram sender built, no bot)</span></li>
+        <li>Revive.call as a held call <span>(composer only)</span></li>
+        <li>Hosted owner UI <span>(none yet; CLI today)</span></li>
+        <li>Deploy the watcher + registry <span>(local today)</span></li>
+      </ul>
+    </div>
+  </div>
+  <aside class="speaker-notes">Left is what already ran on V3, each line backed by an evidence file and a commit. The benchmark is the honest gap: twenty drains per chain, all vetoed, but on our labelled interim chains, not on V3 yet. Right is what is still open before November 6.</aside>
+</section>
+
+<!-- 10 · LINKS + ASK -->
+<section class="slide" data-title="Links">
+  <h2>Check it by extrinsic id.</h2>
+  <div class="close mid">
+    <div>
+      <table class="links">
+        <tr><td class="cap">Source</td><td><a class="mono" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu">github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu</a></td></tr>
+        <tr><td class="cap">Proof log</td><td><a class="mono" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/PROOF.md">docs/PROOF.md</a> <span class="muted">· every row: id, block, tx</span></td></tr>
+        <tr><td class="cap">Demo video</td><td><a class="mono" href="https://youtu.be/3kbXcX7UWwU">youtu.be/3kbXcX7UWwU</a> <span class="muted">· real V3 run</span></td></tr>
+        <tr><td class="cap">Page</td><td><a class="mono" href="https://airlock.edycu.dev">airlock.edycu.dev</a></td></tr>
+        <tr><td class="cap">Vault on V3</td><td><a class="mono" href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x76700d7f2bf0d6b17ff6e0b46e74ca397e6fe233403919d4d0490266f25334ef">5F4rPF…smE1</a> <span class="muted">· created 105053-1</span></td></tr>
+      </table>
+      <p class="ai">AI assistance: most of the code, tests, README and this deck were drafted with Claude (Claude Code) and reviewed by the author. The Proxy-pallet mechanism and the on-chain design decisions are the author's (edycu, solo).</p>
+    </div>
+    <div class="qr">
+      <svg role="img" shape-rendering="crispEdges" viewBox="0 0 37 37" class="segno"><title>QR code: github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu</title><path class="qrline" stroke="#15120f" d="M0 0.5h7m2 0h2m3 0h3m1 0h1m1 0h4m4 0h1m1 0h7m-37 1h1m5 0h1m2 0h3m2 0h1m1 0h1m2 0h1m1 0h2m2 0h1m1 0h1m2 0h1m5 0h1m-37 1h1m1 0h3m1 0h1m1 0h2m1 0h3m1 0h2m1 0h4m1 0h2m1 0h1m3 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h2m1 0h3m2 0h2m1 0h2m1 0h1m2 0h3m2 0h1m1 0h3m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m1 0h2m1 0h1m1 0h2m1 0h4m1 0h1m1 0h1m2 0h1m1 0h1m1 0h3m1 0h1m-37 1h1m5 0h1m1 0h1m5 0h1m1 0h1m1 0h1m2 0h2m3 0h2m2 0h1m5 0h1m-37 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-29 1h2m2 0h1m1 0h1m1 0h1m2 0h1m1 0h2m5 0h1m-29 1h1m1 0h5m2 0h2m2 0h3m2 0h1m1 0h2m2 0h3m1 0h1m1 0h5m-35 1h2m1 0h1m4 0h2m1 0h2m1 0h3m6 0h1m1 0h1m2 0h2m3 0h1m1 0h1m-36 1h3m1 0h1m1 0h7m1 0h1m3 0h1m1 0h1m4 0h6m1 0h1m2 0h2m-37 1h2m5 0h1m3 0h2m3 0h1m4 0h1m2 0h1m1 0h2m1 0h1m6 0h1m-37 1h2m2 0h7m1 0h1m1 0h1m2 0h1m2 0h1m1 0h2m1 0h2m2 0h2m1 0h1m1 0h3m-37 1h6m2 0h1m1 0h1m1 0h3m1 0h6m1 0h1m1 0h1m5 0h1m-29 1h1m2 0h1m1 0h3m1 0h1m1 0h2m1 0h1m2 0h2m3 0h3m2 0h4m1 0h2m-37 1h1m1 0h3m2 0h1m2 0h2m1 0h1m1 0h1m1 0h5m1 0h2m1 0h1m3 0h3m2 0h1m-32 1h1m1 0h1m2 0h3m2 0h1m1 0h1m2 0h1m1 0h1m3 0h3m2 0h3m1 0h1m-33 1h4m1 0h1m1 0h5m1 0h1m1 0h2m1 0h1m2 0h1m1 0h1m2 0h2m5 0h1m-34 1h1m2 0h3m3 0h1m1 0h1m1 0h2m2 0h1m2 0h1m1 0h1m1 0h3m2 0h1m1 0h1m1 0h2m-37 1h1m1 0h1m1 0h1m2 0h2m1 0h1m2 0h3m2 0h5m3 0h2m1 0h4m3 0h1m-37 1h1m2 0h1m1 0h5m1 0h2m2 0h1m1 0h1m1 0h1m2 0h1m1 0h2m1 0h1m1 0h2m1 0h3m-35 1h1m1 0h2m1 0h1m3 0h2m5 0h1m1 0h3m2 0h1m4 0h2m3 0h1m-31 1h1m2 0h1m3 0h2m1 0h1m1 0h2m1 0h1m3 0h1m2 0h1m1 0h2m1 0h4m1 0h2m-37 1h1m1 0h3m3 0h2m1 0h1m3 0h2m7 0h1m1 0h3m2 0h2m2 0h1m-34 1h1m1 0h1m1 0h5m1 0h1m1 0h1m3 0h1m1 0h8m2 0h1m1 0h1m1 0h1m1 0h1m-37 1h1m2 0h2m3 0h2m1 0h1m1 0h4m6 0h1m1 0h1m2 0h2m3 0h2m-35 1h1m3 0h3m2 0h3m1 0h2m5 0h1m1 0h1m2 0h6m1 0h2m1 0h2m-37 1h1m1 0h1m1 0h2m2 0h7m1 0h1m1 0h1m2 0h1m4 0h3m1 0h3m3 0h1m-37 1h1m1 0h1m1 0h4m1 0h1m1 0h2m1 0h1m2 0h1m2 0h1m1 0h1m2 0h2m1 0h9m-29 1h1m1 0h2m2 0h1m2 0h5m1 0h1m1 0h1m2 0h1m3 0h2m-34 1h7m5 0h1m2 0h1m1 0h1m2 0h2m2 0h2m2 0h1m1 0h1m1 0h1m1 0h3m-37 1h1m5 0h1m1 0h4m1 0h10m3 0h1m1 0h1m3 0h2m1 0h2m-37 1h1m1 0h3m1 0h1m1 0h1m1 0h1m3 0h3m2 0h1m1 0h1m2 0h2m1 0h6m1 0h1m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m2 0h3m1 0h1m1 0h2m1 0h4m3 0h1m1 0h2m1 0h1m1 0h1m1 0h1m-37 1h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h6m1 0h1m2 0h1m3 0h3m5 0h3m-37 1h1m5 0h1m4 0h1m2 0h2m3 0h4m3 0h5m1 0h1m3 0h1m-37 1h7m1 0h2m2 0h2m1 0h3m1 0h1m3 0h5m4 0h5"/></svg>
+      <div class="cap">Scan: source on GitHub</div>
+    </div>
+  </div>
+  <aside class="speaker-notes">Our ask: open any id on node-console and check it. Every number in this deck comes from the repo's evidence files. Then tell us whose POT should sit behind a veto first: grantees, validators, or the wallet itself.</aside>
+</section>
+
+</div>
+</div>
+<script>
+(() => {
+  const slides = [...document.querySelectorAll('.slide')];
+  const N = slides.length;
+  const stage = document.querySelector('.stage');
+  const pad = n => String(n).padStart(2, '0');
+  slides.forEach((s, i) => {
+    const f = document.createElement('footer');
+    f.className = 'foot';
+    f.innerHTML = '<span>AIRLOCK · PORTALDOT HACKER HOUSE 2026 · ECOSYSTEM DAPPS</span>' +
+      '<span><span class="ver">v0.0.0-dev</span> · facts at build 775c284 · ' + pad(i + 1) + ' / ' + pad(N) + '</span>';
+    s.appendChild(f);
+  });
+  let cur = 0;
+  const fit = () => {
+    const k = Math.min(innerWidth / 1920, innerHeight / 1080);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + k + ')';
+  };
+  const show = i => {
+    cur = Math.max(0, Math.min(N - 1, i));
+    slides.forEach((s, j) => s.classList.toggle('active', j === cur));
+    if (location.hash !== '#' + (cur + 1)) history.replaceState(null, '', '#' + (cur + 1));
+  };
+  const fromHash = () => { const h = parseInt(location.hash.slice(1), 10); return Number.isFinite(h) ? h - 1 : 0; };
+  addEventListener('resize', fit);
+  addEventListener('hashchange', () => show(fromHash()));
+  addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key;
+    if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') { show(cur + 1); e.preventDefault(); }
+    else if (k === 'ArrowLeft' || k === 'PageUp') { show(cur - 1); e.preventDefault(); }
+    else if (k === 'Home') show(0);
+    else if (k === 'End') show(N - 1);
+    else if (/^[0-9]$/.test(k)) show(k === '0' ? 9 : Number(k) - 1);
+    else if (k === 'p' || k === 'P') document.body.classList.toggle('presenter');
+    else if (k === 'c' || k === 'C') document.body.classList.toggle('debug-contrast');
+    else if (k === 'f' || k === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    }
+  });
+  document.addEventListener('click', e => {
+    if (e.target.closest('a')) return;
+    show(cur + (e.clientX > innerWidth / 2 ? 1 : -1));
+  });
+  fit();
+  show(fromHash());
+})();
+</script>
+</body>
+</html>

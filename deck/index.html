@@ -539,7 +539,7 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
     <tr><th class="cap">Setup</th><th class="cap">Signers per payment</th><th class="cap">A leaked hot key…</th><th class="cap">The owner acts…</th></tr>
     <tr><td>One hot key</td><td><span class="n">1</span></td><td>drains the account in one extrinsic</td><td>after the money is gone</td></tr>
     <tr><td>Two-key multisig</td><td><span class="n">2</span></td><td>cannot spend alone</td><td>on every payment</td></tr>
-    <tr><td>Delayed proxy, no watcher</td><td><span class="n">1</span>, then wait D</td><td>can only announce, but nobody is told</td><td>only if they spot the hash in time</td></tr>
+    <tr><td>Delayed proxy, no watcher</td><td><span class="n">1</span>, then wait D</td><td>can only announce; no alert goes out</td><td>only if they notice the hash on chain in time</td></tr>
     <tr class="us"><td>Airlock</td><td><span class="n">1</span>, then wait D</td><td>can only announce; the cold key vetoes</td><td>only on NOT YOURS</td></tr>
   </table>
   <aside class="speaker-notes">The new part is not a primitive, it is the product around one. The pallet already had announce and reject; what was missing is a vault layout that uses them, and a watcher that tells the owner which announcement to reject.</aside>
@@ -596,7 +596,7 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
         <tr><td class="n">25 · 8</td><td>seed extrinsics · call types</td><td class="ref">seed-v3</td></tr>
         <tr><td class="n">44 / 44</td><td>V3 proof rows re-fetched by id</td><td class="ref">PROOF.md</td></tr>
       </table>
-      <h3 class="iv">Not on V3</h3>
+      <h3 class="iv">Interim chains and offline</h3>
       <table class="ledger interim">
         <tr><td class="n">20 / 20</td><td>bench drains vetoed, 0 planck moved</td><td class="ref">interim, not V3</td></tr>
         <tr><td class="n">350</td><td>offline tests pass · 164 commits</td><td class="ref">775c284</td></tr>

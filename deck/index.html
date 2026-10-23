@@ -92,26 +92,26 @@ a:hover, a:focus-visible { color: var(--on-bg); text-decoration-color: var(--aft
 .trow { display: grid; grid-template-columns: 150px 1fr; align-items: baseline; padding: 7px 0;
         border-top: 1px solid var(--rule); }
 .trow .mono { font-size: 21px; font-weight: 500; }
-.blocks { position: relative; display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; margin-top: 26px; height: 40px; }
-.blocks i { display: block; border: 3px solid var(--muted); opacity: .55; }
+.blocks { position: relative; display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; margin-top: 40px; height: 40px; width: 47%; }
+.blocks i { display: block; border: 2px solid var(--muted); opacity: .6; }
 .blocks i.held { background: var(--before); border-color: var(--before); opacity: 1; }
-.cut { position: absolute; top: -26px; bottom: -26px; left: calc(20% - 1px); width: 8px; background: var(--after);
+.cut { position: absolute; top: -18px; bottom: -18px; left: calc(20% - 1px); width: 8px; background: var(--after);
        transform-origin: top center; }
 .cut::before, .cut::after { content: ""; position: absolute; left: 50%; transform: translateX(-50%);
        border-left: 12px solid transparent; border-right: 12px solid transparent; }
 .cut::before { top: -14px; border-top: 16px solid var(--after); }
 .cut::after { bottom: -14px; border-bottom: 16px solid var(--after); }
 .blk-scale { position: relative; height: 20px; font-family: var(--font-data); font-size: 15px;
-             color: var(--muted); margin-top: 30px; }
+             color: var(--muted); margin-top: 30px; width: 50%; }
 .blk-scale span { position: absolute; left: 0; }
-.blk-scale b { position: absolute; left: calc(20% + 18px); }
+.blk-scale b { position: absolute; left: calc(20% + 16px); white-space: nowrap; }
 .blk-scale b { color: var(--after); font-weight: 600; }
-.stamp { position: absolute; right: 26px; bottom: 26px; transform: rotate(-9deg); border: 7px solid var(--after);
+.stamp { position: absolute; right: 20px; bottom: 26px; transform: rotate(-9deg); border: 7px solid var(--after);
          color: var(--after); padding: 2px 22px 10px; text-align: center; mix-blend-mode: multiply; opacity: .94;
          border-radius: 4px; }
-.stamp b { display: block; font-family: var(--font-display); font-weight: 900; font-size: 112px; line-height: .95;
+.stamp b { display: block; font-family: var(--font-display); font-weight: 900; font-size: 92px; line-height: .95;
            letter-spacing: .08em; }
-.stamp span { display: block; font-family: var(--font-data); font-size: 15px; font-weight: 600; letter-spacing: .02em;
+.stamp span { display: block; font-family: var(--font-data); font-size: 14px; font-weight: 600; letter-spacing: .02em;
               border-top: 3px solid var(--after); padding-top: 6px; }
 
 /* entry motion: blocks fill, the cut drops, the stamp lands — once, then rests */
@@ -170,8 +170,9 @@ a:hover, a:focus-visible { color: var(--on-bg); text-decoration-color: var(--aft
 .proof .count { font-size: 160px; margin-top: 18px; }
 .proof .amount { font-size: 68px; margin-bottom: 16px; }
 .proof .stamp { bottom: 30px; right: 24px; }
-.proof .stamp b { font-size: 88px; }
-.ids { margin-top: 26px; width: 900px; border-collapse: collapse; font-size: 22px; }
+.proof .stamp b { font-size: 78px; }
+.ids { margin-top: 26px; width: 900px; border-collapse: collapse; font-size: 21px; }
+.ids td { white-space: nowrap; }
 .ids td { padding: 10px 10px 10px 0; border-top: 1px solid var(--bg-rule); vertical-align: baseline; }
 .ids td:first-child { font-family: var(--font-data); font-weight: 600; width: 130px; }
 .ids .who { color: var(--on-bg-muted); }
@@ -179,12 +180,12 @@ a:hover, a:focus-visible { color: var(--on-bg); text-decoration-color: var(--aft
 .ids .veto { color: var(--after); font-family: var(--font-data); font-weight: 600; }
 .ids .refused { font-family: var(--font-data); }
 .ids td:last-child { text-align: right; white-space: nowrap; font-family: var(--font-data); }
-.term { background: var(--bg); border: 1px solid var(--bg-rule); border-radius: 10px; overflow: hidden; height: 100%; }
+.term { background: var(--bg); border: 1px solid var(--bg-rule); border-radius: 10px; overflow: hidden; height: calc(100% - 70px); }
 .term-bar { display: flex; align-items: center; gap: 9px; padding: 14px 18px; border-bottom: 1px solid var(--bg-rule);
             font-family: var(--font-data); font-size: 15px; color: var(--on-bg-muted); }
 .term-bar i { width: 13px; height: 13px; border-radius: 50%; background: var(--bg-rule); display: inline-block; }
 .term-bar span { margin-left: 10px; }
-.term pre { font-family: var(--font-data); font-size: 20px; line-height: 1.5; padding: 20px 22px; white-space: pre;
+.term pre { font-family: var(--font-data); font-size: 20px; line-height: 1.42; padding: 20px 22px; white-space: pre;
             color: var(--on-bg); }
 .term .t-alert { color: var(--after); font-weight: 600; }
 .term .t-held { color: var(--before); }
@@ -202,11 +203,12 @@ a:hover, a:focus-visible { color: var(--on-bg); text-decoration-color: var(--aft
 .archnote { font-size: 24px; color: var(--on-bg-muted); margin-top: 6px; }
 
 /* ── slide 6: why new ────────────────────────────────────────────────── */
-.cmp { width: 1680px; border-collapse: collapse; font-size: 30px; }
+.cmp { width: 1680px; border-collapse: collapse; font-size: 29px; }
 .cmp th { text-align: left; padding: 0 24px 16px 0; }
-.cmp td { padding: 32px 24px 32px 0; border-top: 1px solid var(--bg-rule); vertical-align: top; line-height: 1.35; }
-.cmp td:first-child { font-family: var(--font-display); font-weight: 800; font-size: 44px; text-transform: uppercase;
-                      letter-spacing: .03em; width: 400px; }
+.cmp td { padding: 24px 24px 24px 0; border-top: 1px solid var(--bg-rule); vertical-align: top; line-height: 1.35; }
+.cmp td:first-child { font-family: var(--font-display); font-weight: 800; font-size: 40px; text-transform: uppercase;
+                      letter-spacing: .03em; width: 430px; }
+.cmp td:nth-child(2), .cmp th:nth-child(2) { white-space: nowrap; }
 .cmp tr.us td { border-top: 3px solid var(--after); }
 .cmp tr.us td:first-child { color: var(--after); }
 .cmp .n { font-family: var(--font-data); font-weight: 600; }
@@ -252,6 +254,7 @@ a:hover, a:focus-visible { color: var(--on-bg); text-decoration-color: var(--aft
              font-size: 34px; margin-bottom: 14px; }
 .status h3.v3 { color: var(--settled-on-bg); }
 .status h3.op { color: var(--before); }
+.status h3.iv { color: var(--on-bg-muted); margin-top: 34px; }
 
 /* ── slide 10: links ─────────────────────────────────────────────────── */
 .close { display: grid; grid-template-columns: 1fr 440px; gap: 90px; align-items: center; }
@@ -327,7 +330,7 @@ body.debug-contrast .contrast-check, body.debug-contrast .slide :is(h1, h2, h3, 
           <div class="trow"><span class="cap">From vault</span><span class="mono">5F4rPF…smE1</span></div>
           <div class="trow"><span class="cap">Release at</span><span class="mono">#105103</span></div>
           <div class="blocks"><i class="held"></i><i class="held"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="cut"></span></div>
-          <div class="blk-scale"><span>#105093</span><b>#105095</b></div>
+          <div class="blk-scale"><b>veto #105095</b></div>
           <div class="stamp"><b>VOID</b><span>veto 105095-1 · 0x2d2d…89b3</span></div>
         </div>
       </div>
@@ -370,7 +373,7 @@ body.debug-contrast .contrast-check, body.debug-contrast .slide :is(h1, h2, h3, 
     <div class="station s2">
       <div class="num">2 · Wait</div>
       <div class="who">D = 10 blocks = 60 s on V3</div>
-      <p>The watcher alerts: YOURS, or NOT YOURS with the amount and a veto line.</p>
+      <p>The watcher alerts: YOURS, or <span style="white-space:nowrap">NOT YOURS</span> with the amount and a veto line.</p>
       <code>event Proxy.Announced</code>
     </div>
     <div class="arrow">→</div>
@@ -406,16 +409,16 @@ body.debug-contrast .contrast-check, body.debug-contrast .slide :is(h1, h2, h3, 
             <div class="trow"><span class="cap">Payee</span><span class="mono">5CFCWZ…ZHJV</span></div>
             <div class="trow"><span class="cap">Release at</span><span class="mono">#105103</span></div>
             <div class="blocks"><i class="held"></i><i class="held"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span class="cut"></span></div>
-            <div class="blk-scale"><span>#105093</span><b>#105095</b></div>
+            <div class="blk-scale"><b>veto #105095</b></div>
             <div class="stamp"><b>VOID</b><span>veto 105095-1 · 0x2d2d…89b3</span></div>
           </div>
         </div>
       </div>
       <table class="ids">
-        <tr><td>105093-1</td><td><span class="who">thief</span> Proxy.announce</td><td class="ok-held">ok · held</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xc7c32f0a384f536f0607194de537809ed53984e270007c8f138be815b962f63b">0xc7c3…f63b ↗</a></td></tr>
-        <tr><td>105095-1</td><td><span class="who">cold</span> reject_announcement</td><td class="veto">ok · VETO</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xc22ce38855fc2be38628387324c971153efa7ec7c52236795d36b70ec17e9e26">0xc22c…9e26 ↗</a></td></tr>
-        <tr><td>105106-1</td><td><span class="who">thief</span> proxy_announced</td><td class="refused">Proxy.Unannounced</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x308b11bcb174fb77a8e3b3a17019ebb6db508fbede9c2d322363c3d54a7d16ea">0x308b…16ea ↗</a></td></tr>
-        <tr><td>105108-1</td><td><span class="who">thief</span> proxy.proxy, direct</td><td class="refused">Proxy.Unannounced</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xa7122e9e9031b9de19586ccbf19cf7e5364aab269e20524fe3503cd769c61959">0xa712…1959 ↗</a></td></tr>
+        <tr><td>105093-1</td><td><span class="who">thief</span> Proxy.announce</td><td class="ok-held">ok · held</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xc7c32f0a384f536f0607194de537809ed53984e270007c8f138be815b962f63b"><span class="muted">block</span> 0xc7c3…f63b ↗</a></td></tr>
+        <tr><td>105095-1</td><td><span class="who">cold</span> reject_announcement</td><td class="veto">ok · VETO</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xc22ce38855fc2be38628387324c971153efa7ec7c52236795d36b70ec17e9e26"><span class="muted">block</span> 0xc22c…9e26 ↗</a></td></tr>
+        <tr><td>105106-1</td><td><span class="who">thief</span> proxy_announced</td><td class="refused">Proxy.Unannounced</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x308b11bcb174fb77a8e3b3a17019ebb6db508fbede9c2d322363c3d54a7d16ea"><span class="muted">block</span> 0x308b…16ea ↗</a></td></tr>
+        <tr><td>105108-1</td><td><span class="who">thief</span> proxy.proxy, direct</td><td class="refused">Proxy.Unannounced</td><td><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xa7122e9e9031b9de19586ccbf19cf7e5364aab269e20524fe3503cd769c61959"><span class="muted">block</span> 0xa712…1959 ↗</a></td></tr>
       </table>
     </div>
     <div>
@@ -536,6 +539,7 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
     <tr><th class="cap">Setup</th><th class="cap">Signers per payment</th><th class="cap">A leaked hot key…</th><th class="cap">The owner acts…</th></tr>
     <tr><td>One hot key</td><td><span class="n">1</span></td><td>drains the account in one extrinsic</td><td>after the money is gone</td></tr>
     <tr><td>Two-key multisig</td><td><span class="n">2</span></td><td>cannot spend alone</td><td>on every payment</td></tr>
+    <tr><td>Delayed proxy, no watcher</td><td><span class="n">1</span>, then wait D</td><td>can only announce, but nobody is told</td><td>only if they spot the hash in time</td></tr>
     <tr class="us"><td>Airlock</td><td><span class="n">1</span>, then wait D</td><td>can only announce; the cold key vetoes</td><td>only on NOT YOURS</td></tr>
   </table>
   <aside class="speaker-notes">The new part is not a primitive, it is the product around one. The pallet already had announce and reject; what was missing is a vault layout that uses them, and a watcher that tells the owner which announcement to reject.</aside>
@@ -543,7 +547,7 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
 
 <!-- 7 · ECOSYSTEM FIT -->
 <section class="slide" data-title="Ecosystem fit">
-  <h2>The Proxy pallet is the product.</h2>
+  <h2>Portaldot's Proxy pallet enforces it.</h2>
   <div class="eco mid">
     <table class="calls">
       <tr><td>Proxy.create_pure</td><td>the keyless vault</td></tr>
@@ -560,7 +564,7 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
       <p><span class="plan-inline">Plan, not built:</span> the hold-ticket flow inside Portaldot Wallet; <span class="mono">Revive.call</span> as a held call.</p>
     </div>
   </div>
-  <aside class="speaker-notes">Remove Portaldot and the product disappears: the Proxy pallet's calls and two storage maps are all of it. That also means the trust model is the chain's. Our watcher and registry can be wrong or down; the delay and the veto are still enforced by consensus.</aside>
+  <aside class="speaker-notes">Remove Portaldot and the enforcement disappears: the Proxy pallet's calls and two storage maps are the core. That also means the trust model is the chain's. Our watcher and registry can be wrong or down; the delay and the veto are still enforced by consensus.</aside>
 </section>
 
 <!-- 8 · USERS + MODEL -->
@@ -573,8 +577,8 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
   </div>
   <div class="plan">
     <div class="tag">Plan, not built</div>
-    <p><b>Free</b>the open-source CLI and watcher.</p>
-    <p><b>Paid</b>a hosted watcher with phone alerts.</p>
+    <p><b>First users</b>grantees: new grants vested straight into the grantee's vault.</p>
+    <p><b>Paid</b>a hosted watcher with phone alerts; the CLI and watcher stay free.</p>
     <p><b>Wallet</b>the hold-ticket flow is small enough for Portaldot Wallet to adopt.</p>
   </div></div>
   <aside class="speaker-notes">The first users are people like the grantee we designed for: POT on a hot key, no second signer. The business side is a plan only: the watcher stays free and open source, and the paid tier is hosting it with phone alerts. Nothing on the plan line is built yet.</aside>
@@ -592,7 +596,8 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
         <tr><td class="n">25 · 8</td><td>seed extrinsics · call types</td><td class="ref">seed-v3</td></tr>
         <tr><td class="n">44 / 44</td><td>V3 proof rows re-fetched by id</td><td class="ref">PROOF.md</td></tr>
       </table>
-      <table class="ledger interim" style="margin-top:26px">
+      <h3 class="iv">Not on V3</h3>
+      <table class="ledger interim">
         <tr><td class="n">20 / 20</td><td>bench drains vetoed, 0 planck moved</td><td class="ref">interim, not V3</td></tr>
         <tr><td class="n">350</td><td>offline tests pass · 164 commits</td><td class="ref">775c284</td></tr>
       </table>
@@ -621,7 +626,7 @@ airlock veto --vault 5F4rPF…smE1 --delegate 5Cwitu…ZULN
         <tr><td class="cap">Proof log</td><td><a class="mono" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/PROOF.md">docs/PROOF.md</a> <span class="muted">· every row: id, block, tx</span></td></tr>
         <tr><td class="cap">Demo video</td><td><a class="mono" href="https://youtu.be/3kbXcX7UWwU">youtu.be/3kbXcX7UWwU</a> <span class="muted">· V3 run, ids in evidence/checkin-video-run-v3-2026-10-20.md</span></td></tr>
         <tr><td class="cap">Page</td><td><a class="mono" href="https://airlock.edycu.dev">airlock.edycu.dev</a></td></tr>
-        <tr><td class="cap">Vault on V3</td><td><a class="mono" href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x76700d7f2bf0d6b17ff6e0b46e74ca397e6fe233403919d4d0490266f25334ef">5F4rPF…smE1</a> <span class="muted">· created 105053-1</span></td></tr>
+        <tr><td class="cap">Vault on V3</td><td><a class="mono" href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x76700d7f2bf0d6b17ff6e0b46e74ca397e6fe233403919d4d0490266f25334ef">5F4rPF…smE1</a> <span class="muted">· created 105053-1 (link opens its block)</span></td></tr>
       </table>
       <p class="ai"><b>AI assistance.</b> Drafted with Claude (Claude Code) and reviewed by the author: most of the code, the tests, the README and this deck. The author's own: the choice of the Proxy-pallet mechanism, the vault layout and the on-chain design decisions (edycu, solo).</p>
     </div>

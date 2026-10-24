@@ -64,7 +64,7 @@ V3 each row links to the block on the V3 testnet's public explorer (`node-consol
 
 ![Airlock architecture: a thief announces a spend on the Portaldot V3 Proxy pallet, the watcher alerts NOT YOURS, the owner's cold key vetoes, and the execute fails with Proxy.Unannounced](docs/architecture.png)
 
-*Core flow, numbered 1–5, as it ran on the Portaldot V3 testnet on 2026-10-24: announce #166811, veto #166816, execute refused at #166825 ([run record](evidence/final-video-run-v3-2026-10-24.md)).*
+*Core flow, numbered 1–5, as it ran on the Portaldot V3 testnet on 2026-10-24 WIB: announce #166811, veto #166816, execute refused at #166825 ([run record](evidence/final-video-run-v3-2026-10-24.md)).*
 
 <details>
 <summary>Diagram as text (Mermaid)</summary>

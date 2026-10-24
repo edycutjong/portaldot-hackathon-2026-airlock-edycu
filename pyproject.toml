@@ -27,3 +27,6 @@ include = ["airlock*"]
 testpaths = ["tests"]
 # substrate-interface pulls in no async code; keep a globally installed pytest-asyncio from loading
 addopts = "-p no:asyncio"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

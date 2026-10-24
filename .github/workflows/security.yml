@@ -29,4 +29,5 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install pip-audit
-      - run: pip-audit .
+      # ecdsa (transitive via substrate-interface) has no fixed release for PYSEC-2026-1325; re-check when one ships
+      - run: pip-audit . --ignore-vuln PYSEC-2026-1325

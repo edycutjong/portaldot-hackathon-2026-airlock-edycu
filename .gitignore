@@ -29,3 +29,12 @@ brag-output/
 
 # local Vercel link (project/org ids)
 .vercel/
+
+# python tooling
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build-*/
+.python-version
+*.whl

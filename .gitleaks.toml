@@ -1,0 +1,8 @@
+title = "airlock gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "public demo material: dev keys (//Alice etc.) are derivation paths, not secrets; on-chain ids and hashes are public"
+paths = ['''^evidence/''', '''^fixtures/''', '''^docs/PROOF\.md$''']

@@ -21,7 +21,25 @@ blocks before that deadline. The watcher printed the alert before `thief.py` ret
 finality before it prints its receipt).
 
 Vault `airlock status` before (head #166806) and after (head #166835): at risk 11.4200 tPOT, free 11.5200 tPOT, reserved
-1.9800 tPOT, no pending announcements, unchanged.
+1.9800 tPOT, no pending announcements, unchanged. The two outputs as recorded (terminal line wrapping removed):
+
+```
+$ airlock status --vault 5F4rPFqS6PQEKUHacHtR5mLrDMVZ8RjCfJpYmfiktERhsmE1
+chain: Portaldot V3 testnet · portaldot-v3/3002 · genesis 0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd · wss://test-node-v3.portaldot.dev
+vault 5F4rPFqS6PQEKUHacHtR5mLrDMVZ8RjCfJpYmfiktERhsmE1 on Portaldot V3 testnet · head #166806
+  at risk 11.4200 tPOT (free 11.5200 tPOT, reserved 1.9800 tPOT, locked 0.0000 tPOT)
+  delegate 5Cwitu8fsmPcnpashjvrCsAvTVXp67oQLAKq8BnchwpLZULN Any delay 10
+  delegate 5EnJxVLrjdznoeEqGyz8Hf1T5MwK1ZTGTBnVnvsuYWu1UjHw Any delay 0  (cold: veto/panic)
+  no pending announcements
+
+$ airlock status --vault 5F4rPFqS6PQEKUHacHtR5mLrDMVZ8RjCfJpYmfiktERhsmE1
+chain: Portaldot V3 testnet · portaldot-v3/3002 · genesis 0xd4f9acbcf7f52388d8b095abe3c198d19fc510e0343e643e87cfbccb155283bd · wss://test-node-v3.portaldot.dev
+vault 5F4rPFqS6PQEKUHacHtR5mLrDMVZ8RjCfJpYmfiktERhsmE1 on Portaldot V3 testnet · head #166835
+  at risk 11.4200 tPOT (free 11.5200 tPOT, reserved 1.9800 tPOT, locked 0.0000 tPOT)
+  delegate 5Cwitu8fsmPcnpashjvrCsAvTVXp67oQLAKq8BnchwpLZULN Any delay 10
+  delegate 5EnJxVLrjdznoeEqGyz8Hf1T5MwK1ZTGTBnVnvsuYWu1UjHw Any delay 0  (cold: veto/panic)
+  no pending announcements
+```
 
 The veto's block on the V3 testnet's public explorer (signed by the cold key `5EnJxVLrjdznoeEqGyz8Hf1T5MwK1ZTGTBnVnvsuYWu1UjHw`,
 call `proxy.rejectAnnouncement`, callHash `0x1d19e158…eb40b59`):

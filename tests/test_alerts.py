@@ -1,5 +1,6 @@
 """The alert text and its delivery: what the owner reads, and the Telegram sender against a local mock Bot API."""
 
+import re
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -67,7 +68,8 @@ def test_v3_chain_is_named_with_its_profile_id():
 def test_not_yours_alert_says_the_call_is_opaque_and_names_the_node_console_on_v3():
     v3 = format_text(alert(profile_id="v3", profile_label="Portaldot V3 testnet", is_interim=False))
     assert "the call itself is not on chain" in v3 and "proxies as well as move funds" in v3
-    assert "https://node-console.portaldot.dev/" in v3 and "polkadot.js" not in v3
+    assert re.search(r"https://node-console\.portaldot\.dev/", v3)
+    assert "polkadot.js" not in v3
     assert "polkadot.js Apps" in format_text(alert())  # the interim chains have no public console
 
 

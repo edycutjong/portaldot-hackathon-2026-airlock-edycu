@@ -204,7 +204,7 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
 
 ## Demo
 
-- **Video:** check-in demo: https://youtu.be/3kbXcX7UWwU
+- **Video:** demo: https://youtu.be/Es1387HDSTw
 - **Live demo:** no hosted UI; the CLI and watcher run against the public V3 endpoint (see Installation).
 - **On V3** (2026-10-19, profile `v3`, D = 10 blocks = 60 s, independent cold and hot keys from `file:` specs):
   `airlock create` made the core vault (`evidence/create-v3-2026-10-19T160150Z.jsonl`); end to end at commit `b4d379d`

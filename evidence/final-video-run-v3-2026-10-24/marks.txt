@@ -1,0 +1,28 @@
+1792797840.151 start
+1792797840.308 owner_status_cmd
+1792797848.159 owner_status_done
+1792797851.354 watcher_cmd
+1792797860.593 watcher_up
+1792797863.251 thief_cmd
+1792797876.739 alert_written
+1792797901.931 thief_announce_done
+1792797909.105 alert_read
+release=166821
+1792797910.029 veto_cmd
+1792797931.519 veto_done
+veto_id=166816-1
+announce_id=166811-1
+1792797935.771 wait_start
+1792797956.639 wait_end
+head_at_wait_end=166822
+1792797957.212 exec_cmd
+1792797986.419 exec_done
+execute_id=166825-1
+1792797991.008 direct_cmd
+1792798022.467 direct_done
+direct_id=166831-1
+1792798027.051 status2_cmd
+1792798034.374 status2_done
+1792798038.966 refetch_cmd
+1792798047.721 refetch_done
+1792798052.913 end

@@ -44,3 +44,9 @@ vault 5F4rPFqS6PQEKUHacHtR5mLrDMVZ8RjCfJpYmfiktERhsmE1 on Portaldot V3 testnet �
 The veto's block on the V3 testnet's public explorer (signed by the cold key `5EnJxVLrjdznoeEqGyz8Hf1T5MwK1ZTGTBnVnvsuYWu1UjHw`,
 call `proxy.rejectAnnouncement`, callHash `0x1d19e158…eb40b59`):
 https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xa8f95309e37549e56809b7af7d53818eb17e66be6044b4dfaed91c129c6468eb
+
+Raw recordings of this run are in [final-video-run-v3-2026-10-24/](final-video-run-v3-2026-10-24/): the three asciinema casts
+(`owner.cast`, `thief.cast`, `watcher.cast`, asciicast v3, true timestamps) and `marks.txt`, the recording driver's
+wall-clock marks (unix time and step; `start` = 1792797840.151 = 2026-10-23 23:24:00 UTC). The video's run clock
+(`run T+mm:ss.s`) is the time since `start` on that clock, and every "sped up ×N · real time S s" label states the length
+of the recorded segment it covers on the same clock. The casts line up with the marks to within 40 ms.

@@ -521,7 +521,9 @@ def test_retries_respect_the_time_budget(tmp_path):
     fake.events[101] = [announced(VAULT, HOT, H2)]
     fake.head = 101
     w.catch_up(101, from_block=100)  # both alerts attempted once, both failed
-    attempts = lambda: {r["announced_block"]: r["attempts"] for r in store.announcements()}
+    def attempts():
+        return {r["announced_block"]: r["attempts"] for r in store.announcements()}
+
     assert attempts() == {100: 1, 101: 1}
     w._attempted = set()  # a new pass
     assert w.retry_unsent(101, budget_s=-1) == 0  # budget already spent: exactly one retry started (and failed)

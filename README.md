@@ -4,6 +4,7 @@
 
 **A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.**
 
+[![CI](https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/actions/workflows/ci.yml/badge.svg)](https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/actions/workflows/ci.yml)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![Tests: 350 passing](https://img.shields.io/badge/tests-350%20passing-brightgreen)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)
@@ -254,6 +255,17 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
   funder account (`scripts/fund.py`, `evidence/fund-v3-2026-10-19T160122Z.json`). On the interim chains, dev keys: the demo accounts `//AirlockDemo//cold`, `//AirlockDemo//hot`,
   … ([fixtures/accounts.json](fixtures/accounts.json)) funded by `//Alice` (`//Dave` on `interim-1002`); the spike and
   watcher runs use `//Alice`–`//Ferdie`.
+
+## Development
+
+```bash
+pip install -e ".[dev]" ruff
+ruff check .
+python -m pytest -q   # offline suite; live/V3 tests are opt-in and skipped by default
+```
+
+CI (`.github/workflows/`) runs lint, the offline tests on Python 3.10-3.12, and a package build; CodeQL, gitleaks and
+pip-audit run separately. None of it needs a key or writes to a live chain.
 
 ## Roadmap
 

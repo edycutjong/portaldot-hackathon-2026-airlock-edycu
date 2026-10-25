@@ -27,6 +27,11 @@
 
 ---
 
+<div align="center">
+  <img src="docs/broll.gif" alt="Airlock b-roll from the demo video: the watcher flags NOT YOURS, the owner pastes the veto, the cold key signs it, and the thief's execute fails with Proxy.Unannounced on the Portaldot V3 testnet" width="100%">
+  <br/><sub>B-roll: the veto on the Portaldot V3 testnet (2× speed) · <a href="https://youtu.be/Es1387HDSTw">full demo video</a></sub>
+</div>
+
 A POT holder who keeps funds on one hot key loses them in one block when that seed leaks. Airlock is a keyless Portaldot
 vault: the hot key can only announce a spend and wait out a delay, and the cold key can veto it first. On the Portaldot
 V3 testnet that flow has already refused a 12.92 tPOT sweep (`Proxy.Unannounced`, vault total unchanged); see

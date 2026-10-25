@@ -86,7 +86,7 @@ code, .mono { font-family: var(--f-data); }
 .top nav a:hover { color: var(--on-bg); }
 
 /* ── buttons ── */
-.btn { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 12px 18px; border: 1.5px solid var(--on-bg);
+.btn { display: inline-flex; align-items: center; gap: 9px; min-height: 48px; padding: 12px 16px; border: 1.5px solid var(--on-bg);
   font: 600 15px/1.2 var(--f-body); text-decoration: none; color: var(--on-bg); background: transparent; cursor: pointer;
   transition: transform .25s var(--ease-out), background-color .2s, color .2s, box-shadow .25s var(--ease-out); }
 .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 22px -12px rgba(0,0,0,.9); text-decoration: none; }
@@ -102,29 +102,31 @@ code, .mono { font-family: var(--f-data); }
 .hero { position: relative; isolation: isolate; overflow: clip; padding-bottom: 96px; }
 .hero::before { content: ""; position: absolute; inset: 0; z-index: -2; pointer-events: none;
   background:
-    radial-gradient(52rem 34rem at 76% 38%, rgba(255,226,170,.105), transparent 64%),
+    radial-gradient(34rem 26rem at 74% 46%, rgba(255,226,170,.17), transparent 70%),
+    radial-gradient(60rem 40rem at 76% 40%, rgba(255,226,170,.07), transparent 66%),
     radial-gradient(40rem 26rem at 8% 0%, rgba(180,155,255,.06), transparent 70%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .62 0 0 0 0 .56 0 0 0 0 .72 0 0 0 .085 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 .ghosts { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
 .gst { position: absolute; border: 4px double currentColor; padding: 4px 14px 2px; font: 400 54px/1 var(--f-display); letter-spacing: .1em; opacity: .05; }
 .gst.g1 { color: var(--void-on-bg); left: 47%; top: 6%; transform: rotate(-9deg); }
-.gst.g2 { color: var(--held); right: -2%; bottom: 10%; transform: rotate(7deg); font-size: 72px; }
-.gst.g3 { color: var(--on-bg); left: -3%; bottom: 3%; transform: rotate(4deg); font-size: 46px; }
-.hero-grid { display: grid; grid-template-columns: minmax(0, 1.13fr) minmax(0, .87fr); gap: 56px; align-items: center; padding-top: 56px; }
+.gst.g2 { color: var(--held); right: 3%; bottom: 2%; transform: rotate(7deg); font-size: 60px; }
+.gst.g3 { color: var(--on-bg); left: 2%; bottom: 3%; transform: rotate(4deg); font-size: 46px; }
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1.06fr) minmax(0, .96fr); gap: 48px; align-items: center; padding-top: 56px; }
 .label { font: 400 13px/1.4 var(--f-data); letter-spacing: .18em; color: var(--held); text-transform: uppercase; }
 .hero .label { margin-bottom: 24px; }
 .head .label { margin-bottom: 18px; }
-h1 { font: 400 clamp(54px, 6.9vw, 6rem)/.93 var(--f-display); text-transform: uppercase; letter-spacing: .004em; }
+h1 { font: 400 clamp(54px, 6.4vw, 5.3rem)/.93 var(--f-display); text-transform: uppercase; letter-spacing: .004em; }
 h1 em { font-style: normal; color: var(--void-on-bg); white-space: nowrap; }
 .sub { max-width: 34em; margin: 30px 0 34px; color: #D9D3CB; font-size: 19px; line-height: 1.6; }
 .sub b { color: var(--on-bg); font-weight: 700; }
 .sub .n { font: 400 1.08em/1 var(--f-data); color: var(--on-bg); }
 .ctas { display: flex; flex-wrap: wrap; gap: 10px; }
-.strip { margin-top: 24px; font: 400 14px/1.6 var(--f-data); color: var(--on-bg-muted); }
+.strip { margin-top: 24px; font: 400 15px/1.6 var(--f-data); color: #C9C2D0; }
 .strip span { white-space: nowrap; }
 
 /* the hold ticket (signature) */
-.desk { position: relative; margin: 0; }
+.desk { position: relative; margin: 0; max-width: 600px; justify-self: end; width: 100%; }
+.pile { position: relative; }
 .stack { position: absolute; inset: 0; pointer-events: none; }
 .stack i { position: absolute; inset: 6% -2% -4% 4%; background: #2C2433; transform: rotate(4.5deg); box-shadow: 0 24px 50px -24px #000; }
 .stack i + i { inset: -3% 6% 8% -3%; background: #241E2A; transform: rotate(-7deg); }
@@ -133,7 +135,7 @@ h1 em { font-style: normal; color: var(--void-on-bg); white-space: nowrap; }
 .ticket::before, .ticket::after { content: ""; position: absolute; left: 112px; width: 24px; height: 24px; border-radius: 50%; background: var(--bg); }
 .ticket::before { top: -12px; } .ticket::after { bottom: -12px; }
 .stub { padding: 20px 14px 18px 18px; border-right: 2px dashed var(--perf); display: flex; flex-direction: column; gap: 6px; }
-.cap { font: 400 12px/1.3 var(--f-display); letter-spacing: .15em; color: var(--muted); text-transform: uppercase; }
+.cap { font: 400 13px/1.3 var(--f-display); letter-spacing: .15em; color: var(--muted); text-transform: uppercase; }
 .d { font: 400 15px/1.25 var(--f-data); }
 .stub .d { margin-bottom: 8px; }
 .left { font: 400 104px/.86 var(--f-display); color: var(--held-on-paper); margin: 2px 0 4px; font-variant-numeric: tabular-nums; }
@@ -141,10 +143,10 @@ h1 em { font-style: normal; color: var(--void-on-bg); white-space: nowrap; }
 .amount { font: 400 58px/1 var(--f-display); letter-spacing: .01em; margin-top: 6px; }
 .amount small { font: 400 20px var(--f-data); margin-left: 8px; letter-spacing: 0; }
 .rows { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; margin: 14px 0 0; font: 400 15px/1.35 var(--f-data); }
-.rows dt { font: 400 12px/1.7 var(--f-display); letter-spacing: .14em; color: var(--muted); text-transform: uppercase; }
+.rows dt { font: 400 13px/1.6 var(--f-display); letter-spacing: .14em; color: var(--muted); text-transform: uppercase; }
 .rows dd { margin: 0; overflow-wrap: anywhere; }
 .meter { position: relative; margin: 22px 0 6px; }
-.mcap { display: block; margin-bottom: 18px; }
+.mcap { display: block; max-width: 46%; margin-bottom: 18px; }
 .cells { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 5px; }
 .cells i { height: 26px; border: 2px solid var(--perf); transition: background-color .18s, border-color .18s; }
 .cells i.on { background: var(--held); border-color: var(--held); }
@@ -153,7 +155,7 @@ h1 em { font-style: normal; color: var(--void-on-bg); white-space: nowrap; }
 .cut::before, .cut::after { content: ""; position: absolute; left: 50%; margin-left: -7px; border: 7px solid transparent; }
 .cut::before { top: -10px; border-top: 10px solid var(--void); border-bottom: 0; }
 .cut::after { bottom: -10px; border-bottom: 10px solid var(--void); border-top: 0; }
-.cut > span { position: absolute; left: 12px; top: -6px; white-space: nowrap; font: 400 13px/1 var(--f-data); color: var(--void); }
+.cut > span { position: absolute; left: 10px; top: -12px; white-space: nowrap; font: 400 13px/1.15 var(--f-data); color: var(--void); }
 .meter-cap { display: flex; justify-content: space-between; gap: 8px; font: 400 12px/1.3 var(--f-data); color: var(--muted); }
 .then { transition: opacity .4s; }
 .stamp { position: absolute; right: 18px; bottom: 16px; padding: 8px 16px 7px; border: 5px double var(--void); color: var(--void); text-align: center;
@@ -162,8 +164,8 @@ h1 em { font-style: normal; color: var(--void-on-bg); white-space: nowrap; }
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='.5' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.6 1.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"); }
 .stamp b { display: block; font: 400 66px/.92 var(--f-display); letter-spacing: .08em; }
 .stamp span { display: block; font: 400 13px/1.35 var(--f-data); }
-.desk figcaption { margin-top: 34px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; font: 400 14px/1.5 var(--f-data);
-  color: var(--on-bg-muted); transform: rotate(-2.2deg); }
+.desk figcaption { position: relative; margin-top: 56px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px;
+  font: 400 15px/1.5 var(--f-data); color: #C9C2D0; }
 .desk figcaption a { color: var(--on-bg); }
 .replay { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 14px; background: transparent; border: 1px solid var(--rule);
   color: var(--on-bg); font: 600 14px/1 var(--f-body); cursor: pointer; transition: border-color .2s, background-color .2s; }
@@ -200,10 +202,10 @@ h1 em { font-style: normal; color: var(--void-on-bg); white-space: nowrap; }
 .tally .v small { font: 400 20px var(--f-data); color: var(--on-bg-muted); margin-left: 6px; }
 .tally .v.hot { color: var(--void-on-bg); }
 .tally p { font-size: 15px; line-height: 1.5; color: #D9D3CB; max-width: 26ch; }
-.tally a.src { display: inline-block; margin-top: 12px; font: 400 13px/1.4 var(--f-data); color: var(--on-bg-muted); overflow-wrap: anywhere; }
+.tally a.src { display: inline-block; margin-top: 12px; font: 400 14px/1.4 var(--f-data); color: #C9C2D0; overflow-wrap: anywhere; }
 
 /* ── section shells ── */
-section.band { padding: 120px 0; position: relative; }
+section.band { padding: 104px 0; position: relative; }
 .head { max-width: 760px; margin-bottom: 52px; }
 h2 { font: 400 clamp(40px, 5vw, 68px)/.98 var(--f-display); text-transform: uppercase; letter-spacing: .005em; }
 h2 em { font-style: normal; color: var(--void-on-bg); }
@@ -219,14 +221,14 @@ h2 em { font-style: normal; color: var(--void-on-bg); }
   background: repeating-linear-gradient(90deg, var(--rule) 0 1px, transparent 1px calc(5% - .05%)); }
 .ev { position: absolute; left: calc(var(--x) * 1%); top: 50%; width: 0; }
 .ev .pin { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; background: var(--bg); border: 2px solid var(--on-bg-muted); transform: rotate(45deg); }
-.ev .lbl { position: absolute; left: -10px; width: 190px; font: 400 14px/1.35 var(--f-data); color: var(--on-bg-muted); }
+.ev .lbl { position: absolute; left: 16px; width: 210px; font: 400 15px/1.35 var(--f-data); color: #C9C2D0; }
 .ev .lbl b { display: block; font: 400 21px/1 var(--f-display); letter-spacing: .04em; color: var(--on-bg); margin-bottom: 4px; }
 .ev.up .lbl { bottom: 22px; } .ev.dn .lbl { top: 22px; }
-.ev.r .lbl { left: auto; right: -10px; text-align: right; }
+.ev.r .lbl { left: auto; right: 16px; text-align: right; }
 .ev.a .pin { border-color: var(--held); background: var(--held); }
 .ev.v .pin { border-color: var(--void-on-bg); background: var(--void-on-bg); }
 .ev.v .lbl b { color: var(--void-on-bg); }
-.ev.v::before { content: ""; position: absolute; left: -1.5px; top: -46px; height: 92px; width: 3px; background: var(--void-on-bg); }
+.ev.v::before { content: ""; position: absolute; left: -1.5px; top: -52px; height: 52px; width: 3px; background: var(--void-on-bg); }
 .ev.f .pin { border-color: var(--on-bg-muted); }
 .ev.dl .pin { border-style: dashed; border-color: var(--held); }
 .ev a { color: inherit; }
@@ -239,7 +241,7 @@ h2 em { font-style: normal; color: var(--void-on-bg); }
 .term header span { margin-left: auto; font: 400 12px/1 var(--f-data); color: var(--on-bg-muted); }
 .term header i { width: 9px; height: 9px; background: var(--held); transform: rotate(45deg); }
 .term.owner header i { background: var(--void-on-bg); }
-.term pre { margin: 0; padding: 18px 18px 22px; font: 400 14px/1.6 var(--f-data); color: #E4DED6; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 420px; }
+.term pre { margin: 0; padding: 18px 18px 22px; font: 400 15px/1.6 var(--f-data); color: #E4DED6; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 420px; }
 .term .hi { color: var(--void-on-bg); }
 .term .am { color: var(--held); }
 .term .cmd { color: var(--on-bg); }
@@ -250,7 +252,7 @@ h2 em { font-style: normal; color: var(--void-on-bg); }
 .term.typing .line.wait { visibility: hidden; }
 .term .caret { display: inline-block; width: .6em; height: 1.05em; vertical-align: -.18em; background: var(--void-on-bg); animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
-.pair-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; margin-top: 16px; font: 400 13px/1.5 var(--f-data); color: var(--on-bg-muted); }
+.pair-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; margin-top: 16px; font: 400 14px/1.5 var(--f-data); color: #C9C2D0; }
 .pair-foot .replay { font-size: 13px; }
 
 .film { margin-top: 72px; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 40px; align-items: center; }
@@ -258,7 +260,7 @@ h2 em { font-style: normal; color: var(--void-on-bg); }
 .frame img, .frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; object-fit: cover; display: block; }
 .frame img { transition: transform .6s var(--ease-out), filter .4s; filter: saturate(.9) brightness(.82); }
 .frame:hover img { transform: scale(1.02); filter: saturate(1) brightness(.92); }
-.frame .playbtn { position: absolute; left: 24px; bottom: 24px; display: inline-flex; align-items: center; gap: 12px; padding: 14px 20px 14px 16px;
+.frame .playbtn { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: inline-flex; align-items: center; gap: 12px; padding: 14px 20px 14px 16px;
   background: var(--paper); color: var(--ink); font: 600 16px/1 var(--f-body); box-shadow: 0 14px 30px -12px #000; transition: transform .25s var(--ease-out); }
 .frame:hover .playbtn { transform: translateY(-2px); }
 .playbtn svg { width: 22px; height: 22px; fill: var(--void); stroke: none; }
@@ -274,20 +276,22 @@ h2 em { font-style: normal; color: var(--void-on-bg); }
 .cell { position: relative; background: var(--bg-raised); border: 1px solid var(--rule); padding: 26px 26px 24px; min-width: 0;
   transition: border-color .25s, transform .3s var(--ease-out); }
 .cell:hover { border-color: #5A4E64; transform: translateY(-2px); }
-.cell h3 { font: 400 25px/1.05 var(--f-display); text-transform: uppercase; letter-spacing: .03em; margin: 14px 0 10px; }
+.cell h3 { font: 400 25px/1.05 var(--f-display); text-transform: uppercase; letter-spacing: .03em; margin: 18px 0 10px; }
 .cell p { color: #D9D3CB; font-size: 16px; line-height: 1.55; }
-.cell .glyph { width: 44px; height: 44px; color: var(--held); }
-.cell .glyph .ico { width: 44px; height: 44px; stroke-width: 1.6; }
+.tline { margin: 0 0 4px; padding: 10px 12px 11px; background: var(--bg-deep); border: 1px solid var(--rule); font: 400 14px/1.45 var(--f-data); color: #E4DED6; overflow-wrap: anywhere; }
+.tline small { display: block; margin-bottom: 4px; font: 400 12px/1.3 var(--f-data); letter-spacing: .06em; color: var(--on-bg-muted); }
+.tline .hi { color: var(--void-on-bg); }
 .chip { display: inline-block; margin-top: 16px; padding: 5px 10px 4px; border: 1px solid var(--rule); background: var(--bg-deep);
   font: 400 13px/1.3 var(--f-data); color: var(--void-on-bg); overflow-wrap: anywhere; }
 .cell.arch { grid-column: span 4; grid-row: span 2; margin: 0; padding: 14px; display: flex; flex-direction: column; }
 .cell.arch a.img { display: block; flex: 1; background: #120f10; }
 .cell.arch img { display: block; width: 100%; height: auto; }
-.cell.arch .capline { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 18px; padding: 14px 6px 4px; font: 400 13px/1.45 var(--f-data); color: var(--on-bg-muted); }
+.cell.arch .capline { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 18px; padding: 14px 6px 4px; font: 400 14px/1.45 var(--f-data); color: #C9C2D0; }
 .cell.c2 { grid-column: span 2; }
 .cell.c4 { grid-column: span 4; }
 .cell.wide { grid-column: span 6; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 40px; align-items: center; }
 .cell.wide .tags { display: flex; gap: 22px; align-items: center; }
+.cell.wide h3 { margin-top: 0; }
 .tagstamp { white-space: nowrap; font: 400 30px/1 var(--f-display); letter-spacing: .08em; padding: 8px 14px 6px; border: 4px double currentColor; }
 .tagstamp.y { color: var(--held); transform: rotate(-3deg); }
 .tagstamp.n { color: var(--void-on-bg); transform: rotate(4deg); }
@@ -303,7 +307,7 @@ h2 em { font-style: normal; color: var(--void-on-bg); }
 .memo { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--ink); max-width: 1000px; }
 .memo li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px 22px; padding: 30px 0 28px; border-bottom: 1px dashed #B9AF9E; }
 .memo .no { font: 400 40px/1 var(--f-display); color: var(--void); }
-.memo q { display: block; font: 400 clamp(21px, 2.1vw, 27px)/1.45 var(--f-data); quotes: "\201C" "\201D"; max-width: 58ch; }
+.memo q { display: block; font: 500 clamp(22px, 2.2vw, 29px)/1.4 var(--f-body); letter-spacing: -.005em; quotes: "\201C" "\201D"; max-width: 46ch; }
 .memo cite { display: block; margin-top: 10px; font: 600 13px/1.4 var(--f-body); letter-spacing: .12em; text-transform: uppercase; font-style: normal; color: var(--muted); }
 .memo cite a { color: var(--ink); }
 .holdstamp { position: absolute; right: 40px; top: 6px; color: var(--held-on-paper); border: 5px double currentColor; padding: 8px 16px 6px;
@@ -348,8 +352,11 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
 
 /* ── responsive ── */
 @media (max-width: 1080px) {
-  .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 72px; }
-  .desk { max-width: 600px; justify-self: center; width: 100%; }
+  .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .hero-copy { display: contents; }   /* phones and tablets: the ticket sits right under the headline, in the first view */
+  .hero .label { order: 1; } .hero h1 { order: 2; } .hero .desk { order: 3; } .hero .sub { order: 4; } .hero .ctas { order: 5; } .hero .strip { order: 6; }
+  .desk { max-width: 600px; justify-self: center; width: 100%; margin: 40px 0 10px; }
+  .desk figcaption { margin-top: 40px; }
   .tally ol { grid-template-columns: 1fr 1fr; }
   .tally li { border-bottom: 1px dashed var(--rule); padding-left: 0; }
   .tally li:nth-child(2n) { border-right: 0; padding-left: 26px; }
@@ -394,7 +401,6 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
   .stamp { right: 8px; bottom: 14px; padding: 6px 10px 5px; }
   .stamp b { font-size: 48px; }
   .stamp span { font-size: 11px; }
-  .desk figcaption { transform: rotate(-1.2deg); }
   .ticket.stamped { animation: none; }
   .term pre { font-size: 13px; min-height: 0; }
   .memo li { grid-template-columns: minmax(0, 1fr); }
@@ -404,7 +410,7 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
   .cell.wide .tags { gap: 14px; flex-wrap: wrap; }
   .cmd-box { flex-direction: column; }
   .copy { border-left: 0; border-top: 1px solid var(--rule); padding: 14px 18px; justify-content: center; }
-  .frame .playbtn { left: 12px; bottom: 12px; padding: 10px 14px 10px 12px; font-size: 14px; }
+  .frame .playbtn { padding: 10px 14px 10px 12px; font-size: 14px; }
 }
 @media (max-height: 820px) and (min-width: 1081px) {
   .hero-grid { padding-top: 28px; }
@@ -434,11 +440,6 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
   <symbol id="i-replay" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h11v11H9zM5 15H4V4h11v1"/></symbol>
-  <symbol id="i-vault" viewBox="0 0 48 48"><path d="M7 9h34v30H7zM7 39v4M41 39v4M15 17h18v14H15z"/><path d="M19 24h10" stroke-dasharray="2 3"/></symbol>
-  <symbol id="i-glass" viewBox="0 0 48 48"><path d="M13 6h22M13 42h22M15 6c0 10 9 12 9 18s-9 8-9 18M33 6c0 10-9 12-9 18s9 8 9 18"/><path d="M19 38h10l-5-5z"/></symbol>
-  <symbol id="i-stamp" viewBox="0 0 48 48"><path d="M20 6h8v12h-8zM16 18h16l3 9H13zM9 27h30v6H9zM9 40h30"/></symbol>
-  <symbol id="i-lamp" viewBox="0 0 48 48"><path d="M10 42h22M21 42V28l12-12M33 16l-7-7 11-3 3 11zM36 21l5 5M41 17h4"/></symbol>
-  <symbol id="i-tag" viewBox="0 0 48 48"><path d="M8 8h18l16 16-18 18L8 26z"/><path d="M15 15h2v2h-2z"/></symbol>
 </svg>
 
 <header class="top">
@@ -462,7 +463,7 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
       <h1 id="h1" class="rise">The hot key<br> that has to<br> <em>ask first.</em></h1>
       <p class="sub rise">Your hot key's seed leaks. Under Airlock it can only announce the sweep and wait <b class="n">10&nbsp;blocks</b>.
         On the Portaldot V3 testnet the cold key vetoed it at block <b class="n">#166816</b>, <b>4 blocks</b> before the deadline,
-        and <b class="n">11.4200&nbsp;tPOT</b> never moved.</p>
+        and <b class="n">11.4200&nbsp;tPOT</b> did not move.</p>
       <div class="ctas rise">
         <a class="btn solid" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu"><svg class="ico" aria-hidden="true"><use href="#i-gh"/></svg>View on GitHub</a>
         <a class="btn ghost" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/pitch-deck.pdf"><svg class="ico" aria-hidden="true"><use href="#i-deck"/></svg>Pitch deck</a>
@@ -472,6 +473,7 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
     </div>
 
     <figure class="desk" aria-labelledby="ticket-cap">
+      <div class="pile">
       <div class="stack" aria-hidden="true"><i></i><i></i></div>
       <div class="ticket" id="ticket" role="img" aria-label="Hold ticket: the thief announced a sweep of 11.4200 tPOT from vault 5F4rPFqS…hsmE1 at block #166811. The cold key vetoed it at block #166816 with 4 blocks left before the veto deadline #166820; the thief's execute in 166825-1 failed with Proxy.Unannounced.">
         <div class="stub" aria-hidden="true">
@@ -490,12 +492,13 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
           <div class="meter">
             <span class="cap mcap">Delay · 10 blocks</span>
             <div class="cells" data-cells><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i class="ex"></i></div>
-            <div class="cut"><span><span class="lg">cold key veto · </span>#166816</span></div>
+            <div class="cut"><span><span class="lg">cold key veto<br></span>#166816</span></div>
           </div>
           <div class="meter-cap"><span>#166812</span><span>#166821 executable</span></div>
           <dl class="rows then"><dt>Veto by</dt><dd>#166820</dd><dt>Then</dt><dd>166825-1 · Proxy.Unannounced</dd></dl>
           <div class="stamp"><b>VOID</b><span>COLD KEY · #166816</span><span>0x3b57e68d…bc63f04</span></div>
         </div>
+      </div>
       </div>
       <figcaption id="ticket-cap">
         <span>The thief's announce on the V3 testnet, 2026-10-24 06:24 WIB. <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/evidence/final-video-run-v3-2026-10-24.md">Run record</a></span>
@@ -527,7 +530,7 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
     <div class="head">
       <p class="label">Scene 01 · one sweep, three terminals</p>
       <h2 id="run-h">The thief knocked. <em>The owner said no.</em></h2>
-      <p class="lede">Recorded 2026-10-24 on the Portaldot V3 testnet: the thief, the watcher and the owner, each in a terminal on one wall clock. Every linked block opens on the public explorer.</p>
+      <p class="lede">Recorded 2026-10-24 06:24 WIB (2026-10-23 23:24 UTC) on the Portaldot V3 testnet: the thief, the watcher and the owner, each in a terminal on one wall clock. The linked blocks open on the public explorer.</p>
     </div>
 
     <ol class="rail" aria-label="The run, block by block">
@@ -554,7 +557,7 @@ Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY):
       </article>
       <article class="term owner" id="owner-term" aria-label="The owner's terminal: veto, then re-fetch by id">
         <header><i aria-hidden="true"></i><b>OWNER · COLD KEY</b><span>owner.cast</span></header>
-<pre data-replay><span class="line cmd" data-type>airlock veto --vault 5F4rPFqS… --delegate 5Cwitu8f… --hash 0x1d19e158…</span><span class="line dim">chain: Portaldot V3 testnet · portaldot-v3/3002 · genesis 0xd4f9…83bd · wss://test-node-v3.portaldot.dev</span><span class="line">[v3] <span class="ok">ok</span> veto Proxy.proxy(Proxy.reject_announcement) by cold #166816 id 166816-1 tx 0x3b57e68d…bc63f04</span><span class="line"><span class="hi">VETOED</span> 0x1d19e158…eb40b59 — removed from Proxy.Announcements; proxy_announced for it now fails Proxy.Unannounced</span><span class="line cmd" data-type>python scripts/refetch.py --profile v3 --id 166811-1 --id 166816-1 --id 166825-1 --id 166831-1</span><span class="line">FOUND 166811-1 Proxy.announce outcome=ok</span><span class="line">FOUND 166816-1 Proxy.proxy(Proxy.reject_announcement) outcome=ok</span><span class="line">FOUND 166825-1 Proxy.proxy_announced(Balances.transfer_keep_alive) outcome=<span class="hi">Proxy.Unannounced</span></span><span class="line">FOUND 166831-1 Proxy.proxy(Balances.transfer_keep_alive) outcome=<span class="hi">Proxy.Unannounced</span></span><span class="line"><span class="ok">4/4 found by extrinsic id over wss (v3)</span></span></pre>
+<pre data-replay><span class="line cmd" data-type>airlock veto --vault 5F4rPFqS… --delegate 5Cwitu8f… --hash 0x1d19e158…</span><span class="line dim">chain: Portaldot V3 testnet · portaldot-v3/3002 · genesis 0xd4f9…83bd · wss://test-node-v3.portaldot.dev</span><span class="line">[v3] <span class="ok">ok</span> veto Proxy.proxy(Proxy.reject_announcement) by cold #166816 id 166816-1 tx 0x3b57e68d…bc63f04</span><span class="line"><span class="hi">VETOED</span> 0x1d19e158…eb40b59 — removed from Proxy.Announcements; proxy_announced for it now fails Proxy.Unannounced (veto tx 0x3b57e68d…bc63f04, id 166816-1)</span><span class="line cmd" data-type>python scripts/refetch.py --profile v3 --id 166811-1 --id 166816-1 --id 166825-1 --id 166831-1</span><span class="line">FOUND 166811-1 Proxy.announce outcome=ok</span><span class="line">FOUND 166816-1 Proxy.proxy(Proxy.reject_announcement) outcome=ok</span><span class="line">FOUND 166825-1 Proxy.proxy_announced(Balances.transfer_keep_alive) outcome=<span class="hi">Proxy.Unannounced</span></span><span class="line">FOUND 166831-1 Proxy.proxy(Balances.transfer_keep_alive) outcome=<span class="hi">Proxy.Unannounced</span></span><span class="line"><span class="ok">4/4 found by extrinsic id over wss (v3)</span></span></pre>
       </article>
     </div>
     <div class="pair-foot">
@@ -590,32 +593,31 @@ Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY):
         <figcaption class="capline"><span>README · Technical Architecture. Steps 1 to 5 carry the 2026-10-24 block numbers.</span><span>Open full size</span></figcaption>
       </figure>
       <article class="cell c2">
-        <span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-vault"/></svg></span>
+        <p class="tline"><small>airlock status · head #166806</small>vault 5F4rPFqS…hsmE1 on Portaldot V3 testnet</p>
         <h3>A vault with no seed</h3>
         <p>A pure proxy: a keyless account that only its proxies can move.</p>
         <span class="chip">Proxy.create_pure</span>
       </article>
       <article class="cell c2">
-        <span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-glass"/></svg></span>
+        <p class="tline"><small>airlock status · the hot key</small>delegate 5Cwitu8f…wpLZULN Any delay 10</p>
         <h3>The hot key waits</h3>
         <p>It can only announce a call hash, then wait out its delay. A direct spend fails.</p>
         <span class="chip">Proxy.announce · proxy_announced</span>
       </article>
       <article class="cell c2">
-        <span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-stamp"/></svg></span>
+        <p class="tline"><small>airlock status · the cold key</small>delegate 5EnJxVLr…u1UjHw Any delay 0 (cold: veto/panic)</p>
         <h3>The cold key says no</h3>
         <p>Delay 0, dispatched as the vault: it removes the announcement before the delay ends.</p>
         <span class="chip">Proxy.reject_announcement</span>
       </article>
       <article class="cell c4">
-        <span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-lamp"/></svg></span>
+        <p class="tline"><small>watcher · the alert's first lines</small><span class="hi">NOT YOURS — VETO</span> · Up to 11.4200 tPOT at risk · Veto must land by #166820</p>
         <h3>The watcher reads every block</h3>
         <p>On each announcement against the vault: the amount at risk, the block by which a veto must land, and the exact <code>airlock veto</code> line to paste. It never signs anything.</p>
         <span class="chip">event Proxy.Announced</span>
       </article>
       <article class="cell wide">
         <div>
-          <span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-tag"/></svg></span>
           <h3>Your own spends say YOURS</h3>
           <p>The owner registers an intent before announcing a payment. The watcher calls anything unregistered NOT YOURS, so the owner's own spend and a thief's look different at a glance.</p>
           <span class="chip">owner intent registry · register before announce</span>
@@ -636,7 +638,7 @@ Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY):
     <ol class="memo">
       <li><span class="no" aria-hidden="true">1</span><div><q>The interim rows keep their labels; the benchmark has not run on V3.</q><cite><a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu#readme">README</a> · Status</cite></div></li>
       <li><span class="no" aria-hidden="true">2</span><div><q>No alert has reached a phone yet (no Telegram bot token configured).</q><cite><a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu#demo">README</a> · Demo</cite></div></li>
-      <li><span class="no" aria-hidden="true">3</span><div><q>The veto is automated, so these measure the chain and the watcher on one machine, not a person's reaction time or Telegram delivery.</q><cite><a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/BENCH.md">README</a> · Benchmark</cite></div></li>
+      <li><span class="no" aria-hidden="true">3</span><div><q>The veto is automated, so these measure the chain and the watcher on one machine, not a person's reaction time or Telegram delivery.</q><cite><a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu#demo">README</a> · Demo, benchmark</cite></div></li>
     </ol>
     <p class="bench-note">For scale, the benchmark itself, on local interim chains and <b>not V3</b>: 20 thief drains per chain, every one alerted NOT YOURS and vetoed, then failing Proxy.Unannounced; <b>0 planck</b> moved to the thief.</p>
   </div>
@@ -667,7 +669,7 @@ Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY):
       </details>
       <details>
         <summary>What is mocked?<svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></summary>
-        <div class="ans">The Telegram sender is built and tested against a mock Bot API; no alert has reached a phone yet. The benchmark's vetoes are automated. On the V3 path every step is a real extrinsic, listed by id in PROOF.md.</div>
+        <div class="ans">The Telegram sender is built and tested against a mock Bot API; no alert has reached a phone yet. The benchmark's vetoes are automated. The thief is our own script (<code>scripts/thief.py</code>, no Airlock imports) holding the vault's hot key; its calls are real V3 extrinsics. The 2026-10-19 V3 rows are listed by id in PROOF.md, the 2026-10-24 run in its run record.</div>
       </details>
       <details>
         <summary>Why not a multisig?<svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></summary>

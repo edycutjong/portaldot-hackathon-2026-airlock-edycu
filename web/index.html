@@ -156,7 +156,7 @@ h1 em { font-style: normal; color: var(--void-on-bg); white-space: nowrap; }
 .cut::before { top: -10px; border-top: 10px solid var(--void); border-bottom: 0; }
 .cut::after { bottom: -10px; border-bottom: 10px solid var(--void); border-top: 0; }
 .cut > span { position: absolute; left: 10px; top: -12px; white-space: nowrap; font: 400 13px/1.15 var(--f-data); color: var(--void); }
-.meter-cap { display: flex; justify-content: space-between; gap: 8px; font: 400 12px/1.3 var(--f-data); color: var(--muted); }
+.meter-cap { display: flex; justify-content: space-between; gap: 8px; font: 400 13px/1.3 var(--f-data); color: #4F4854; }
 .then { transition: opacity .4s; }
 .stamp { position: absolute; right: 18px; bottom: 16px; padding: 8px 16px 7px; border: 5px double var(--void); color: var(--void); text-align: center;
   transform: rotate(-12deg); mix-blend-mode: multiply;
@@ -241,7 +241,23 @@ h2 em { font-style: normal; color: var(--void-on-bg); }
 .term header span { margin-left: auto; font: 400 12px/1 var(--f-data); color: var(--on-bg-muted); }
 .term header i { width: 9px; height: 9px; background: var(--held); transform: rotate(45deg); }
 .term.owner header i { background: var(--void-on-bg); }
-.term pre { margin: 0; padding: 18px 18px 22px; font: 400 15px/1.6 var(--f-data); color: #E4DED6; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 420px; }
+.term pre { margin: 0; padding: 18px 18px 22px; font: 400 15px/1.6 var(--f-data); color: #E4DED6; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 520px; }
+.slip { position: relative; background: var(--paper); color: var(--ink); padding: 22px 26px 26px; transform: rotate(-1deg); box-shadow: 0 30px 60px -26px #000; min-width: 0; }
+.slip::before { content: ""; position: absolute; left: 0; right: 0; top: -9px; height: 10px;
+  background: radial-gradient(circle at 6px 0, transparent 5px, var(--paper) 5.5px) 0 0 / 12px 10px repeat-x; }
+.slip header { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 2px dashed var(--perf); }
+.slip header b { font: 400 15px/1 var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.slip header span { font: 400 13px/1 var(--f-data); color: var(--muted); }
+.slip .ny { margin: 18px 0 14px; font: 400 clamp(38px, 4.2vw, 56px)/.95 var(--f-display); color: var(--void); letter-spacing: .01em; }
+.sl-k { font: 400 13px/1.3 var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
+.sl-v { font: 400 15px/1.4 var(--f-data); overflow-wrap: anywhere; }
+.slip .risk, .slip .by { margin-top: 16px; font: 400 17px/1.45 var(--f-data); }
+.slip .risk b { display: block; font: 400 52px/1 var(--f-display); color: var(--held-on-paper); margin: 2px 0; letter-spacing: .01em; }
+.slip .risk span { display: block; font-size: 14px; color: var(--muted); }
+.slip .by b { font: 400 30px/1 var(--f-display); color: var(--ink); letter-spacing: .02em; }
+.sl-s { margin-top: 10px; font: 400 14px/1.45 var(--f-data); color: #3E3742; overflow-wrap: anywhere; }
+.slip .paste { margin-top: 18px; padding-top: 14px; border-top: 2px dashed var(--perf); }
+.slip .paste code { display: block; margin-top: 8px; padding: 10px 12px; background: var(--ink); color: var(--paper); font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
 .term .hi { color: var(--void-on-bg); }
 .term .am { color: var(--held); }
 .term .cmd { color: var(--on-bg); }
@@ -255,7 +271,7 @@ h2 em { font-style: normal; color: var(--void-on-bg); }
 .pair-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; margin-top: 16px; font: 400 14px/1.5 var(--f-data); color: #C9C2D0; }
 .pair-foot .replay { font-size: 13px; }
 
-.film { margin-top: 72px; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 40px; align-items: center; }
+.film { margin-top: 56px; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 40px; align-items: center; }
 .frame { position: relative; display: block; aspect-ratio: 16 / 9; background: var(--bg-deep); border: 1px solid var(--rule); overflow: hidden; }
 .frame img, .frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; object-fit: cover; display: block; }
 .frame img { transition: transform .6s var(--ease-out), filter .4s; filter: saturate(.9) brightness(.82); }
@@ -283,15 +299,15 @@ h2 em { font-style: normal; color: var(--void-on-bg); }
 .tline .hi { color: var(--void-on-bg); }
 .chip { display: inline-block; margin-top: 16px; padding: 5px 10px 4px; border: 1px solid var(--rule); background: var(--bg-deep);
   font: 400 13px/1.3 var(--f-data); color: var(--void-on-bg); overflow-wrap: anywhere; }
-.cell.arch { grid-column: span 4; grid-row: span 2; margin: 0; padding: 14px; display: flex; flex-direction: column; }
+.cell.arch { grid-column: span 6; margin: 0; padding: 14px; display: flex; flex-direction: column; }
 .cell.arch a.img { display: block; flex: 1; background: #120f10; }
 .cell.arch img { display: block; width: 100%; height: auto; }
 .cell.arch .capline { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 18px; padding: 14px 6px 4px; font: 400 14px/1.45 var(--f-data); color: #C9C2D0; }
 .cell.c2 { grid-column: span 2; }
-.cell.c4 { grid-column: span 4; }
-.cell.wide { grid-column: span 6; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 40px; align-items: center; }
-.cell.wide .tags { display: flex; gap: 22px; align-items: center; }
-.cell.wide h3 { margin-top: 0; }
+.cell.c3 { grid-column: span 3; }
+.cell.yours .tags { margin-top: 22px; }
+.cell .tags { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+.cell.yours h3 { margin-top: 0; }
 .tagstamp { white-space: nowrap; font: 400 30px/1 var(--f-display); letter-spacing: .08em; padding: 8px 14px 6px; border: 4px double currentColor; }
 .tagstamp.y { color: var(--held); transform: rotate(-3deg); }
 .tagstamp.n { color: var(--void-on-bg); transform: rotate(4deg); }
@@ -363,7 +379,6 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
   .pair, .film, .faq-grid { grid-template-columns: minmax(0, 1fr); }
   .faq-grid .head { position: static; }
   .cell.arch { grid-column: span 6; grid-row: auto; }
-  .cell.c2, .cell.c4 { grid-column: span 3; }
 }
 @media (max-width: 860px) {
   .top nav { display: none; }
@@ -375,8 +390,7 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
   .ev .pin { left: -31px; top: 3px; }
   .ev .lbl, .ev.r .lbl { position: static; width: auto; text-align: left; }
   .ev.v::before { display: none; }
-  .cell.c2, .cell.c4 { grid-column: span 6; }
-  .cell.wide { grid-template-columns: minmax(0, 1fr); }
+  .cell.c2, .cell.c3 { grid-column: span 6; }
   footer .wrap { grid-template-columns: minmax(0, 1fr); }
   footer nav { justify-content: flex-start; }
 }
@@ -386,28 +400,34 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
   .tally li, .tally li:nth-child(2n) { border-right: 0; padding-left: 0; }
   .mark span { display: none; }
   section.band { padding: 84px 0; }
+  .hero-grid { padding-top: 26px; }
+  .hero .label { font-size: 12px; margin-bottom: 14px; }
+  h1 { font-size: 50px; }
+  .desk { margin: 26px 0 8px; }
+  .slip { padding: 18px 16px 20px; }
+  .slip .risk b { font-size: 42px; }
   .ticket { grid-template-columns: 92px minmax(0, 1fr); transform: rotate(-1.2deg); }
   .ticket::before, .ticket::after { left: 80px; }
   .stub { padding: 16px 10px 14px 12px; }
   .left { font-size: 74px; }
   .d { font-size: 13px; }
-  .tbody { padding: 16px 14px 140px 16px; }
+  .tbody { padding: 16px 14px 18px 16px; }
   .amount { font-size: 42px; }
   .amount small { font-size: 16px; }
   .rows { grid-template-columns: minmax(0, 1fr); gap: 0; font-size: 14px; }
   .rows dd { margin-bottom: 6px; }
   .cells { gap: 3px; } .cells i { height: 22px; }
   .meter-cap { font-size: 11px; }
-  .stamp { right: 8px; bottom: 14px; padding: 6px 10px 5px; }
+  .stamp { right: 4px; top: 70px; bottom: auto; padding: 5px 9px 4px; }
   .stamp b { font-size: 48px; }
   .stamp span { font-size: 11px; }
   .ticket.stamped { animation: none; }
   .term pre { font-size: 13px; min-height: 0; }
   .memo li { grid-template-columns: minmax(0, 1fr); }
   .holdstamp { position: relative; display: inline-block; right: auto; top: auto; margin: 0 0 26px; font-size: 26px; transform: rotate(-4deg); }
-  .cut .lg { display: none; }
+  .ticket .lg { display: none; }
   .tagstamp { font-size: 22px; }
-  .cell.wide .tags { gap: 14px; flex-wrap: wrap; }
+  .cell .tags { gap: 14px; }
   .cmd-box { flex-direction: column; }
   .copy { border-left: 0; border-top: 1px solid var(--rule); padding: 14px 18px; justify-content: center; }
   .frame .playbtn { padding: 10px 14px 10px 12px; font-size: 14px; }
@@ -494,14 +514,14 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
             <div class="cells" data-cells><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i class="ex"></i></div>
             <div class="cut"><span><span class="lg">cold key veto<br></span>#166816</span></div>
           </div>
-          <div class="meter-cap"><span>#166812</span><span>#166821 executable</span></div>
+          <div class="meter-cap"><span>#166812</span><span>#166821<span class="lg"> executable</span></span></div>
           <dl class="rows then"><dt>Veto by</dt><dd>#166820</dd><dt>Then</dt><dd>166825-1 · Proxy.Unannounced</dd></dl>
           <div class="stamp"><b>VOID</b><span>COLD KEY · #166816</span><span>0x3b57e68d…bc63f04</span></div>
         </div>
       </div>
       </div>
       <figcaption id="ticket-cap">
-        <span>The thief's announce on the V3 testnet, 2026-10-24 06:24 WIB. <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/evidence/final-video-run-v3-2026-10-24.md">Run record</a></span>
+        <span>The thief's announce on the V3 testnet, 2026-10-24 06:24 WIB, replayed at about 0.4 s per block (the chain's block time is 6 s). <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/evidence/final-video-run-v3-2026-10-24.md">Run record</a></span>
         <button class="replay" type="button" data-replay-ticket><svg class="ico" aria-hidden="true"><use href="#i-replay"/></svg>Replay the hold</button>
       </figcaption>
     </figure>
@@ -530,30 +550,29 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
     <div class="head">
       <p class="label">Scene 01 · one sweep, three terminals</p>
       <h2 id="run-h">The thief knocked. <em>The owner said no.</em></h2>
-      <p class="lede">Recorded 2026-10-24 06:24 WIB (2026-10-23 23:24 UTC) on the Portaldot V3 testnet: the thief, the watcher and the owner, each in a terminal on one wall clock. The linked blocks open on the public explorer.</p>
+      <p class="lede">Recorded 2026-10-24 06:24 WIB (2026-10-23 23:24 UTC) on the Portaldot V3 testnet: the thief, the watcher and the owner, each in a terminal on one wall clock. The thief is our own script holding the vault's hot key; every call it makes is a real V3 extrinsic. The linked blocks open on the public explorer.</p>
     </div>
 
     <ol class="rail" aria-label="The run, block by block">
       <li class="hold" aria-hidden="true"></li><li class="tick" aria-hidden="true"></li>
-      <li class="ev a up" style="--x:0"><span class="pin"></span><span class="lbl"><b>Announce</b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x35eb3267f5e393a35fa88aeebcd95d2e2b2e4125af8157301272166f332a25f0">#166811</a> · the thief, hot key</span></li>
-      <li class="ev v dn" style="--x:25"><span class="pin"></span><span class="lbl"><b>Veto</b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xa8f95309e37549e56809b7af7d53818eb17e66be6044b4dfaed91c129c6468eb">#166816</a> · the owner, cold key</span></li>
-      <li class="ev dl dn" style="--x:45"><span class="pin"></span><span class="lbl"><b>Deadline</b>#166820 · last block to veto</span></li>
-      <li class="ev f up r" style="--x:70"><span class="pin"></span><span class="lbl"><b>Execute: refused</b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x21f02d23ccc573d71e24784068bb5f3ab45ecffdf4dd18866c831693f67bf6bc">#166825</a> · Proxy.Unannounced</span></li>
-      <li class="ev f dn r" style="--x:100"><span class="pin"></span><span class="lbl"><b>Direct call: refused</b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x83f24f947415a8acaa585ef0f5dce94ed9d4d6f692993c86d9e19741eaa53f2c">#166831</a> · Proxy.Unannounced</span></li>
+      <li class="ev a up" style="--x:0"><span class="pin"></span><span class="lbl"><b>Announce</b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x35eb3267f5e393a35fa88aeebcd95d2e2b2e4125af8157301272166f332a25f0">#166811</a><br>the thief, hot key</span></li>
+      <li class="ev v dn" style="--x:25"><span class="pin"></span><span class="lbl"><b>Veto</b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xa8f95309e37549e56809b7af7d53818eb17e66be6044b4dfaed91c129c6468eb">#166816</a><br>the owner, cold key</span></li>
+      <li class="ev dl dn" style="--x:45"><span class="pin"></span><span class="lbl"><b>Deadline</b>#166820<br>last block to veto</span></li>
+      <li class="ev f up r" style="--x:70"><span class="pin"></span><span class="lbl"><b>Execute: refused</b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x21f02d23ccc573d71e24784068bb5f3ab45ecffdf4dd18866c831693f67bf6bc">#166825</a><br>Proxy.Unannounced</span></li>
+      <li class="ev f dn r" style="--x:100"><span class="pin"></span><span class="lbl"><b>Direct call: refused</b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x83f24f947415a8acaa585ef0f5dce94ed9d4d6f692993c86d9e19741eaa53f2c">#166831</a><br>Proxy.Unannounced</span></li>
     </ol>
 
     <div class="pair">
-      <article class="term" aria-label="The watcher's alert, as printed">
-        <header><i aria-hidden="true"></i><b>WATCHER · OWNER'S SIDE</b><span>watcher.cast</span></header>
-<pre><span class="hi">NOT YOURS — VETO</span>
-Vault 5F4rPFqS6PQEKUHacHtR5mLrDMVZ8RjCfJpYmfiktERhsmE1
-Chain: Portaldot V3 testnet (v3)
-<span class="am">Up to 11.4200 tPOT at risk</span> (0.1000 tPOT of the free balance cannot move: …)
-Announced by delegate 5Cwitu8f…wpLZULN at block #166811; executable from #166821. <span class="am">Veto must land by #166820: 9 blocks (≈ 54 s)</span> from head #166811
-Call hash 0x1d19e158…eb40b59 (an announcement publishes only the hash: …)
-Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY):
-<span class="cmd">airlock veto --vault 5F4rPFqS… --delegate 5Cwitu8f… --hash 0x1d19e158…</span>
-<span class="dim">or in the Portaldot node console (https://node-console.portaldot.dev/) &gt; Developer &gt; Extrinsics, signed by the cold key: …</span></pre>
+      <article class="slip" aria-label="The watcher's alert: its stdout lines, set on paper">
+        <header><b>Airlock alert</b><span>watcher stdout · watcher.cast</span></header>
+        <p class="ny">NOT YOURS — VETO</p>
+        <p class="sl-k">Vault</p><p class="sl-v">5F4rPFqS6PQEKUHacHtR5mLrDMVZ8RjCfJpYmfiktERhsmE1</p>
+        <p class="sl-k">Chain</p><p class="sl-v">Portaldot V3 testnet (v3)</p>
+        <p class="risk">Up to <b>11.4200 tPOT</b> at risk <span>(0.1000 tPOT of the free balance cannot move: …)</span></p>
+        <p class="by">Veto must land by <b>#166820</b>: 9 blocks (≈ 54 s) from head #166811</p>
+        <p class="sl-s">Announced by delegate 5Cwitu8f…wpLZULN at block #166811; executable from #166821.</p>
+        <p class="sl-s">Call hash 0x1d19e158…eb40b59 (an announcement publishes only the hash: …)</p>
+        <div class="paste"><p class="sl-k">Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY):</p><code>airlock veto --vault 5F4rPFqS… --delegate 5Cwitu8f… --hash 0x1d19e158…</code></div>
       </article>
       <article class="term owner" id="owner-term" aria-label="The owner's terminal: veto, then re-fetch by id">
         <header><i aria-hidden="true"></i><b>OWNER · COLD KEY</b><span>owner.cast</span></header>
@@ -561,18 +580,18 @@ Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY):
       </article>
     </div>
     <div class="pair-foot">
-      <span>Excerpts of the asciinema recordings: long values shortened with …, column padding collapsed, tx hashes dropped from the FOUND lines. <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/tree/main/evidence/final-video-run-v3-2026-10-24">Raw casts</a></span>
+      <span>Left: the watcher's alert lines, re-set on paper. Right: the owner's terminal. Both are excerpts of the asciinema recordings: long values shortened with …, column padding collapsed, tx hashes dropped from the FOUND lines. <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/tree/main/evidence/final-video-run-v3-2026-10-24">Raw casts</a></span>
       <button class="replay" type="button" data-replay-term><svg class="ico" aria-hidden="true"><use href="#i-replay"/></svg>Replay the owner's terminal</button>
     </div>
 
     <div class="film">
       <a class="frame" href="https://youtu.be/Es1387HDSTw" data-yt="Es1387HDSTw">
-        <img src="assets/film-poster.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Frame from the demo film: the thief's terminal and the watcher's NOT YOURS alert side by side, Portaldot V3 testnet">
+        <img src="assets/film-poster.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Frame from the demo film: the veto's block #166,816 open on node-console.portaldot.dev, call proxy.rejectAnnouncement">
         <span class="playbtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>Play the film</span>
       </a>
       <div>
         <h3>The same run, on film</h3>
-        <p>The three terminals side by side, from the thief's announce to the re-fetch by id. Every speed-up is labelled on screen with the real time it covers.</p>
+        <p>The three terminals side by side, from the thief's announce to the re-fetch by id and the veto's block on node-console. Speed-ups are labelled on screen.</p>
         <p>YouTube · <a href="https://youtu.be/Es1387HDSTw">youtu.be/Es1387HDSTw</a></p>
       </div>
     </div>
@@ -588,9 +607,9 @@ Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY):
     <div class="bento">
       <figure class="cell arch">
         <a class="img" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/architecture.png">
-          <img src="assets/architecture.webp" width="2000" height="1482" loading="lazy" decoding="async" alt="Architecture: the thief's machine announces to the Proxy pallet on the Portaldot V3 testnet; the watcher on the owner's machine raises NOT YOURS; the owner's cold key vetoes; the thief's execute is refused. Block numbers from the 2026-10-24 run.">
+          <img src="assets/architecture-core.webp" width="2400" height="1001" loading="lazy" decoding="async" alt="Core flow from the README architecture diagram: the thief's machine announces to the Proxy pallet on the Portaldot V3 testnet (#166811); the watcher on the owner's machine raises NOT YOURS; the owner's cold key vetoes (#166816); the thief's execute is refused (#166825).">
         </a>
-        <figcaption class="capline"><span>README · Technical Architecture. Steps 1 to 5 carry the 2026-10-24 block numbers.</span><span>Open full size</span></figcaption>
+        <figcaption class="capline"><span>README · Technical Architecture, the core flow. Numbered steps 1 to 5 are the 2026-10-24 run; its block numbers are marked.</span><span>Open the full diagram</span></figcaption>
       </figure>
       <article class="cell c2">
         <p class="tline"><small>airlock status · head #166806</small>vault 5F4rPFqS…hsmE1 on Portaldot V3 testnet</p>
@@ -610,13 +629,13 @@ Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY):
         <p>Delay 0, dispatched as the vault: it removes the announcement before the delay ends.</p>
         <span class="chip">Proxy.reject_announcement</span>
       </article>
-      <article class="cell c4">
+      <article class="cell c3">
         <p class="tline"><small>watcher · the alert's first lines</small><span class="hi">NOT YOURS — VETO</span> · Up to 11.4200 tPOT at risk · Veto must land by #166820</p>
         <h3>The watcher reads every block</h3>
         <p>On each announcement against the vault: the amount at risk, the block by which a veto must land, and the exact <code>airlock veto</code> line to paste. It never signs anything.</p>
         <span class="chip">event Proxy.Announced</span>
       </article>
-      <article class="cell wide">
+      <article class="cell c3 yours">
         <div>
           <h3>Your own spends say YOURS</h3>
           <p>The owner registers an intent before announcing a payment. The watcher calls anything unregistered NOT YOURS, so the owner's own spend and a thief's look different at a glance.</p>
@@ -725,11 +744,11 @@ Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY):
   const t = document.getElementById('ticket');
   const left = t.querySelector('[data-left]'), head = t.querySelector('[data-head]'), cells = [...t.querySelectorAll('[data-cells] i')];
   const setHead = h => { left.textContent = 166820 - h; head.textContent = '#' + h; cells.forEach((c, i) => c.classList.toggle('on', 166812 + i <= h)); };
-  let run = 0;
+  let run = 0, first = true;
   const arm = () => { t.classList.remove('cutting', 'stamped'); t.classList.add('armed'); setHead(166811); };
   const playTicket = async () => {
     const me = ++run;
-    arm(); await sleep(650);
+    arm(); await sleep(first ? 1150 : 650); first = false;
     for (let h = 166812; h <= 166816; h++) { if (me !== run) return; setHead(h); await sleep(430); }
     t.classList.add('cutting'); await sleep(380);
     if (me !== run) return;

@@ -166,7 +166,7 @@ h1 { font: 400 140px/.92 var(--f-display); text-transform: uppercase; letter-spa
 .proof { display: grid; grid-template-columns: 820px 1fr; gap: 64px; align-items: center; flex: 1; margin-top: 40px; }
 .proof .tk { zoom: 1.36; }
 .ids { list-style: none; padding: 0; margin: 26px 0 0; border-top: 1px solid var(--rule); }
-.ids li { display: grid; grid-template-columns: 170px 1fr; gap: 20px; align-items: baseline; padding: 15px 0; border-bottom: 1px solid var(--rule); }
+.ids li { display: grid; grid-template-columns: 170px 1fr; gap: 20px; align-items: baseline; padding: 11px 0; border-bottom: 1px solid var(--rule); }
 .ids b { font: 400 28px/1 var(--f-data); color: var(--on-bg); }
 .ids span { font-size: 24px; color: #D9D3CB; }
 .ids .x { color: var(--void-on-bg); font-family: var(--f-data); }
@@ -229,7 +229,7 @@ h1 { font: 400 140px/.92 var(--f-display); text-transform: uppercase; letter-spa
 .qr { background: var(--paper); padding: 28px; width: 440px; transform: rotate(2deg); box-shadow: 0 30px 60px -24px #000; }
 .qr svg { width: 384px; height: 384px; display: block; }
 .qr .cap { color: var(--muted); margin-top: 16px; text-align: center; font-size: 17px; }
-.ai { margin-top: 36px; font-size: 22px; line-height: 1.45; color: var(--on-bg-muted); max-width: 1140px; }
+.ai { margin-top: 36px; font-size: 24px; line-height: 1.45; color: var(--on-bg-muted); max-width: 1140px; }
 .ai b { color: var(--on-bg); font-weight: 700; }
 
 /* presenter notes (P) */
@@ -270,7 +270,7 @@ body.debug-contrast .slide :is(h1, h2, h3, p, td, li, pre, .cap, .chip) { outlin
       <h1>The hot key<br>that has to<br><em>ask first.</em></h1>
       <p class="lede">A Portaldot vault whose hot key can only announce a spend, and whose cold key can veto it.</p>
       <div class="term">
-        <header><i></i><b>OWNER · COLD KEY</b><span>V3 testnet · 2026-10-24 06:24 WIB</span></header>
+        <header><i></i><b>OWNER · COLD KEY</b><span>V3 testnet · recorded 2026-10-24 06:24 WIB</span></header>
 <pre>[v3] <span class="ok">ok</span> veto Proxy.proxy(Proxy.reject_announcement) by cold #166816 id 166816-1 tx 0x3b57e68d…bc63f04
 <span class="hi">VETOED</span> 0x1d19e158…eb40b59 — removed from Proxy.Announcements; …</pre>
       </div>
@@ -319,7 +319,7 @@ body.debug-contrast .slide :is(h1, h2, h3, p, td, li, pre, .cap, .chip) { outlin
   <h2>Announce. Wait. <em>Veto.</em></h2>
   <div class="steps">
     <div class="step"><span class="n">1 · hot key · delay 10</span><h3>Announce</h3><p>It cannot spend directly. It can only publish a call hash.</p><span class="chip">Proxy.announce</span></div>
-    <div class="step w"><span class="n">2 · 10 blocks ≈ 60 s on V3</span><h3>Wait</h3><p>The watcher alerts: YOURS, or NOT YOURS with the amount and a veto line.</p><div class="mini" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><b></b></div><span class="chip">event Proxy.Announced</span></div>
+    <div class="step w"><span class="n">2 · 10 blocks ≈ 60 s on V3</span><h3>Wait</h3><p>The watcher alerts: YOURS, or NOT YOURS with the amount and a veto line.</p><div class="mini" aria-hidden="true" style="margin-bottom:14px"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><b></b></div><span class="chip">event Proxy.Announced</span></div>
     <div class="step v"><span class="n">3 · cold key · delay 0</span><h3>Veto</h3><p>The thief's execute then fails Proxy.Unannounced.</p><span class="chip">Proxy.reject_announcement</span></div>
   </div>
   <p class="under"><b>Your own spend:</b> register the intent, announce, wait, execute. No co-signer.</p>
@@ -356,7 +356,7 @@ airlock veto --vault 5F4rPFqS… --delegate 5Cwitu8f… --hash 0x1d19e158…</pr
         <li><b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x21f02d23ccc573d71e24784068bb5f3ab45ecffdf4dd18866c831693f67bf6bc">166825-1</a></b><span>execute · <span class="x">Proxy.Unannounced</span></span></li>
         <li><b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x83f24f947415a8acaa585ef0f5dce94ed9d4d6f692993c86d9e19741eaa53f2c">166831-1</a></b><span>direct call · <span class="x">Proxy.Unannounced</span></span></li>
       </ul>
-      <p class="note" style="margin-top:18px">4/4 re-fetched · total unchanged #166806 → #166835 · excerpt, cut with …<br>thief = our own script, scripts/thief.py, holding the hot key</p>
+      <p class="note" style="margin-top:16px;font-size:20px">4/4 re-fetched · total unchanged #166806 → #166835<br>excerpt cut with … · thief = our script (scripts/thief.py)</p>
     </div>
   </div>
   <aside class="speaker-notes">This is the slide to remember. Block 166811: a thief with the hot key announces a sweep of 11.4200 tPOT. The watcher prints NOT YOURS with the deadline, block 166820, and the exact veto command; the command lands at 166816, four blocks early. After the delay the thief's execute and a direct call both fail Proxy.Unannounced. Every id opens on node-console. Staged, and said so: the thief is our own script, scripts/thief.py, holding the vault's hot key; its transactions are real V3 extrinsics.</aside>

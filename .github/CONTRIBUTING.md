@@ -21,3 +21,7 @@ pip install ruff && ruff check .
 ## Reporting bugs / requesting features
 
 Open an issue using the templates. For vulnerabilities, see [SECURITY.md](SECURITY.md) instead.
+
+## Releases
+
+Releases are automatic. Use Angular-style commit prefixes: `fix:`/`perf:` bump the patch version, `feat:` the minor, `feat!:` or a `BREAKING CHANGE:` footer the major. `docs:`, `chore:`, `test:`, `refactor:`, `style:` and `ci:` publish nothing.

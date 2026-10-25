@@ -1,16 +1,29 @@
+<a id="airlock"></a>
+
 <div align="center">
+  <img src="docs/icon.svg" alt="Airlock icon" width="144">
+  <h1>Airlock 🔐</h1>
+  <p><em>A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.</em></p>
+  <img src="docs/readme-hero.svg" alt="Airlock animated hero: the hot key announces a spend, the countdown runs, and the cold key stamps VOID across it" width="100%">
 
-# Airlock
+  <br/>
 
-**A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.**
+  [![Live](https://img.shields.io/badge/🚀_Live-airlock.edycu.dev-5B2FB5?style=for-the-badge)](https://airlock.edycu.dev)
+  [![Pitch Deck](https://img.shields.io/badge/📊_Pitch-Deck-D9A13B?style=for-the-badge)](https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/pitch-deck.pdf)
+  [![Demo Video](https://img.shields.io/badge/🎬_Demo-Video-ef4444?style=for-the-badge)](https://youtu.be/Es1387HDSTw)
+  [![DoraHacks BUIDL](https://img.shields.io/badge/DoraHacks-BUIDL_50126-3A3240?style=for-the-badge)](https://dorahacks.io/build/50126)
 
-[![CI](https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/actions/workflows/ci.yml/badge.svg)](https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/actions/workflows/ci.yml)
-![License: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Tests: 350 passing](https://img.shields.io/badge/tests-350%20passing-brightgreen)
-![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)
-![Chain: Portaldot V3 testnet](https://img.shields.io/badge/chain-Portaldot%20V3%20testnet-blue)
+  <br/>
+
+  [![CI](https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/actions/workflows/ci.yml/badge.svg)](https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/actions/workflows/ci.yml)
+  [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat)](LICENSE)
+  ![Tests: 350 passing](https://img.shields.io/badge/tests-350%20passing-brightgreen?style=flat)
+  ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat&logo=python&logoColor=white)
+  ![Chain: Portaldot V3 testnet](https://img.shields.io/badge/chain-Portaldot%20V3%20testnet-blue?style=flat)
 
 </div>
+
+---
 
 A POT holder who keeps funds on one hot key loses them in one block when that seed leaks. Airlock is a keyless Portaldot
 vault: the hot key can only announce a spend and wait out a delay, and the cold key can veto it first. On the Portaldot
@@ -25,11 +38,15 @@ V3 testnet that flow has already refused a 12.92 tPOT sweep (`Proxy.Unannounced`
 > flow, the owner intent registry and the seeded demo history have since run **on V3** (rows labelled `v3` in PROOF.md).
 > The interim rows keep their labels; the benchmark has not run on V3.
 
-## Project Name
+<a id="project-name"></a>
+
+## 🏷️ Project Name
 
 **Airlock** — repo `portaldot-hackathon-2026-airlock-edycu`.
 
-## Project Overview
+<a id="project-overview"></a>
+
+## 💡 Project Overview
 
 ### Problem Statement
 
@@ -60,7 +77,9 @@ WSS on V3, where HTTPS JSON-RPC answered 503 to bulk re-fetches, [evidence/v3-rp
 V3 each row links to the block on the V3 testnet's public explorer (`node-console.portaldot.dev`). `interim-sdk` keeps its state on disk (archive node), so its rows stay re-fetchable;
 `interim-1002` runs with `--tmp`, so its rows are a run log once that node stops.
 
-## Technical Architecture
+<a id="technical-architecture"></a>
+
+## 🏗️ Technical Architecture
 
 ![Airlock architecture: a thief announces a spend on the Portaldot V3 Proxy pallet, the watcher alerts NOT YOURS, the owner's cold key vetoes, and the execute fails with Proxy.Unannounced](docs/architecture.png)
 
@@ -125,7 +144,9 @@ Every tool identifies the chain by genesis hash and runtime code hash before sig
 ([airlock/chain_profile.py](airlock/chain_profile.py)); the profile supplies the Proxy call names (`create_pure` vs
 `anonymous` on 1002), decimals and block time.
 
-## Smart Contracts
+<a id="smart-contracts"></a>
+
+## 📜 Smart Contracts
 
 Airlock is **pallet-native**: there is no contract to deploy. The calls it uses, all from the Proxy pallet unless noted:
 
@@ -145,7 +166,9 @@ Airlock is **pallet-native**: there is no contract to deploy. The calls it uses,
 - Deployment: nothing to deploy. `airlock create` (or `scripts/seed.py`) creates a vault.
 - IDs: vault addresses, extrinsic ids, block hashes and tx hashes are in [docs/PROOF.md](docs/PROOF.md) (V3 rows labelled `v3`). V3 vaults: core `5F4rPFqS6PQEKUHacHtR5mLrDMVZ8RjCfJpYmfiktERhsmE1`, seeded demo `5G1jCu2ZvTkjsrGpNajJgExfAfthseLdb5EKhNjr4HA7Bhc9`.
 
-## Installation & Setup
+<a id="installation--setup"></a>
+
+## 🚀 Installation & Setup
 
 ### Requirements
 
@@ -212,7 +235,9 @@ once `intent_evidence.sh` has executed an owner spend from the vault the re-chec
 protocol walk-through, `--vesting` adds 4 at-risk steps), `scripts/refetch.py` (re-read recorded extrinsics by id),
 the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs/CLI.md)).
 
-## Demo
+<a id="demo"></a>
+
+## 🎬 Demo
 
 - **Video:** demo: https://youtu.be/Es1387HDSTw
 - **Live demo:** no hosted UI; the CLI and watcher run against the public V3 endpoint (see Installation).
@@ -265,7 +290,9 @@ the watcher ([docs/WATCHER.md](docs/WATCHER.md)) and the CLI ([docs/CLI.md](docs
   … ([fixtures/accounts.json](fixtures/accounts.json)) funded by `//Alice` (`//Dave` on `interim-1002`); the spike and
   watcher runs use `//Alice`–`//Ferdie`.
 
-## Development
+<a id="development"></a>
+
+## 🧪 Development
 
 ```bash
 pip install -e ".[dev]" ruff
@@ -276,7 +303,9 @@ python -m pytest -q   # offline suite; live/V3 tests are opt-in and skipped by d
 CI (`.github/workflows/`) runs lint, the offline tests on Python 3.10-3.12, and a package build; CodeQL, gitleaks and
 pip-audit run separately. None of it needs a key or writes to a live chain.
 
-## Roadmap
+<a id="roadmap"></a>
+
+## 🗺️ Roadmap
 
 **Completed (2026-10-14)**
 
@@ -315,7 +344,9 @@ pip-audit run separately. None of it needs a key or writes to a live chain.
 - A demo video with live transactions, and the check-in submission (Oct 24).
 - `Revive.call` as a held call type, only if it can be proven through a vault origin on a chain.
 
-## Team
+<a id="team"></a>
+
+## 👥 Team
 
 - **Team:** `edycu`
 - **Members & roles:** edycu — solo: design, on-chain protocol choices, review.
@@ -329,6 +360,8 @@ Open-source libraries: [`substrate-interface`](https://github.com/JAMdotTech/py-
 (Apache-2.0); the `interim-sdk` chain is the unmodified `substrate-node` release from
 [paritytech/polkadot-sdk](https://github.com/paritytech/polkadot-sdk).
 
-## License
+<a id="license"></a>
+
+## 📄 License
 
 [MIT](LICENSE)

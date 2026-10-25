@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Airlock — the cold key vetoes a hot key’s announced spend: 11.42 tPOT announced at #166811 · 10-block delay — and a red VOID stamp lands across it.">
+<!-- STORYBOARD (dur 6s — must equal this file's single master dur)
+  0-10%   steady state: black plate, paper hold ticket, block 1 elapsed (amber), blocks 2-4 remaining (hollow) — the poster
+  10-42%  trigger:      the countdown advances — block 2 fills with hold amber from left to right              data-story="beat-2"
+  42-55%  mechanism:    11.42 tPOT announced at #166811 · 10-block delay — and a red VOID stamp lands across it.  (icon form: the vermilion cut line drops at the "now" boundary, cut marks snap in) data-story="beat-3"
+  55-88%  resolution:   the cut persists at the now line; blocks 3-4 stay hollow; stamp ink breathes           data-story="beat-4"
+  88-100% breathe + seam fade: cut and block-2 fill fade out, back to the poster
+-->
+<style>
+  .snap { transform-box: fill-box; transform-origin: center; animation: snap 6s cubic-bezier(.2,1.4,.4,1) infinite; }
+  @keyframes snap { 0%, 43% { transform: scale(1.6) } 47% { transform: scale(.94) } 50%, 100% { transform: scale(1) } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+<defs>
+  <filter id="ink" x="-200%" y="-10%" width="500%" height="120%"><feGaussianBlur stdDeviation="9"/></filter>
+</defs>
+<rect x="0" y="0" width="512" height="512" rx="112" fill="#15120F"/>
+<path d="M40 112 H472 V206 A50 50 0 0 0 472 306 V400 H40 V306 A50 50 0 0 0 40 206 Z" fill="#F5F1E8"/>
+<rect x="92" y="170" width="68" height="172" fill="#B7791F"/>
+<rect x="183" y="177" width="54" height="158" fill="none" stroke="#8A8378" stroke-width="14"/>
+<rect x="298" y="177" width="54" height="158" fill="none" stroke="#8A8378" stroke-width="14"/>
+<rect x="376" y="177" width="54" height="158" fill="none" stroke="#8A8378" stroke-width="14"/>
+<rect data-story="beat-2" x="176" y="170" width="0" height="172" fill="#B7791F">
+  <animate attributeName="width" dur="6s" repeatCount="indefinite" keyTimes="0;0.10;0.42;0.88;0.96;1" values="0;0;68;68;0;0"/>
+</rect>
+<rect data-story="beat-4" opacity="0" x="258" y="96" width="26" height="320" fill="#E8402F" filter="url(#ink)">
+  <animate attributeName="opacity" dur="6s" repeatCount="indefinite" keyTimes="0;0.44;0.52;0.66;0.78;0.88;0.94;1" values="0;0;0.8;0.3;0.7;0.3;0;0"/>
+</rect>
+<rect data-story="beat-3" opacity="0" x="258" y="96" width="26" height="0" fill="#E8402F">
+  <animate attributeName="height" dur="6s" repeatCount="indefinite" keyTimes="0;0.42;0.46;0.88;0.96;1" values="0;0;320;320;320;0"/>
+  <animate attributeName="opacity" dur="6s" repeatCount="indefinite" keyTimes="0;0.42;0.43;0.88;0.95;1" values="0;0;1;1;0;0"/>
+</rect>
+<g class="snap">
+  <path data-story="beat-3" opacity="0" d="M233 30 H309 L271 84 Z M233 482 H309 L271 428 Z" fill="#E8402F">
+    <animate attributeName="opacity" dur="6s" repeatCount="indefinite" keyTimes="0;0.44;0.46;0.88;0.95;1" values="0;0;1;1;0;0"/>
+  </path>
+</g>
+</svg>

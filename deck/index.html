@@ -13,7 +13,7 @@
           index.html#4 opens slide 4. Click the right half of the screen for next, the left half for previous.
   PDF:    print (Cmd/Ctrl+P), margins none, background graphics on: one slide per page.
           docs/pitch-deck.pdf is printed from this file by headless Chromium.
-  Images: docs/architecture.png (slide 5). The ticket, the mark and the QR code are inline HTML/SVG.
+  Images: deck/assets/architecture-core.png (slide 5) = the core flow cropped from docs/architecture.png. The ticket, the mark and the QR code are inline HTML/SVG.
           Terminal text is excerpted from evidence/final-video-run-v3-2026-10-24/ (owner.cast, watcher.cast):
           long values shortened with "…", column padding collapsed.
   Fonts:  Anton, Libre Franklin, Cutive Mono (SIL OFL), self-hosted in web/assets/fonts/; same tokens as the landing.
@@ -63,7 +63,7 @@ h2 em, h1 em { font-style: normal; color: var(--void-on-bg); }
 .lede { margin-top: 26px; max-width: 1180px; font-size: 32px; line-height: 1.45; color: #D9D3CB; }
 .chip { display: inline-block; padding: 6px 14px 5px; border: 1px solid var(--rule); background: var(--bg-deep); font: 400 24px/1.3 var(--f-data); color: var(--void-on-bg); }
 .note { font: 400 22px/1.4 var(--f-data); color: var(--on-bg-muted); }
-.foot { position: absolute; left: 120px; right: 120px; bottom: 44px; display: flex; justify-content: space-between; font: 400 18px/1 var(--f-data);
+.foot { position: absolute; left: 120px; right: 120px; bottom: 44px; display: flex; justify-content: space-between; font: 400 20px/1 var(--f-data);
   letter-spacing: .1em; color: var(--on-bg-muted); border-top: 1px solid var(--rule); padding-top: 18px; }
 .gst { position: absolute; z-index: -1; border: 6px double currentColor; padding: 6px 22px 2px; font: 400 120px/1 var(--f-display); letter-spacing: .1em; opacity: .05; pointer-events: none; }
 
@@ -127,10 +127,11 @@ h1 { font: 400 140px/.92 var(--f-display); text-transform: uppercase; letter-spa
 .cover .tk { zoom: 1.3; justify-self: center; }
 
 /* 2 · problem */
-.exhibits { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: auto; }
-.exhibit { background: var(--bg-raised); border: 1px solid var(--rule); padding: 44px 48px 40px; position: relative; }
+.exhibits { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 56px; flex: 1; }
+.exhibit { background: var(--bg-raised); border: 1px solid var(--rule); padding: 48px 52px 44px; position: relative; display: flex; flex-direction: column; justify-content: center; }
+.tagint { position: absolute; right: 40px; top: 40px; font: 400 30px/1 var(--f-display); letter-spacing: .08em; color: var(--held); border: 4px double var(--held); padding: 10px 16px 6px; transform: rotate(4deg); }
 .exhibit .k { font: 400 26px/1.2 var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: var(--on-bg-muted); }
-.exhibit .v { font: 400 190px/.9 var(--f-display); margin: 22px 0 18px; color: var(--held); }
+.exhibit .v { font: 400 230px/.9 var(--f-display); margin: 26px 0 22px; color: var(--held); }
 .exhibit .v small { font: 400 44px var(--f-data); color: var(--on-bg); margin-left: 14px; }
 .exhibit p { font-size: 32px; color: #D9D3CB; }
 .exhibit .note { margin-top: 18px; }
@@ -159,8 +160,9 @@ h1 { font: 400 140px/.92 var(--f-display); text-transform: uppercase; letter-spa
 .proof .term pre { font-size: 21px; padding: 18px 22px 20px; }
 
 /* 5 · architecture */
-.arch { display: grid; grid-template-columns: 940px 1fr; gap: 60px; align-items: start; flex: 1; margin-top: 30px; }
-.arch img { display: block; width: 940px; height: auto; border: 1px solid var(--rule); }
+.arch { display: flex; flex-direction: column; gap: 18px; flex: 1; margin-top: 26px; }
+.arch img { display: block; width: 1440px; height: auto; border: 1px solid var(--rule); align-self: center; }
+.arch .note { align-self: center; width: 1440px; }
 .arch ul { list-style: none; margin: 0; padding: 0; }
 .arch li { padding: 22px 0; border-top: 1px solid var(--rule); font-size: 27px; line-height: 1.4; color: #D9D3CB; }
 .arch li b { display: block; font: 400 30px/1.1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; color: var(--on-bg); margin-bottom: 8px; }
@@ -175,20 +177,21 @@ h1 { font: 400 140px/.92 var(--f-display); text-transform: uppercase; letter-spa
 .cmp .usrow { background: rgba(180,155,255,.07); }
 
 /* 7 · ecosystem */
-.calls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px 26px; margin-top: 56px; }
-.call { border: 1px solid var(--rule); background: var(--bg-raised); padding: 34px 30px 36px; }
-.call code { display: block; font: 400 31px/1.2 var(--f-data); color: var(--void-on-bg); }
-.call span { display: block; margin-top: 12px; font-size: 28px; color: #D9D3CB; }
+.calls { display: grid; grid-template-columns: 1fr 1fr; gap: 0 72px; margin-top: 50px; background: var(--paper); color: var(--ink); padding: 26px 48px 30px; transform: rotate(-.6deg); box-shadow: 0 30px 60px -30px #000; }
+.call { display: grid; grid-template-columns: 1fr; gap: 4px; padding: 20px 0 18px; border-bottom: 2px dashed var(--perf); }
+.call:nth-last-child(-n+2) { border-bottom: 0; }
+.call code { display: block; font: 400 32px/1.2 var(--f-data); color: var(--void); }
+.call span { display: block; font-size: 28px; color: #3E3742; }
 .sec { margin-top: auto; display: grid; grid-template-columns: 1.2fr 1fr; gap: 56px; align-items: end; }
 .sec p { font-size: 30px; line-height: 1.45; }
 .sec .note { font-size: 22px; }
 
 /* 8 · users */
-.users { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 50px; }
-.user { background: var(--paper); color: var(--ink); padding: 36px 36px 34px; }
-.user h3 { font: 400 46px/1 var(--f-display); text-transform: uppercase; }
-.user p { margin-top: 16px; font-size: 27px; line-height: 1.4; color: #3E3742; }
-.plan { margin-top: auto; border: 2px dashed var(--rule); padding: 30px 36px; display: grid; grid-template-columns: 220px 1fr 1fr 1fr; gap: 28px; align-items: start; }
+.users { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 50px; flex: 1; max-height: 420px; }
+.user { background: var(--paper); color: var(--ink); padding: 44px 40px 40px; display: flex; flex-direction: column; justify-content: center; }
+.user h3 { font: 400 56px/1 var(--f-display); text-transform: uppercase; }
+.user p { margin-top: 18px; font-size: 30px; line-height: 1.4; color: #3E3742; }
+.plan { margin-top: 40px; border: 2px dashed var(--rule); padding: 30px 36px; display: grid; grid-template-columns: 220px 1fr 1fr 1fr; gap: 28px; align-items: start; }
 .plan .stampp { font: 400 30px/1.05 var(--f-display); color: var(--held); border: 4px double var(--held); padding: 10px 14px 6px; transform: rotate(-4deg); text-align: center; letter-spacing: .08em; }
 .plan p { font-size: 26px; line-height: 1.4; color: #D9D3CB; }
 .plan p b { display: block; font: 400 28px/1.1 var(--f-display); letter-spacing: .08em; text-transform: uppercase; color: var(--on-bg); margin-bottom: 6px; }
@@ -253,9 +256,9 @@ body.debug-contrast .slide :is(h1, h2, h3, p, td, li, pre, .cap, .chip) { outlin
       <h1>The hot key<br>that has to<br><em>ask first.</em></h1>
       <p class="lede">A Portaldot vault whose hot key can only announce a spend, and whose cold key can veto it.</p>
       <div class="term">
-        <header><i></i><b>OWNER · COLD KEY</b><span>V3 testnet · 2026-10-24</span></header>
-<pre>[v3] <span class="ok">ok</span> veto by cold #166816 id 166816-1
-<span class="hi">VETOED</span> 0x1d19e158…eb40b59</pre>
+        <header><i></i><b>OWNER · COLD KEY</b><span>V3 testnet · 2026-10-24 06:24 WIB</span></header>
+<pre>[v3] <span class="ok">ok</span> veto Proxy.proxy(Proxy.reject_announcement) by cold #166816 id 166816-1 tx 0x3b57e68d…bc63f04
+<span class="hi">VETOED</span> 0x1d19e158…eb40b59 — removed from Proxy.Announcements; …</pre>
       </div>
     </div>
     <div class="tk paperstack">
@@ -280,6 +283,7 @@ body.debug-contrast .slide :is(h1, h2, h3, p, td, li, pre, .cap, .chip) { outlin
   <p class="lede">POT on a single hot key leaves in one extrinsic once its seed leaks. A multisig stops that, but asks a second signer for every payment.</p>
   <div class="exhibits">
     <div class="exhibit">
+      <span class="tagint">INTERIM · NOT V3</span>
       <p class="k">Hot key, no delay</p>
       <p class="v">100<small>UNIT</small></p>
       <p>moved to the thief in one extrinsic.</p>
@@ -310,7 +314,7 @@ body.debug-contrast .slide :is(h1, h2, h3, p, td, li, pre, .cap, .chip) { outlin
 
 <!-- 4 · LIVE V3 PROOF (frozen slide) -->
 <section class="slide" data-title="Live V3 proof">
-  <p class="label">Portaldot V3 testnet · portaldot-v3/3002 · 2026-10-24 06:24 WIB</p>
+  <p class="label">Portaldot V3 testnet · portaldot-v3/3002 · 2026-10-24 06:24 WIB (10-23 23:24 UTC)</p>
   <h2 style="font-size:96px">Refused on V3. <em>4 blocks to spare.</em></h2>
   <div class="proof">
     <div class="tk paperstack">
@@ -328,9 +332,9 @@ body.debug-contrast .slide :is(h1, h2, h3, p, td, li, pre, .cap, .chip) { outlin
       <div class="term">
         <header><i class="am"></i><b>WATCHER · OWNER'S SIDE</b><span>watcher.cast</span></header>
 <pre><span class="hi">NOT YOURS — VETO</span>
-<span class="am">Up to 11.4200 tPOT at risk</span>
-<span class="am">Veto must land by #166820: 9 blocks (≈ 54 s)</span>
-airlock veto --vault 5F4rPFqS… --hash 0x1d19e158…</pre>
+<span class="am">Up to 11.4200 tPOT at risk</span> (…)
+… <span class="am">Veto must land by #166820: 9 blocks (≈ 54 s)</span> from head #166811
+airlock veto --vault 5F4rPFqS… --delegate 5Cwitu8f… --hash 0x1d19e158…</pre>
       </div>
       <ul class="ids">
         <li><b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x35eb3267f5e393a35fa88aeebcd95d2e2b2e4125af8157301272166f332a25f0">166811-1</a></b><span>thief announces · ok</span></li>
@@ -338,7 +342,7 @@ airlock veto --vault 5F4rPFqS… --hash 0x1d19e158…</pre>
         <li><b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x21f02d23ccc573d71e24784068bb5f3ab45ecffdf4dd18866c831693f67bf6bc">166825-1</a></b><span>execute · <span class="x">Proxy.Unannounced</span></span></li>
         <li><b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x83f24f947415a8acaa585ef0f5dce94ed9d4d6f692993c86d9e19741eaa53f2c">166831-1</a></b><span>direct call · <span class="x">Proxy.Unannounced</span></span></li>
       </ul>
-      <p class="note" style="margin-top:18px">4/4 re-fetched by id · vault total unchanged, #166806 to #166835</p>
+      <p class="note" style="margin-top:18px">4/4 re-fetched by id · vault total unchanged, #166806 to #166835<br>excerpts of watcher.cast: long values and lines shortened with …</p>
     </div>
   </div>
   <aside class="speaker-notes">This is the slide to remember. Block 166811: a thief with the hot key announces a sweep of 11.4200 tPOT. The watcher prints NOT YOURS with the deadline, block 166820, and the exact veto command; the command lands at 166816, four blocks early. After the delay the thief's execute and a direct call both fail Proxy.Unannounced. Every id opens on node-console.</aside>
@@ -349,12 +353,8 @@ airlock veto --vault 5F4rPFqS… --hash 0x1d19e158…</pre>
   <p class="label">How it is wired</p>
   <h2 style="font-size:84px">The chain holds the ticket. <em>Airlock reads it.</em></h2>
   <div class="arch">
-    <img src="../docs/architecture.png" width="940" height="697" alt="Architecture: thief's machine, the Proxy pallet on the Portaldot V3 testnet, and the owner's machine (watcher, intent registry, Airlock CLI), core flow 1 to 5 with the 2026-10-24 block numbers">
-    <ul>
-      <li><b>On chain</b>The Proxy pallet holds the delay and the veto. No contract, no custom runtime code.</li>
-      <li><b>Owner's machine</b>Watcher, intent registry and CLI. The watcher never signs.</li>
-      <li><b>Before signing</b><span class="mono" style="font-size:24px">chain_profile.py</span> checks genesis and runtime code hash.</li>
-    </ul>
+    <img src="assets/architecture-core.png" width="1440" height="600" alt="Core flow from the README architecture diagram: the thief's announce #166811 to the Proxy pallet on the Portaldot V3 testnet, the watcher's NOT YOURS alert, the owner's cold-key veto #166816, and the refused execute #166825">
+    <p class="note">Steps 1 to 5 of the README diagram (docs/architecture.png), block numbers from the 2026-10-24 run. The watcher never signs; chain_profile.py checks genesis and runtime code hash before signing.</p>
   </div>
   <aside class="speaker-notes">This is the README diagram. The only enforcement is on chain: the Proxy pallet holds the delay and the veto. Everything we run is on the owner side and can fail without losing funds: a dead watcher means no alert, never a shorter delay.</aside>
 </section>

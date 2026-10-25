@@ -72,6 +72,7 @@ h2 em, h1 em { font-style: normal; color: var(--void-on-bg); }
 .note { font: 400 22px/1.4 var(--f-data); color: var(--on-bg-muted); }
 .foot { position: absolute; left: 120px; right: 120px; bottom: 44px; display: flex; justify-content: space-between; font: 400 20px/1 var(--f-data);
   letter-spacing: .1em; color: var(--on-bg-muted); border-top: 1px solid var(--rule); padding-top: 18px; }
+.ver { text-transform: none; color: inherit; text-decoration: none; border-bottom: 1px solid currentColor; }
 .gst { position: absolute; z-index: -1; border: 6px double currentColor; padding: 6px 22px 2px; font: 400 120px/1 var(--f-display); letter-spacing: .1em; opacity: .05; pointer-events: none; }
 
 /* the hold ticket (same markup and rules as the landing, zoomed per slide) */
@@ -266,7 +267,7 @@ body.debug-contrast .slide :is(h1, h2, h3, p, td, li, pre, .cap, .chip) { outlin
         <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#221C27"/><path d="M40 112H472V206A50 50 0 0 0 472 306V400H40V306A50 50 0 0 0 40 206Z" fill="#F3EEE4"/><rect x="92" y="170" width="68" height="172" fill="#D9A13B"/><rect x="176" y="170" width="68" height="172" fill="#D9A13B"/><rect x="298" y="177" width="54" height="158" fill="none" stroke="#8E8696" stroke-width="14"/><rect x="376" y="177" width="54" height="158" fill="none" stroke="#8E8696" stroke-width="14"/><rect x="258" y="96" width="26" height="320" fill="#5B2FB5"/><path d="M233 30H309L271 84ZM233 482H309L271 428Z" fill="#5B2FB5"/></svg>
         <b>AIRLOCK</b>
       </div>
-      <p class="label">Portaldot Hacker House 2026 · Ecosystem DApps</p>
+      <p class="label">Portaldot Hacker House 2026 · Ecosystem DApps · <a class="ver" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/releases/latest">v0.0.1</a></p>
       <h1>The hot key<br>that has to<br><em>ask first.</em></h1>
       <p class="lede">A Portaldot vault whose hot key can only announce a spend, and whose cold key can veto it.</p>
       <div class="term">
@@ -490,9 +491,10 @@ airlock veto --vault 5F4rPFqS… --delegate 5Cwitu8f… --hash 0x1d19e158…</pr
     const f = document.createElement('footer');
     f.className = 'foot';
     f.innerHTML = '<span>AIRLOCK · PORTALDOT HACKER HOUSE 2026 · ECOSYSTEM DAPPS</span>' +
-      '<span><span class="ver">v0.0.1</span> · facts at build 937e2f4 · ' + pad(i + 1) + ' / ' + pad(N) + '</span>';
+      '<span><a class="ver" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/releases/latest">v0.0.1</a> · facts at build 937e2f4 · ' + pad(i + 1) + ' / ' + pad(N) + '</span>';
     s.appendChild(f);
   });
+  fetch('https://api.github.com/repos/edycutjong/portaldot-hackathon-2026-airlock-edycu/releases/latest').then(r=>r.ok?r.json():null).then(j=>{if(j&&j.tag_name)document.querySelectorAll('.ver').forEach(e=>{e.textContent=j.tag_name})}).catch(()=>{});
   let cur = 0;
   const fit = () => {   // clientWidth/Height, not innerWidth: a zoomed-out mobile viewport reports a wide innerWidth
     const de = document.documentElement;

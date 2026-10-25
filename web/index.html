@@ -366,6 +366,7 @@ footer.foot { background: var(--bg-deep); border-top: 1px solid var(--rule); pad
 footer .wrap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px 48px; align-items: start; }
 footer nav { display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: flex-end; }
 footer nav a { color: var(--on-bg); text-decoration: none; } footer nav a:hover { text-decoration: underline; }
+footer nav a.ver { font-family: var(--f-data); letter-spacing: .06em; color: var(--on-bg-muted); border: 1px solid var(--rule); padding: 0 8px; border-radius: 2px; }
 footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
 
 /* ── responsive ── */
@@ -725,6 +726,7 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
       <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/CLI.md">CLI reference</a>
       <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/pitch-deck.pdf">Pitch deck</a>
       <a href="https://youtu.be/Es1387HDSTw">Film</a>
+      <a class="ver" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/releases/latest">v0.0.1</a>
     </nav>
     <p class="fine">No hosted app: Airlock is a command-line tool and a watcher that run against the public V3 endpoint. Portaldot Hacker House 2026 · Ecosystem DApps. MIT licensed. Type: Anton, Libre Franklin, Cutive Mono (SIL Open Font License).</p>
   </div>
@@ -732,6 +734,7 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
 
 <script>
 (() => {
+  fetch('https://api.github.com/repos/edycutjong/portaldot-hackathon-2026-airlock-edycu/releases/latest').then(r=>r.ok?r.json():null).then(j=>{if(j&&j.tag_name)document.querySelectorAll('.ver').forEach(e=>{e.textContent=j.tag_name})}).catch(()=>{});
   const root = document.documentElement;
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!still) { root.classList.add('play'); setTimeout(() => root.classList.add('settled'), 1700); }

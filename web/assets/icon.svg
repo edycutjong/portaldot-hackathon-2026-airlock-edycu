@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Airlock: a hold ticket whose block countdown is cut at the now line by a violet cut mark">
+  <!-- Airlock mark, night hold desk tokens (2026-10-25): a paper hold ticket on the ink-pad mat. Two blocks elapsed
+       (amber), two remaining (hollow). At the now boundary a violet cut line with printer's cut marks. -->
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="#17131B"/>
+  <path d="M40 112 H472 V206 A50 50 0 0 0 472 306 V400 H40 V306 A50 50 0 0 0 40 206 Z" fill="#F3EEE4"/>
+  <rect x="92" y="170" width="68" height="172" fill="#D9A13B"/>
+  <rect x="176" y="170" width="68" height="172" fill="#D9A13B"/>
+  <rect x="298" y="177" width="54" height="158" fill="none" stroke="#8E8696" stroke-width="14"/>
+  <rect x="376" y="177" width="54" height="158" fill="none" stroke="#8E8696" stroke-width="14"/>
+  <rect x="258" y="96" width="26" height="320" fill="#5B2FB5"/>
+  <path d="M233 30 H309 L271 84 Z M233 482 H309 L271 428 Z" fill="#5B2FB5"/>
+</svg>

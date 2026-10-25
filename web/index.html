@@ -135,7 +135,7 @@ h1 em { font-style: normal; color: var(--void-on-bg); white-space: nowrap; }
 .ticket::before, .ticket::after { content: ""; position: absolute; left: 112px; width: 24px; height: 24px; border-radius: 50%; background: var(--bg); }
 .ticket::before { top: -12px; } .ticket::after { bottom: -12px; }
 .stub { padding: 20px 14px 18px 18px; border-right: 2px dashed var(--perf); display: flex; flex-direction: column; gap: 6px; }
-.cap { font: 400 13px/1.3 var(--f-display); letter-spacing: .15em; color: var(--muted); text-transform: uppercase; }
+.cap { font: 400 13px/1.3 var(--f-display); letter-spacing: .15em; color: #554E5A; text-transform: uppercase; }
 .d { font: 400 15px/1.25 var(--f-data); }
 .stub .d { margin-bottom: 8px; }
 .left { font: 400 104px/.86 var(--f-display); color: var(--held-on-paper); margin: 2px 0 4px; font-variant-numeric: tabular-nums; }
@@ -143,7 +143,7 @@ h1 em { font-style: normal; color: var(--void-on-bg); white-space: nowrap; }
 .amount { font: 400 58px/1 var(--f-display); letter-spacing: .01em; margin-top: 6px; }
 .amount small { font: 400 20px var(--f-data); margin-left: 8px; letter-spacing: 0; }
 .rows { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; margin: 14px 0 0; font: 400 15px/1.35 var(--f-data); }
-.rows dt { font: 400 13px/1.6 var(--f-display); letter-spacing: .14em; color: var(--muted); text-transform: uppercase; }
+.rows dt { font: 400 13px/1.6 var(--f-display); letter-spacing: .14em; color: #554E5A; text-transform: uppercase; }
 .rows dd { margin: 0; overflow-wrap: anywhere; }
 .meter { position: relative; margin: 22px 0 6px; }
 .mcap { display: block; max-width: 46%; margin-bottom: 18px; }
@@ -164,7 +164,7 @@ h1 em { font-style: normal; color: var(--void-on-bg); white-space: nowrap; }
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='.5' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.6 1.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"); }
 .stamp b { display: block; font: 400 66px/.92 var(--f-display); letter-spacing: .08em; }
 .stamp span { display: block; font: 400 13px/1.35 var(--f-data); }
-.desk figcaption { position: relative; margin-top: 56px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px;
+.desk figcaption { position: relative; margin-top: 44px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px;
   font: 400 15px/1.5 var(--f-data); color: #C9C2D0; }
 .desk figcaption a { color: var(--on-bg); }
 .replay { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 14px; background: transparent; border: 1px solid var(--rule);
@@ -234,7 +234,9 @@ h2 em { font-style: normal; color: var(--void-on-bg); }
 .ev a { color: inherit; }
 .ev .lbl a { text-decoration: underline; text-decoration-color: rgba(167,159,175,.5); }
 
-.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: stretch; }
+.term { display: flex; flex-direction: column; }
+.term pre { flex: 1; }
 .term { background: var(--bg-deep); border: 1px solid var(--rule); box-shadow: 0 30px 60px -36px #000; min-width: 0; }
 .term header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--rule); }
 .term header b { font: 400 15px/1 var(--f-display); letter-spacing: .12em; }
@@ -247,7 +249,7 @@ h2 em { font-style: normal; color: var(--void-on-bg); }
   background: radial-gradient(circle at 6px 0, transparent 5px, var(--paper) 5.5px) 0 0 / 12px 10px repeat-x; }
 .slip header { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 2px dashed var(--perf); }
 .slip header b { font: 400 15px/1 var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.slip header span { font: 400 13px/1 var(--f-data); color: var(--muted); }
+.slip header span { font: 400 14px/1.2 var(--f-data); color: var(--void); text-align: right; }
 .slip .ny { margin: 18px 0 14px; font: 400 clamp(38px, 4.2vw, 56px)/.95 var(--f-display); color: var(--void); letter-spacing: .01em; }
 .sl-k { font: 400 13px/1.3 var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
 .sl-v { font: 400 15px/1.4 var(--f-data); overflow-wrap: anywhere; }
@@ -391,6 +393,8 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
   .ev .lbl, .ev.r .lbl { position: static; width: auto; text-align: left; }
   .ev.v::before { display: none; }
   .cell.c2, .cell.c3 { grid-column: span 6; }
+  .cell.arch a.img { overflow-x: auto; position: relative; }
+  .cell.arch img { width: 900px; max-width: none; }
   footer .wrap { grid-template-columns: minmax(0, 1fr); }
   footer nav { justify-content: flex-start; }
 }
@@ -401,7 +405,7 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
   .mark span { display: none; }
   section.band { padding: 84px 0; }
   .hero-grid { padding-top: 26px; }
-  .hero .label { font-size: 12px; margin-bottom: 14px; }
+  .hero .label { font-size: 11px; letter-spacing: .04em; margin-bottom: 14px; }
   h1 { font-size: 50px; }
   .desk { margin: 26px 0 8px; }
   .slip { padding: 18px 16px 20px; }
@@ -411,15 +415,14 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
   .stub { padding: 16px 10px 14px 12px; }
   .left { font-size: 74px; }
   .d { font-size: 13px; }
-  .tbody { padding: 16px 14px 18px 16px; }
+  .tbody { padding: 16px 14px 100px 16px; }
   .amount { font-size: 42px; }
   .amount small { font-size: 16px; }
-  .rows { grid-template-columns: minmax(0, 1fr); gap: 0; font-size: 14px; }
-  .rows dd { margin-bottom: 6px; }
+  .rows { gap: 2px 10px; font-size: 14px; }
   .cells { gap: 3px; } .cells i { height: 22px; }
   .meter-cap { font-size: 11px; }
-  .stamp { right: 4px; top: 70px; bottom: auto; padding: 5px 9px 4px; }
-  .stamp b { font-size: 48px; }
+  .stamp { right: 6px; bottom: 10px; padding: 5px 9px 4px; }
+  .stamp b { font-size: 40px; }
   .stamp span { font-size: 11px; }
   .ticket.stamped { animation: none; }
   .term pre { font-size: 13px; min-height: 0; }
@@ -489,7 +492,7 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
         <a class="btn ghost" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/pitch-deck.pdf"><svg class="ico" aria-hidden="true"><use href="#i-deck"/></svg>Pitch deck</a>
         <a class="btn violet" href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xa8f95309e37549e56809b7af7d53818eb17e66be6044b4dfaed91c129c6468eb">The veto on node-console<svg class="ico" aria-hidden="true"><use href="#i-out"/></svg></a>
       </div>
-      <p class="strip rise"><span>Portaldot V3 testnet · <span class="nt">portaldot-v3/3002</span></span> · <span>no custom runtime code</span> · <span>4/4 re-fetched by id</span></p>
+      <p class="strip rise"><span>Portaldot V3 testnet · <span class="nt">portaldot-v3/3002</span></span> · <span>no custom runtime code</span> · <span>this run's 4 ids re-fetched by id</span></p>
     </div>
 
     <figure class="desk" aria-labelledby="ticket-cap">
@@ -536,7 +539,7 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
     <li><p class="k">To spare</p><p class="v hot" data-count="4">4<small>blocks</small></p>
       <p>Veto in #166816; the deadline was #166820.</p>
       <a class="src" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/evidence/final-video-run-v3-2026-10-24.md">same run record</a></li>
-    <li><p class="k">Re-fetched</p><p class="v" data-count="44" data-tail="/44">44/44</p>
+    <li><p class="k">Proof rows re-fetched</p><p class="v" data-count="44" data-tail="/44">44/44</p>
       <p>Every V3 row in PROOF.md, read back by extrinsic id.</p>
       <a class="src" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/evidence/verify-onchain-2026-10-19T161943Z.json">evidence/verify-onchain-2026-10-19T161943Z.json</a></li>
     <li><p class="k">Offline tests</p><p class="v" data-count="350">350</p>
@@ -564,7 +567,7 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
 
     <div class="pair">
       <article class="slip" aria-label="The watcher's alert: its stdout lines, set on paper">
-        <header><b>Airlock alert</b><span>watcher stdout · watcher.cast</span></header>
+        <header><b>Airlock alert</b><span class="reset">re-set from the watcher's stdout · real V3 run</span></header>
         <p class="ny">NOT YOURS — VETO</p>
         <p class="sl-k">Vault</p><p class="sl-v">5F4rPFqS6PQEKUHacHtR5mLrDMVZ8RjCfJpYmfiktERhsmE1</p>
         <p class="sl-k">Chain</p><p class="sl-v">Portaldot V3 testnet (v3)</p>
@@ -591,7 +594,7 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
       </a>
       <div>
         <h3>The same run, on film</h3>
-        <p>The three terminals side by side, from the thief's announce to the re-fetch by id and the veto's block on node-console. Speed-ups are labelled on screen.</p>
+        <p>The thief's announce, the veto and the re-fetch by id, with the veto's block on node-console. Speed-ups are labelled on screen.</p>
         <p>YouTube · <a href="https://youtu.be/Es1387HDSTw">youtu.be/Es1387HDSTw</a></p>
       </div>
     </div>
@@ -649,7 +652,7 @@ footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
 
 <section class="band honest" id="honest" aria-labelledby="honest-h">
   <div class="wrap">
-    <span class="holdstamp" aria-hidden="true">KNOWN HOLDS</span>
+    <span class="holdstamp" aria-hidden="true">NOT YET</span>
     <div class="head">
       <h2 id="honest-h">What it <em>hasn't</em> done yet.</h2>
       <p class="lede">Lifted from the README, word for word. A hold desk that hides its own gaps is not one you would trust with the vault.</p>

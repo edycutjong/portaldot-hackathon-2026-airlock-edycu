@@ -80,7 +80,7 @@ h2 em, h1 em { font-style: normal; color: var(--void-on-bg); }
 .ticket::before, .ticket::after { content: ""; position: absolute; left: 112px; width: 24px; height: 24px; border-radius: 50%; background: var(--bg); }
 .ticket::before { top: -12px; } .ticket::after { bottom: -12px; }
 .stub { padding: 20px 14px 18px 18px; border-right: 2px dashed var(--perf); display: flex; flex-direction: column; gap: 6px; }
-.cap { font: 400 12px/1.3 var(--f-display); letter-spacing: .15em; color: var(--muted); text-transform: uppercase; }
+.cap { font: 400 12px/1.3 var(--f-display); letter-spacing: .15em; color: #554E5A; text-transform: uppercase; }
 .d { font: 400 15px/1.25 var(--f-data); }
 .stub .d { margin-bottom: 8px; }
 .left { font: 400 104px/.86 var(--f-display); color: var(--held-on-paper); margin: 2px 0 4px; }
@@ -101,7 +101,7 @@ h2 em, h1 em { font-style: normal; color: var(--void-on-bg); }
 .cut::before { top: -10px; border-top: 10px solid var(--void); border-bottom: 0; }
 .cut::after { bottom: -10px; border-bottom: 10px solid var(--void); border-top: 0; }
 .cut > span { position: absolute; left: 12px; top: -6px; white-space: nowrap; font: 400 13px/1 var(--f-data); color: var(--void); }
-.meter-cap { display: flex; justify-content: space-between; gap: 8px; font: 400 12px/1.3 var(--f-data); color: var(--muted); }
+.meter-cap { display: flex; justify-content: space-between; gap: 8px; font: 400 12px/1.3 var(--f-data); color: #4F4854; }
 .stamp { position: absolute; right: 18px; bottom: 16px; padding: 8px 16px 7px; border: 5px double var(--void); color: var(--void); text-align: center;
   transform: rotate(-12deg); mix-blend-mode: multiply; opacity: .92;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='.5' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.6 1.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
@@ -197,7 +197,7 @@ h1 { font: 400 140px/.92 var(--f-display); text-transform: uppercase; letter-spa
 .call span { display: block; font-size: 28px; color: #3E3742; }
 .sec { margin-top: auto; display: grid; grid-template-columns: 1.2fr 1fr; gap: 56px; align-items: end; }
 .sec p { font-size: 30px; line-height: 1.45; }
-.sec .note { font-size: 22px; }
+.sec .note { font-size: 22px; color: #C9C2D0; }
 
 /* 8 · users */
 .users { display: grid; grid-template-columns: 1fr; margin-top: 46px; border-top: 2px solid var(--on-bg-muted); }
@@ -356,7 +356,7 @@ airlock veto --vault 5F4rPFqS… --delegate 5Cwitu8f… --hash 0x1d19e158…</pr
         <li><b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x21f02d23ccc573d71e24784068bb5f3ab45ecffdf4dd18866c831693f67bf6bc">166825-1</a></b><span>execute · <span class="x">Proxy.Unannounced</span></span></li>
         <li><b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x83f24f947415a8acaa585ef0f5dce94ed9d4d6f692993c86d9e19741eaa53f2c">166831-1</a></b><span>direct call · <span class="x">Proxy.Unannounced</span></span></li>
       </ul>
-      <p class="note" style="margin-top:18px">4/4 re-fetched by id · total unchanged #166806 → #166835 · excerpt, cut with …</p>
+      <p class="note" style="margin-top:18px">4/4 re-fetched · total unchanged #166806 → #166835 · excerpt, cut with …<br>thief = our own script, scripts/thief.py, holding the hot key</p>
     </div>
   </div>
   <aside class="speaker-notes">This is the slide to remember. Block 166811: a thief with the hot key announces a sweep of 11.4200 tPOT. The watcher prints NOT YOURS with the deadline, block 166820, and the exact veto command; the command lands at 166816, four blocks early. After the delay the thief's execute and a direct call both fail Proxy.Unannounced. Every id opens on node-console. Staged, and said so: the thief is our own script, scripts/thief.py, holding the vault's hot key; its transactions are real V3 extrinsics.</aside>
@@ -380,7 +380,7 @@ airlock veto --vault 5F4rPFqS… --delegate 5Cwitu8f… --hash 0x1d19e158…</pr
   <p class="lede">Delayed proxies with announce and reject ship in the Proxy pallet. In our search (not a market survey) we found no product built on that path.</p>
   <div class="cmp">
     <div class="th">Setup</div><div class="th">Signers per payment</div><div class="th">A leaked hot key…</div><div class="th">The owner acts…</div>
-    <div class="rh">One hot key</div><div class="num">1</div><div>drains the account in one extrinsic</div><div>after the money is gone</div>
+    <div class="rh">One hot key</div><div class="num">1</div><div>can move the funds in one extrinsic</div><div>after the money is gone</div>
     <div class="rh">Two-key multisig</div><div class="num">2</div><div>cannot spend alone</div><div>on every payment</div>
     <div class="rh">Delayed proxy, no watcher</div><div class="num">1</div><div>can only announce; no alert goes out</div><div>only if they notice the hash in time</div>
     <div class="rh us usrow">Airlock</div><div class="num us usrow">1</div><div class="usrow">can only announce, then wait</div><div class="usrow">only on NOT YOURS: the cold key vetoes</div>
@@ -435,7 +435,7 @@ airlock veto --vault 5F4rPFqS… --delegate 5Cwitu8f… --hash 0x1d19e158…</pr
       <ul>
         <li><b>4/4</b><span>2026-10-24 run: veto #166816, execute + direct refused <span class="mono">final-video-run</span></span></li>
         <li><b>7/7</b><span>intent registry checks against V3 <span class="mono">890fcfb</span></span></li>
-        <li><b>25 · 8</b><span>seed extrinsics · call types</span></li>
+        <li><b>25</b><span>seed extrinsics of 8 call types</span></li>
         <li><b>44/44</b><span>V3 proof rows re-fetched by id <span class="mono">PROOF.md</span></span></li>
       </ul>
       <h3 class="iv">Interim chains and offline</h3>

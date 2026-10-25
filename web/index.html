@@ -3,55 +3,798 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Airlock</title>
-<meta name="description" content="A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay, and your cold key can veto it first.">
+<title>Airlock: the hot key that has to ask first</title>
+<meta name="description" content="A Portaldot vault whose hot key can only announce a spend and wait. On the V3 testnet the cold key vetoed a thief's 11.4200 tPOT sweep at block #166816, four blocks before the deadline.">
+<meta name="theme-color" content="#17131B">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://airlock.edycu.dev/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Airlock">
+<meta property="og:url" content="https://airlock.edycu.dev/">
+<meta property="og:title" content="Airlock: the hot key that has to ask first">
+<meta property="og:description" content="A stolen hot key can only announce a spend and wait. On the Portaldot V3 testnet the cold key vetoed an 11.4200 tPOT sweep with 4 blocks to spare.">
+<meta property="og:image" content="https://airlock.edycu.dev/assets/og.png?v=20261025">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A paper hold ticket for an 11.4200 tPOT sweep, stamped VOID by the cold key at block #166816">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Airlock: the hot key that has to ask first">
+<meta name="twitter:description" content="A stolen hot key can only announce a spend and wait. On the Portaldot V3 testnet the cold key vetoed an 11.4200 tPOT sweep with 4 blocks to spare.">
+<meta name="twitter:image" content="https://airlock.edycu.dev/assets/og.png?v=20261025">
+<link rel="preload" href="assets/fonts/anton.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/libre-franklin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-  :root { --bg: #f6f5f1; --fg: #16181d; --muted: #5b6070; --line: #d9d6cc; --accent: #b4441f; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #0f1115; --fg: #e9e7e1; --muted: #9aa0ad; --line: #2a2e37; --accent: #f08a5d; }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg);
-         font: 17px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 720px; margin: 0 auto; padding: 72px 16px 56px; }
-  .eyebrow { font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em;
-             text-transform: uppercase; color: var(--accent); }
-  h1 { font-size: clamp(40px, 9vw, 64px); line-height: 1; margin: 16px 0 20px; letter-spacing: -.02em; }
-  .lede { font-size: 20px; margin: 0 0 32px; }
-  ol { padding: 0; margin: 0 0 32px; list-style: none; border-top: 1px solid var(--line); }
-  li { padding: 14px 0; border-bottom: 1px solid var(--line); display: flex; gap: 16px; }
-  li b { font: 600 14px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); min-width: 72px; }
-  p { color: var(--muted); }
-  .links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
-  a.btn { color: var(--fg); text-decoration: none; border: 1px solid var(--fg); padding: 10px 16px; border-radius: 6px;
-          transition: background .15s ease, color .15s ease; }
-  a.btn:hover, a.btn:focus-visible { background: var(--fg); color: var(--bg); }
-  a.btn.primary { background: var(--fg); color: var(--bg); }
-  a.btn.primary:hover, a.btn.primary:focus-visible { background: var(--accent); border-color: var(--accent); }
-  footer { margin-top: 56px; font-size: 14px; color: var(--muted); }
+/* Airlock · night hold desk. Tokens = the project's design tokens (one :root for the landing and the deck). */
+:root {
+  --bg:          #17131B;  /* ink-pad black mat */
+  --paper:       #F3EEE4;  /* the hold ticket, the memo sheet */
+  --void:        #5B2FB5;  /* violet stamp ink on paper */
+  --void-on-bg:  #B49BFF;  /* the same ink read on the mat */
+  --held:        #D9A13B;  /* amber hold tag: announced, counting down */
+  --on-bg:       #F2EEE6;
+  --bg-raised:   #221C27;
+  --bg-deep:     #100D13;
+  --on-bg-muted: #A79FAF;
+  --rule:        #3A3240;
+  --ink:         #19141C;
+  --muted:       #6C6470;
+  --perf:        #CFC4B4;
+  --held-on-paper: #A06A0C;
+  --f-display: "Anton", "Anton Fallback", "Arial Narrow", sans-serif;
+  --f-body:    "Libre Franklin", "Libre Franklin Fallback", "Helvetica Neue", Arial, sans-serif;
+  --f-data:    "Cutive Mono", "Cutive Mono Fallback", ui-monospace, Menlo, monospace;
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+}
+@font-face { font-family: "Anton"; src: url(assets/fonts/anton.woff2) format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Libre Franklin"; src: url(assets/fonts/libre-franklin.woff2) format("woff2"); font-weight: 400 800; font-display: swap; }
+@font-face { font-family: "Cutive Mono"; src: url(assets/fonts/cutive-mono.woff2) format("woff2"); font-weight: 400; font-display: swap; }
+/* metric-matched fallbacks (fontTools, over this page's own copy) so the swap does not move the page */
+@font-face { font-family: "Anton Fallback"; src: local("Arial"); size-adjust: 69.2%; ascent-override: 169.9%; descent-override: 47.5%; line-gap-override: 0%; }
+@font-face { font-family: "Libre Franklin Fallback"; src: local("Arial"); size-adjust: 102.1%; ascent-override: 94.6%; descent-override: 24.1%; line-gap-override: 0%; }
+@font-face { font-family: "Cutive Mono Fallback"; src: local("Courier New"); size-adjust: 100.9%; ascent-override: 82.1%; descent-override: 27%; line-gap-override: 0%; }
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); color: var(--on-bg); font: 400 17px/1.6 var(--f-body); -webkit-font-smoothing: antialiased;
+  overflow-x: clip; scroll-behavior: smooth; scrollbar-color: #4A4052 var(--bg-deep); caret-color: var(--void-on-bg);
+  text-rendering: optimizeLegibility; }
+body { margin: 0; }
+::selection { background: var(--void-on-bg); color: var(--ink); }
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: #4A4052; border: 3px solid var(--bg-deep); border-radius: 8px; }
+a { color: inherit; text-underline-offset: .22em; text-decoration-thickness: 1px; }
+a:hover { text-decoration-color: var(--void-on-bg); }
+:focus-visible { outline: 3px solid var(--void-on-bg); outline-offset: 3px; border-radius: 2px; }
+h1, h2, h3 { margin: 0; font-weight: 400; text-wrap: balance; }
+p { margin: 0; }
+code, .mono { font-family: var(--f-data); }
+.nt { text-transform: none !important; letter-spacing: 0 !important; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
+.skip { position: absolute; left: -9999px; top: 8px; z-index: 9; background: var(--paper); color: var(--ink); padding: 10px 14px; }
+.skip:focus { left: 8px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ico { width: 1em; height: 1em; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── nav ── */
+.top { display: flex; align-items: center; gap: 28px; padding: 22px 32px; position: relative; z-index: 3; }
+.mark { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.mark svg { width: 30px; height: 30px; }
+.mark b { font: 400 26px/1 var(--f-display); letter-spacing: .06em; }
+.mark span { font: 400 12px/1 var(--f-data); color: var(--on-bg-muted); letter-spacing: .14em; padding-top: 4px; }
+.top nav { margin-left: auto; display: flex; gap: 26px; font-size: 15px; color: var(--on-bg-muted); }
+.top nav a { text-decoration: none; transition: color .2s; }
+.top nav a:hover { color: var(--on-bg); }
+
+/* ── buttons ── */
+.btn { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 12px 18px; border: 1.5px solid var(--on-bg);
+  font: 600 15px/1.2 var(--f-body); text-decoration: none; color: var(--on-bg); background: transparent; cursor: pointer;
+  transition: transform .25s var(--ease-out), background-color .2s, color .2s, box-shadow .25s var(--ease-out); }
+.btn:hover { transform: translateY(-2px); box-shadow: 0 10px 22px -12px rgba(0,0,0,.9); text-decoration: none; }
+.btn:active { transform: translateY(0); box-shadow: none; }
+.btn.solid { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+.btn.solid:hover { background: #fff; }
+.btn.ghost:hover { background: rgba(242,238,230,.08); }
+.btn.violet { border-color: var(--void-on-bg); color: var(--void-on-bg); }
+.btn.violet:hover { background: var(--void-on-bg); color: var(--ink); }
+.btn .ico { width: 18px; height: 18px; }
+
+/* ── hero: the desk ── */
+.hero { position: relative; isolation: isolate; overflow: clip; padding-bottom: 96px; }
+.hero::before { content: ""; position: absolute; inset: 0; z-index: -2; pointer-events: none;
+  background:
+    radial-gradient(52rem 34rem at 76% 38%, rgba(255,226,170,.105), transparent 64%),
+    radial-gradient(40rem 26rem at 8% 0%, rgba(180,155,255,.06), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .62 0 0 0 0 .56 0 0 0 0 .72 0 0 0 .085 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.ghosts { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.gst { position: absolute; border: 4px double currentColor; padding: 4px 14px 2px; font: 400 54px/1 var(--f-display); letter-spacing: .1em; opacity: .05; }
+.gst.g1 { color: var(--void-on-bg); left: 47%; top: 6%; transform: rotate(-9deg); }
+.gst.g2 { color: var(--held); right: -2%; bottom: 10%; transform: rotate(7deg); font-size: 72px; }
+.gst.g3 { color: var(--on-bg); left: -3%; bottom: 3%; transform: rotate(4deg); font-size: 46px; }
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1.13fr) minmax(0, .87fr); gap: 56px; align-items: center; padding-top: 56px; }
+.label { font: 400 13px/1.4 var(--f-data); letter-spacing: .18em; color: var(--held); text-transform: uppercase; }
+.hero .label { margin-bottom: 24px; }
+.head .label { margin-bottom: 18px; }
+h1 { font: 400 clamp(54px, 6.9vw, 6rem)/.93 var(--f-display); text-transform: uppercase; letter-spacing: .004em; }
+h1 em { font-style: normal; color: var(--void-on-bg); white-space: nowrap; }
+.sub { max-width: 34em; margin: 30px 0 34px; color: #D9D3CB; font-size: 19px; line-height: 1.6; }
+.sub b { color: var(--on-bg); font-weight: 700; }
+.sub .n { font: 400 1.08em/1 var(--f-data); color: var(--on-bg); }
+.ctas { display: flex; flex-wrap: wrap; gap: 10px; }
+.strip { margin-top: 24px; font: 400 14px/1.6 var(--f-data); color: var(--on-bg-muted); }
+.strip span { white-space: nowrap; }
+
+/* the hold ticket (signature) */
+.desk { position: relative; margin: 0; }
+.stack { position: absolute; inset: 0; pointer-events: none; }
+.stack i { position: absolute; inset: 6% -2% -4% 4%; background: #2C2433; transform: rotate(4.5deg); box-shadow: 0 24px 50px -24px #000; }
+.stack i + i { inset: -3% 6% 8% -3%; background: #241E2A; transform: rotate(-7deg); }
+.ticket { position: relative; display: grid; grid-template-columns: 124px minmax(0, 1fr); background: var(--paper); color: var(--ink);
+  transform: rotate(-2.2deg); box-shadow: 0 34px 60px -22px rgba(0,0,0,.8), 0 2px 0 rgba(0,0,0,.35); }
+.ticket::before, .ticket::after { content: ""; position: absolute; left: 112px; width: 24px; height: 24px; border-radius: 50%; background: var(--bg); }
+.ticket::before { top: -12px; } .ticket::after { bottom: -12px; }
+.stub { padding: 20px 14px 18px 18px; border-right: 2px dashed var(--perf); display: flex; flex-direction: column; gap: 6px; }
+.cap { font: 400 12px/1.3 var(--f-display); letter-spacing: .15em; color: var(--muted); text-transform: uppercase; }
+.d { font: 400 15px/1.25 var(--f-data); }
+.stub .d { margin-bottom: 8px; }
+.left { font: 400 104px/.86 var(--f-display); color: var(--held-on-paper); margin: 2px 0 4px; font-variant-numeric: tabular-nums; }
+.tbody { position: relative; padding: 20px 22px 156px 24px; min-width: 0; }
+.amount { font: 400 58px/1 var(--f-display); letter-spacing: .01em; margin-top: 6px; }
+.amount small { font: 400 20px var(--f-data); margin-left: 8px; letter-spacing: 0; }
+.rows { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; margin: 14px 0 0; font: 400 15px/1.35 var(--f-data); }
+.rows dt { font: 400 12px/1.7 var(--f-display); letter-spacing: .14em; color: var(--muted); text-transform: uppercase; }
+.rows dd { margin: 0; overflow-wrap: anywhere; }
+.meter { position: relative; margin: 22px 0 6px; }
+.mcap { display: block; margin-bottom: 18px; }
+.cells { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 5px; }
+.cells i { height: 26px; border: 2px solid var(--perf); transition: background-color .18s, border-color .18s; }
+.cells i.on { background: var(--held); border-color: var(--held); }
+.cells i.ex { border-style: dashed; border-color: var(--held-on-paper); }
+.cut { position: absolute; left: 50%; top: 12px; bottom: -14px; width: 3px; margin-left: -1.5px; background: var(--void); transform-origin: top; }
+.cut::before, .cut::after { content: ""; position: absolute; left: 50%; margin-left: -7px; border: 7px solid transparent; }
+.cut::before { top: -10px; border-top: 10px solid var(--void); border-bottom: 0; }
+.cut::after { bottom: -10px; border-bottom: 10px solid var(--void); border-top: 0; }
+.cut > span { position: absolute; left: 12px; top: -6px; white-space: nowrap; font: 400 13px/1 var(--f-data); color: var(--void); }
+.meter-cap { display: flex; justify-content: space-between; gap: 8px; font: 400 12px/1.3 var(--f-data); color: var(--muted); }
+.then { transition: opacity .4s; }
+.stamp { position: absolute; right: 18px; bottom: 16px; padding: 8px 16px 7px; border: 5px double var(--void); color: var(--void); text-align: center;
+  transform: rotate(-12deg); mix-blend-mode: multiply;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='.5' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.6 1.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='.5' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.6 1.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"); }
+.stamp b { display: block; font: 400 66px/.92 var(--f-display); letter-spacing: .08em; }
+.stamp span { display: block; font: 400 13px/1.35 var(--f-data); }
+.desk figcaption { margin-top: 34px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; font: 400 14px/1.5 var(--f-data);
+  color: var(--on-bg-muted); transform: rotate(-2.2deg); }
+.desk figcaption a { color: var(--on-bg); }
+.replay { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 14px; background: transparent; border: 1px solid var(--rule);
+  color: var(--on-bg); font: 600 14px/1 var(--f-body); cursor: pointer; transition: border-color .2s, background-color .2s; }
+.replay:hover { border-color: var(--void-on-bg); background: rgba(180,155,255,.08); }
+.replay .ico { width: 16px; height: 16px; }
+
+/* ticket states, driven by JS from the final state */
+.ticket.armed .cut { transform: scaleY(0); }
+.ticket.armed .stamp { opacity: 0; transform: rotate(-12deg) scale(1.7); }
+.ticket.armed .then { opacity: 0; }
+.ticket.cutting .cut { transform: scaleY(1); transition: transform .34s var(--ease-out); }
+.ticket.stamped .stamp { animation: thud .36s cubic-bezier(.3, 1.5, .5, 1) both; }
+.ticket.stamped { animation: jolt .32s .12s ease-out; }
+@keyframes thud { from { opacity: 0; transform: rotate(-12deg) scale(1.7); } 60% { opacity: .92; } to { opacity: .92; transform: rotate(-12deg) scale(1); } }
+@keyframes jolt { 0%, 100% { transform: rotate(-2.2deg); } 35% { transform: rotate(-2.2deg) translateY(3px) scale(.995); } }
+.stamp { opacity: .92; }
+
+/* staggered hero entrance (JS adds .play; .settled drops it so captures and print see the page) */
+.play .hero .rise { animation: rise .9s var(--ease-out) both; }
+.play .hero .rise:nth-child(2) { animation-delay: .08s; } .play .hero .rise:nth-child(3) { animation-delay: .16s; }
+.play .hero .rise:nth-child(4) { animation-delay: .24s; } .play .hero .rise:nth-child(5) { animation-delay: .3s; }
+.play .hero .desk { animation: lay 1s .15s var(--ease-out) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+@keyframes lay { from { opacity: 0; transform: translate(30px, 46px) rotate(4deg); } }
+.settled .hero .rise, .settled .hero .desk { animation: none; }
+
+/* ── receipts ── */
+.tally { position: relative; background: var(--bg-raised); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.tally ol { list-style: none; margin: 0 auto; padding: 0 32px; max-width: 1240px; display: grid; grid-template-columns: 1.25fr 1fr 1fr 1fr; }
+.tally li { padding: 34px 26px 30px; border-right: 1px dashed var(--rule); }
+.tally li:first-child { padding-left: 0; } .tally li:last-child { border-right: 0; }
+.tally .k { font: 400 13px/1.2 var(--f-display); letter-spacing: .16em; color: var(--on-bg-muted); text-transform: uppercase; }
+.tally .v { font: 400 68px/1 var(--f-display); margin: 12px 0 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tally .v small { font: 400 20px var(--f-data); color: var(--on-bg-muted); margin-left: 6px; }
+.tally .v.hot { color: var(--void-on-bg); }
+.tally p { font-size: 15px; line-height: 1.5; color: #D9D3CB; max-width: 26ch; }
+.tally a.src { display: inline-block; margin-top: 12px; font: 400 13px/1.4 var(--f-data); color: var(--on-bg-muted); overflow-wrap: anywhere; }
+
+/* ── section shells ── */
+section.band { padding: 120px 0; position: relative; }
+.head { max-width: 760px; margin-bottom: 52px; }
+h2 { font: 400 clamp(40px, 5vw, 68px)/.98 var(--f-display); text-transform: uppercase; letter-spacing: .005em; }
+h2 em { font-style: normal; color: var(--void-on-bg); }
+.lede { margin-top: 20px; max-width: 62ch; color: #D9D3CB; font-size: 18px; }
+
+/* ── the run ── */
+.rail { position: relative; margin: 0 0 64px; padding: 96px 0 104px; list-style: none; }
+.rail::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: var(--rule); }
+.rail .hold { position: absolute; top: calc(50% - 9px); height: 20px; left: 0; width: 45%;
+  background: repeating-linear-gradient(-45deg, rgba(217,161,59,.5) 0 6px, transparent 6px 12px); border: 1px solid rgba(217,161,59,.6); }
+.rail .hold::after { content: ""; position: absolute; left: 55.6%; right: 0; top: -1px; bottom: -1px; background: var(--bg); opacity: .62; }
+.rail .tick { position: absolute; left: 0; right: 0; top: calc(50% + 6px); height: 8px;
+  background: repeating-linear-gradient(90deg, var(--rule) 0 1px, transparent 1px calc(5% - .05%)); }
+.ev { position: absolute; left: calc(var(--x) * 1%); top: 50%; width: 0; }
+.ev .pin { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; background: var(--bg); border: 2px solid var(--on-bg-muted); transform: rotate(45deg); }
+.ev .lbl { position: absolute; left: -10px; width: 190px; font: 400 14px/1.35 var(--f-data); color: var(--on-bg-muted); }
+.ev .lbl b { display: block; font: 400 21px/1 var(--f-display); letter-spacing: .04em; color: var(--on-bg); margin-bottom: 4px; }
+.ev.up .lbl { bottom: 22px; } .ev.dn .lbl { top: 22px; }
+.ev.r .lbl { left: auto; right: -10px; text-align: right; }
+.ev.a .pin { border-color: var(--held); background: var(--held); }
+.ev.v .pin { border-color: var(--void-on-bg); background: var(--void-on-bg); }
+.ev.v .lbl b { color: var(--void-on-bg); }
+.ev.v::before { content: ""; position: absolute; left: -1.5px; top: -46px; height: 92px; width: 3px; background: var(--void-on-bg); }
+.ev.f .pin { border-color: var(--on-bg-muted); }
+.ev.dl .pin { border-style: dashed; border-color: var(--held); }
+.ev a { color: inherit; }
+.ev .lbl a { text-decoration: underline; text-decoration-color: rgba(167,159,175,.5); }
+
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+.term { background: var(--bg-deep); border: 1px solid var(--rule); box-shadow: 0 30px 60px -36px #000; min-width: 0; }
+.term header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--rule); }
+.term header b { font: 400 15px/1 var(--f-display); letter-spacing: .12em; }
+.term header span { margin-left: auto; font: 400 12px/1 var(--f-data); color: var(--on-bg-muted); }
+.term header i { width: 9px; height: 9px; background: var(--held); transform: rotate(45deg); }
+.term.owner header i { background: var(--void-on-bg); }
+.term pre { margin: 0; padding: 18px 18px 22px; font: 400 14px/1.6 var(--f-data); color: #E4DED6; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 420px; }
+.term .hi { color: var(--void-on-bg); }
+.term .am { color: var(--held); }
+.term .cmd { color: var(--on-bg); }
+.term .cmd::before { content: "$ "; color: var(--on-bg-muted); }
+.term .ok { color: #9FD3B4; }
+.term .dim { color: var(--on-bg-muted); }
+.term .line { display: block; }
+.term.typing .line.wait { visibility: hidden; }
+.term .caret { display: inline-block; width: .6em; height: 1.05em; vertical-align: -.18em; background: var(--void-on-bg); animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.pair-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; margin-top: 16px; font: 400 13px/1.5 var(--f-data); color: var(--on-bg-muted); }
+.pair-foot .replay { font-size: 13px; }
+
+.film { margin-top: 72px; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 40px; align-items: center; }
+.frame { position: relative; display: block; aspect-ratio: 16 / 9; background: var(--bg-deep); border: 1px solid var(--rule); overflow: hidden; }
+.frame img, .frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; object-fit: cover; display: block; }
+.frame img { transition: transform .6s var(--ease-out), filter .4s; filter: saturate(.9) brightness(.82); }
+.frame:hover img { transform: scale(1.02); filter: saturate(1) brightness(.92); }
+.frame .playbtn { position: absolute; left: 24px; bottom: 24px; display: inline-flex; align-items: center; gap: 12px; padding: 14px 20px 14px 16px;
+  background: var(--paper); color: var(--ink); font: 600 16px/1 var(--f-body); box-shadow: 0 14px 30px -12px #000; transition: transform .25s var(--ease-out); }
+.frame:hover .playbtn { transform: translateY(-2px); }
+.playbtn svg { width: 22px; height: 22px; fill: var(--void); stroke: none; }
+.film h3 { font: 400 34px/1 var(--f-display); text-transform: uppercase; letter-spacing: .02em; margin-bottom: 14px; }
+.film p { color: #D9D3CB; max-width: 40ch; }
+.film p + p { margin-top: 12px; font: 400 14px/1.5 var(--f-data); color: var(--on-bg-muted); }
+
+/* ── how it holds (bento) ── */
+.holds { background:
+  linear-gradient(transparent 0 calc(100% - 1px), rgba(58,50,64,.32) 0) 0 0 / 100% 44px,
+  var(--bg); }
+.bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 18px; }
+.cell { position: relative; background: var(--bg-raised); border: 1px solid var(--rule); padding: 26px 26px 24px; min-width: 0;
+  transition: border-color .25s, transform .3s var(--ease-out); }
+.cell:hover { border-color: #5A4E64; transform: translateY(-2px); }
+.cell h3 { font: 400 25px/1.05 var(--f-display); text-transform: uppercase; letter-spacing: .03em; margin: 14px 0 10px; }
+.cell p { color: #D9D3CB; font-size: 16px; line-height: 1.55; }
+.cell .glyph { width: 44px; height: 44px; color: var(--held); }
+.cell .glyph .ico { width: 44px; height: 44px; stroke-width: 1.6; }
+.chip { display: inline-block; margin-top: 16px; padding: 5px 10px 4px; border: 1px solid var(--rule); background: var(--bg-deep);
+  font: 400 13px/1.3 var(--f-data); color: var(--void-on-bg); overflow-wrap: anywhere; }
+.cell.arch { grid-column: span 4; grid-row: span 2; margin: 0; padding: 14px; display: flex; flex-direction: column; }
+.cell.arch a.img { display: block; flex: 1; background: #120f10; }
+.cell.arch img { display: block; width: 100%; height: auto; }
+.cell.arch .capline { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 18px; padding: 14px 6px 4px; font: 400 13px/1.45 var(--f-data); color: var(--on-bg-muted); }
+.cell.c2 { grid-column: span 2; }
+.cell.c4 { grid-column: span 4; }
+.cell.wide { grid-column: span 6; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 40px; align-items: center; }
+.cell.wide .tags { display: flex; gap: 22px; align-items: center; }
+.tagstamp { white-space: nowrap; font: 400 30px/1 var(--f-display); letter-spacing: .08em; padding: 8px 14px 6px; border: 4px double currentColor; }
+.tagstamp.y { color: var(--held); transform: rotate(-3deg); }
+.tagstamp.n { color: var(--void-on-bg); transform: rotate(4deg); }
+
+/* ── honest: the memo sheet ── */
+.honest { background: var(--paper); color: var(--ink); overflow: clip; }
+.honest::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .55;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .25 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E"); }
+.honest .wrap { position: relative; }
+.honest h2 { color: var(--ink); }
+.honest h2 em { color: var(--void); }
+.honest .lede { color: #3E3742; }
+.memo { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--ink); max-width: 1000px; }
+.memo li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px 22px; padding: 30px 0 28px; border-bottom: 1px dashed #B9AF9E; }
+.memo .no { font: 400 40px/1 var(--f-display); color: var(--void); }
+.memo q { display: block; font: 400 clamp(21px, 2.1vw, 27px)/1.45 var(--f-data); quotes: "\201C" "\201D"; max-width: 58ch; }
+.memo cite { display: block; margin-top: 10px; font: 600 13px/1.4 var(--f-body); letter-spacing: .12em; text-transform: uppercase; font-style: normal; color: var(--muted); }
+.memo cite a { color: var(--ink); }
+.holdstamp { position: absolute; right: 40px; top: 6px; color: var(--held-on-paper); border: 5px double currentColor; padding: 8px 16px 6px;
+  font: 400 44px/1 var(--f-display); letter-spacing: .1em; transform: rotate(8deg); opacity: .8; mix-blend-mode: multiply; }
+.bench-note { margin-top: 30px; max-width: 70ch; font-size: 16px; color: #3E3742; }
+.bench-note b { color: var(--ink); }
+
+/* ── faq ── */
+.faq-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 64px; align-items: start; }
+.faq-grid .head { position: sticky; top: 40px; }
+details { border-top: 1px solid var(--rule); }
+details:last-of-type { border-bottom: 1px solid var(--rule); }
+summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 4px;
+  font: 600 19px/1.35 var(--f-body); transition: color .2s; }
+summary::-webkit-details-marker { display: none; }
+summary:hover { color: var(--void-on-bg); }
+summary .ico { width: 22px; height: 22px; color: var(--on-bg-muted); transition: transform .3s var(--ease-out); }
+details[open] summary .ico { transform: rotate(45deg); color: var(--void-on-bg); }
+details .ans { padding: 0 4px 24px; color: #D9D3CB; max-width: 64ch; }
+details .ans code { font-size: 15px; color: var(--on-bg); background: var(--bg-raised); padding: 1px 5px; }
+
+/* ── last call ── */
+.last { background:
+  radial-gradient(46rem 22rem at 50% 100%, rgba(91,47,181,.28), transparent 70%), var(--bg); border-top: 1px solid var(--rule); text-align: center; }
+.last h2 { margin: 0 auto; max-width: 14ch; }
+.last .lede { margin: 20px auto 0; }
+.cmd-box { display: flex; align-items: stretch; max-width: 760px; margin: 40px auto 30px; border: 1px solid var(--rule); background: var(--bg-deep); text-align: left; }
+.cmd-box code { flex: 1; min-width: 0; padding: 16px 18px; font-size: 16px; color: var(--on-bg); overflow-wrap: anywhere; }
+.cmd-box code::before { content: "$ "; color: var(--on-bg-muted); }
+.copy { border: 0; border-left: 1px solid var(--rule); background: transparent; color: var(--on-bg); padding: 0 20px; font: 600 14px/1 var(--f-body);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background-color .2s, color .2s; }
+.copy:hover { background: var(--void-on-bg); color: var(--ink); }
+.copy .ico { width: 16px; height: 16px; }
+.last .ctas { justify-content: center; }
+
+/* ── footer ── */
+footer.foot { background: var(--bg-deep); border-top: 1px solid var(--rule); padding: 44px 0 52px; font-size: 15px; color: var(--on-bg-muted); }
+footer .wrap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px 48px; align-items: start; }
+footer nav { display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: flex-end; }
+footer nav a { color: var(--on-bg); text-decoration: none; } footer nav a:hover { text-decoration: underline; }
+footer .fine { grid-column: 1 / -1; font-size: 14px; max-width: 90ch; }
+
+/* ── responsive ── */
+@media (max-width: 1080px) {
+  .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 72px; }
+  .desk { max-width: 600px; justify-self: center; width: 100%; }
+  .tally ol { grid-template-columns: 1fr 1fr; }
+  .tally li { border-bottom: 1px dashed var(--rule); padding-left: 0; }
+  .tally li:nth-child(2n) { border-right: 0; padding-left: 26px; }
+  .pair, .film, .faq-grid { grid-template-columns: minmax(0, 1fr); }
+  .faq-grid .head { position: static; }
+  .cell.arch { grid-column: span 6; grid-row: auto; }
+  .cell.c2, .cell.c4 { grid-column: span 3; }
+}
+@media (max-width: 860px) {
+  .top nav { display: none; }
+  .top { justify-content: space-between; }
+  .rail { padding: 0 0 0 30px; margin-bottom: 48px; }
+  .rail::before { left: 6px; right: auto; top: 0; bottom: 0; width: 2px; height: auto; }
+  .rail .hold, .rail .tick { display: none; }
+  .ev { position: relative; left: auto; top: auto; width: auto; padding: 0 0 26px; }
+  .ev .pin { left: -31px; top: 3px; }
+  .ev .lbl, .ev.r .lbl { position: static; width: auto; text-align: left; }
+  .ev.v::before { display: none; }
+  .cell.c2, .cell.c4 { grid-column: span 6; }
+  .cell.wide { grid-template-columns: minmax(0, 1fr); }
+  footer .wrap { grid-template-columns: minmax(0, 1fr); }
+  footer nav { justify-content: flex-start; }
+}
+@media (max-width: 560px) {
+  .wrap, .top { padding-left: 18px; padding-right: 18px; }
+  .tally ol { padding: 0 18px; grid-template-columns: minmax(0, 1fr); }
+  .tally li, .tally li:nth-child(2n) { border-right: 0; padding-left: 0; }
+  .mark span { display: none; }
+  section.band { padding: 84px 0; }
+  .ticket { grid-template-columns: 92px minmax(0, 1fr); transform: rotate(-1.2deg); }
+  .ticket::before, .ticket::after { left: 80px; }
+  .stub { padding: 16px 10px 14px 12px; }
+  .left { font-size: 74px; }
+  .d { font-size: 13px; }
+  .tbody { padding: 16px 14px 140px 16px; }
+  .amount { font-size: 42px; }
+  .amount small { font-size: 16px; }
+  .rows { grid-template-columns: minmax(0, 1fr); gap: 0; font-size: 14px; }
+  .rows dd { margin-bottom: 6px; }
+  .cells { gap: 3px; } .cells i { height: 22px; }
+  .meter-cap { font-size: 11px; }
+  .stamp { right: 8px; bottom: 14px; padding: 6px 10px 5px; }
+  .stamp b { font-size: 48px; }
+  .stamp span { font-size: 11px; }
+  .desk figcaption { transform: rotate(-1.2deg); }
+  .ticket.stamped { animation: none; }
+  .term pre { font-size: 13px; min-height: 0; }
+  .memo li { grid-template-columns: minmax(0, 1fr); }
+  .holdstamp { position: relative; display: inline-block; right: auto; top: auto; margin: 0 0 26px; font-size: 26px; transform: rotate(-4deg); }
+  .cut .lg { display: none; }
+  .tagstamp { font-size: 22px; }
+  .cell.wide .tags { gap: 14px; flex-wrap: wrap; }
+  .cmd-box { flex-direction: column; }
+  .copy { border-left: 0; border-top: 1px solid var(--rule); padding: 14px 18px; justify-content: center; }
+  .frame .playbtn { left: 12px; bottom: 12px; padding: 10px 14px 10px 12px; font-size: 14px; }
+}
+@media (max-height: 820px) and (min-width: 1081px) {
+  .hero-grid { padding-top: 28px; }
+  h1 { font-size: clamp(54px, 6.2vw, 5.4rem); }
+  .sub { margin: 22px 0 26px; font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media print {
+  html { background: #fff; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .top nav, .replay, .copy, .skip { display: none !important; }
+  .ticket.armed .cut, .ticket.armed .stamp, .ticket.armed .then { opacity: 1 !important; transform: none !important; }
+  .term.typing .line.wait { visibility: visible !important; }
+}
 </style>
 </head>
 <body>
-<main>
-  <div class="eyebrow">Portaldot Hacker House 2026 · Ecosystem DApps</div>
-  <h1>Airlock</h1>
-  <p class="lede">A time-locked hot key for a Portaldot vault: every spend is announced on-chain, waits out a delay,
-    and your cold key can veto it first.</p>
-  <ol>
-    <li><b>announce</b><span>The hot key can only announce a spend. It cannot move funds directly.</span></li>
-    <li><b>wait</b><span>The spend waits out an on-chain delay, and the watcher alerts the owner.</span></li>
-    <li><b>veto</b><span>The cold key rejects anything the owner didn't intend before the delay ends.</span></li>
-  </ol>
-  <p>Built on the Substrate Proxy pallet's time-delayed proxies. On the Portaldot V3 testnet this flow has already
-    refused a 12.92 tPOT sweep (<code>Proxy.Unannounced</code>, vault total unchanged). Every extrinsic id is listed in
-    the proof log.</p>
-  <p>Work in progress (check-in build). Airlock is a command-line tool; this page is not the product.</p>
-  <div class="links">
-    <a class="btn primary" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu">Source on GitHub</a>
-    <a class="btn" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/PROOF.md">Proof log</a>
-    <a class="btn" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/CLI.md">CLI reference</a>
+<a class="skip" href="#main">Skip to content</a>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></symbol>
+  <symbol id="i-gh" viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></symbol>
+  <symbol id="i-deck" viewBox="0 0 24 24"><path d="M3 5h18v11H3zM12 16v4M8 20h8"/></symbol>
+  <symbol id="i-replay" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h11v11H9zM5 15H4V4h11v1"/></symbol>
+  <symbol id="i-vault" viewBox="0 0 48 48"><path d="M7 9h34v30H7zM7 39v4M41 39v4M15 17h18v14H15z"/><path d="M19 24h10" stroke-dasharray="2 3"/></symbol>
+  <symbol id="i-glass" viewBox="0 0 48 48"><path d="M13 6h22M13 42h22M15 6c0 10 9 12 9 18s-9 8-9 18M33 6c0 10-9 12-9 18s9 8 9 18"/><path d="M19 38h10l-5-5z"/></symbol>
+  <symbol id="i-stamp" viewBox="0 0 48 48"><path d="M20 6h8v12h-8zM16 18h16l3 9H13zM9 27h30v6H9zM9 40h30"/></symbol>
+  <symbol id="i-lamp" viewBox="0 0 48 48"><path d="M10 42h22M21 42V28l12-12M33 16l-7-7 11-3 3 11zM36 21l5 5M41 17h4"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 48 48"><path d="M8 8h18l16 16-18 18L8 26z"/><path d="M15 15h2v2h-2z"/></symbol>
+</svg>
+
+<header class="top">
+  <a class="mark" href="#main" aria-label="Airlock, top of page">
+    <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#221C27"/><path d="M40 112H472V206A50 50 0 0 0 472 306V400H40V306A50 50 0 0 0 40 206Z" fill="#F3EEE4"/><rect x="92" y="170" width="68" height="172" fill="#D9A13B"/><rect x="176" y="170" width="68" height="172" fill="#D9A13B"/><rect x="298" y="177" width="54" height="158" fill="none" stroke="#8E8696" stroke-width="14"/><rect x="376" y="177" width="54" height="158" fill="none" stroke="#8E8696" stroke-width="14"/><rect x="258" y="96" width="26" height="320" fill="#5B2FB5"/><path d="M233 30H309L271 84ZM233 482H309L271 428Z" fill="#5B2FB5"/></svg>
+    <b>AIRLOCK</b><span>HOLD DESK · AFTER HOURS</span>
+  </a>
+  <nav aria-label="Sections">
+    <a href="#run">The run</a><a href="#holds">How it holds</a><a href="#honest">Honest</a><a href="#faq">FAQ</a>
+    <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/pitch-deck.pdf">Pitch deck</a>
+  </nav>
+  <a class="btn solid" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu"><svg class="ico" aria-hidden="true"><use href="#i-gh"/></svg>GitHub</a>
+</header>
+
+<main id="main">
+<section class="hero" aria-labelledby="h1">
+  <div class="ghosts" aria-hidden="true"><span class="gst g1">HOLD</span><span class="gst g2">VOID</span><span class="gst g3">HOLD</span></div>
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="label rise">Portaldot Hacker House 2026 · Ecosystem DApps</p>
+      <h1 id="h1" class="rise">The hot key<br> that has to<br> <em>ask first.</em></h1>
+      <p class="sub rise">Your hot key's seed leaks. Under Airlock it can only announce the sweep and wait <b class="n">10&nbsp;blocks</b>.
+        On the Portaldot V3 testnet the cold key vetoed it at block <b class="n">#166816</b>, <b>4 blocks</b> before the deadline,
+        and <b class="n">11.4200&nbsp;tPOT</b> never moved.</p>
+      <div class="ctas rise">
+        <a class="btn solid" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu"><svg class="ico" aria-hidden="true"><use href="#i-gh"/></svg>View on GitHub</a>
+        <a class="btn ghost" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/pitch-deck.pdf"><svg class="ico" aria-hidden="true"><use href="#i-deck"/></svg>Pitch deck</a>
+        <a class="btn violet" href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xa8f95309e37549e56809b7af7d53818eb17e66be6044b4dfaed91c129c6468eb">The veto on node-console<svg class="ico" aria-hidden="true"><use href="#i-out"/></svg></a>
+      </div>
+      <p class="strip rise"><span>Portaldot V3 testnet · <span class="nt">portaldot-v3/3002</span></span> · <span>no custom runtime code</span> · <span>4/4 re-fetched by id</span></p>
+    </div>
+
+    <figure class="desk" aria-labelledby="ticket-cap">
+      <div class="stack" aria-hidden="true"><i></i><i></i></div>
+      <div class="ticket" id="ticket" role="img" aria-label="Hold ticket: the thief announced a sweep of 11.4200 tPOT from vault 5F4rPFqS…hsmE1 at block #166811. The cold key vetoed it at block #166816 with 4 blocks left before the veto deadline #166820; the thief's execute in 166825-1 failed with Proxy.Unannounced.">
+        <div class="stub" aria-hidden="true">
+          <span class="cap">Hold ticket</span>
+          <span class="d">0x1d19e158<br>…eb40b59</span>
+          <span class="cap">Arrived</span>
+          <span class="d">#166811</span>
+          <span class="cap">Blocks left</span>
+          <span class="left" data-left>4</span>
+          <span class="cap">head <span class="d nt" data-head>#166816</span></span>
+        </div>
+        <div class="tbody" aria-hidden="true">
+          <span class="cap">Pay out of vault <span class="mono nt">5F4rPFqS…hsmE1</span></span>
+          <p class="amount">11.4200<small>tPOT</small></p>
+          <dl class="rows"><dt>To</dt><dd>5CFCWZts…8WmdZHJV</dd><dt>Announced by</dt><dd>hot key 5Cwitu8f…wpLZULN</dd></dl>
+          <div class="meter">
+            <span class="cap mcap">Delay · 10 blocks</span>
+            <div class="cells" data-cells><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i class="ex"></i></div>
+            <div class="cut"><span><span class="lg">cold key veto · </span>#166816</span></div>
+          </div>
+          <div class="meter-cap"><span>#166812</span><span>#166821 executable</span></div>
+          <dl class="rows then"><dt>Veto by</dt><dd>#166820</dd><dt>Then</dt><dd>166825-1 · Proxy.Unannounced</dd></dl>
+          <div class="stamp"><b>VOID</b><span>COLD KEY · #166816</span><span>0x3b57e68d…bc63f04</span></div>
+        </div>
+      </div>
+      <figcaption id="ticket-cap">
+        <span>The thief's announce on the V3 testnet, 2026-10-24 06:24 WIB. <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/evidence/final-video-run-v3-2026-10-24.md">Run record</a></span>
+        <button class="replay" type="button" data-replay-ticket><svg class="ico" aria-hidden="true"><use href="#i-replay"/></svg>Replay the hold</button>
+      </figcaption>
+    </figure>
   </div>
-  <footer>MIT licensed.</footer>
+</section>
+
+<section class="tally" aria-label="Receipts">
+  <ol>
+    <li><p class="k">Refused sweep</p><p class="v" data-count="11.4200" data-dec="4">11.4200<small>tPOT</small></p>
+      <p>The thief's whole sweep. Vault total unchanged, #166806 to #166835.</p>
+      <a class="src" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/evidence/final-video-run-v3-2026-10-24.md">evidence/final-video-run-v3-2026-10-24.md</a></li>
+    <li><p class="k">To spare</p><p class="v hot" data-count="4">4<small>blocks</small></p>
+      <p>Veto in #166816; the deadline was #166820.</p>
+      <a class="src" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/evidence/final-video-run-v3-2026-10-24.md">same run record</a></li>
+    <li><p class="k">Re-fetched</p><p class="v" data-count="44" data-tail="/44">44/44</p>
+      <p>Every V3 row in PROOF.md, read back by extrinsic id.</p>
+      <a class="src" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/evidence/verify-onchain-2026-10-19T161943Z.json">evidence/verify-onchain-2026-10-19T161943Z.json</a></li>
+    <li><p class="k">Offline tests</p><p class="v" data-count="350">350</p>
+      <p>Passing, plus 4 live-chain tests skipped offline.</p>
+      <a class="src" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/evidence/pytest-py3.11.1-2026-10-19c.txt">evidence/pytest-py3.11.1-2026-10-19c.txt</a></li>
+  </ol>
+</section>
+
+<section class="band" id="run" aria-labelledby="run-h">
+  <div class="wrap">
+    <div class="head">
+      <p class="label">Scene 01 · one sweep, three terminals</p>
+      <h2 id="run-h">The thief knocked. <em>The owner said no.</em></h2>
+      <p class="lede">Recorded 2026-10-24 on the Portaldot V3 testnet: the thief, the watcher and the owner, each in a terminal on one wall clock. Every linked block opens on the public explorer.</p>
+    </div>
+
+    <ol class="rail" aria-label="The run, block by block">
+      <li class="hold" aria-hidden="true"></li><li class="tick" aria-hidden="true"></li>
+      <li class="ev a up" style="--x:0"><span class="pin"></span><span class="lbl"><b>Announce</b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x35eb3267f5e393a35fa88aeebcd95d2e2b2e4125af8157301272166f332a25f0">#166811</a> · the thief, hot key</span></li>
+      <li class="ev v dn" style="--x:25"><span class="pin"></span><span class="lbl"><b>Veto</b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xa8f95309e37549e56809b7af7d53818eb17e66be6044b4dfaed91c129c6468eb">#166816</a> · the owner, cold key</span></li>
+      <li class="ev dl dn" style="--x:45"><span class="pin"></span><span class="lbl"><b>Deadline</b>#166820 · last block to veto</span></li>
+      <li class="ev f up r" style="--x:70"><span class="pin"></span><span class="lbl"><b>Execute: refused</b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x21f02d23ccc573d71e24784068bb5f3ab45ecffdf4dd18866c831693f67bf6bc">#166825</a> · Proxy.Unannounced</span></li>
+      <li class="ev f dn r" style="--x:100"><span class="pin"></span><span class="lbl"><b>Direct call: refused</b><a href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x83f24f947415a8acaa585ef0f5dce94ed9d4d6f692993c86d9e19741eaa53f2c">#166831</a> · Proxy.Unannounced</span></li>
+    </ol>
+
+    <div class="pair">
+      <article class="term" aria-label="The watcher's alert, as printed">
+        <header><i aria-hidden="true"></i><b>WATCHER · OWNER'S SIDE</b><span>watcher.cast</span></header>
+<pre><span class="hi">NOT YOURS — VETO</span>
+Vault 5F4rPFqS6PQEKUHacHtR5mLrDMVZ8RjCfJpYmfiktERhsmE1
+Chain: Portaldot V3 testnet (v3)
+<span class="am">Up to 11.4200 tPOT at risk</span> (0.1000 tPOT of the free balance cannot move: …)
+Announced by delegate 5Cwitu8f…wpLZULN at block #166811; executable from #166821. <span class="am">Veto must land by #166820: 9 blocks (≈ 54 s)</span> from head #166811
+Call hash 0x1d19e158…eb40b59 (an announcement publishes only the hash: …)
+Veto with the cold key — Airlock CLI (cold key from $AIRLOCK_COLD_KEY):
+<span class="cmd">airlock veto --vault 5F4rPFqS… --delegate 5Cwitu8f… --hash 0x1d19e158…</span>
+<span class="dim">or in the Portaldot node console (https://node-console.portaldot.dev/) &gt; Developer &gt; Extrinsics, signed by the cold key: …</span></pre>
+      </article>
+      <article class="term owner" id="owner-term" aria-label="The owner's terminal: veto, then re-fetch by id">
+        <header><i aria-hidden="true"></i><b>OWNER · COLD KEY</b><span>owner.cast</span></header>
+<pre data-replay><span class="line cmd" data-type>airlock veto --vault 5F4rPFqS… --delegate 5Cwitu8f… --hash 0x1d19e158…</span><span class="line dim">chain: Portaldot V3 testnet · portaldot-v3/3002 · genesis 0xd4f9…83bd · wss://test-node-v3.portaldot.dev</span><span class="line">[v3] <span class="ok">ok</span> veto Proxy.proxy(Proxy.reject_announcement) by cold #166816 id 166816-1 tx 0x3b57e68d…bc63f04</span><span class="line"><span class="hi">VETOED</span> 0x1d19e158…eb40b59 — removed from Proxy.Announcements; proxy_announced for it now fails Proxy.Unannounced</span><span class="line cmd" data-type>python scripts/refetch.py --profile v3 --id 166811-1 --id 166816-1 --id 166825-1 --id 166831-1</span><span class="line">FOUND 166811-1 Proxy.announce outcome=ok</span><span class="line">FOUND 166816-1 Proxy.proxy(Proxy.reject_announcement) outcome=ok</span><span class="line">FOUND 166825-1 Proxy.proxy_announced(Balances.transfer_keep_alive) outcome=<span class="hi">Proxy.Unannounced</span></span><span class="line">FOUND 166831-1 Proxy.proxy(Balances.transfer_keep_alive) outcome=<span class="hi">Proxy.Unannounced</span></span><span class="line"><span class="ok">4/4 found by extrinsic id over wss (v3)</span></span></pre>
+      </article>
+    </div>
+    <div class="pair-foot">
+      <span>Excerpts of the asciinema recordings: long values shortened with …, column padding collapsed, tx hashes dropped from the FOUND lines. <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/tree/main/evidence/final-video-run-v3-2026-10-24">Raw casts</a></span>
+      <button class="replay" type="button" data-replay-term><svg class="ico" aria-hidden="true"><use href="#i-replay"/></svg>Replay the owner's terminal</button>
+    </div>
+
+    <div class="film">
+      <a class="frame" href="https://youtu.be/Es1387HDSTw" data-yt="Es1387HDSTw">
+        <img src="assets/film-poster.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Frame from the demo film: the thief's terminal and the watcher's NOT YOURS alert side by side, Portaldot V3 testnet">
+        <span class="playbtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>Play the film</span>
+      </a>
+      <div>
+        <h3>The same run, on film</h3>
+        <p>The three terminals side by side, from the thief's announce to the re-fetch by id. Every speed-up is labelled on screen with the real time it covers.</p>
+        <p>YouTube · <a href="https://youtu.be/Es1387HDSTw">youtu.be/Es1387HDSTw</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band holds" id="holds" aria-labelledby="holds-h">
+  <div class="wrap">
+    <div class="head">
+      <h2 id="holds-h">The chain holds the ticket. <em>Airlock reads it.</em></h2>
+      <p class="lede">Everything is enforced by the chain's own Proxy pallet; Airlock adds no custom runtime code. What it adds is the vault layout, the watcher, and the line you paste.</p>
+    </div>
+    <div class="bento">
+      <figure class="cell arch">
+        <a class="img" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/architecture.png">
+          <img src="assets/architecture.webp" width="2000" height="1482" loading="lazy" decoding="async" alt="Architecture: the thief's machine announces to the Proxy pallet on the Portaldot V3 testnet; the watcher on the owner's machine raises NOT YOURS; the owner's cold key vetoes; the thief's execute is refused. Block numbers from the 2026-10-24 run.">
+        </a>
+        <figcaption class="capline"><span>README · Technical Architecture. Steps 1 to 5 carry the 2026-10-24 block numbers.</span><span>Open full size</span></figcaption>
+      </figure>
+      <article class="cell c2">
+        <span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-vault"/></svg></span>
+        <h3>A vault with no seed</h3>
+        <p>A pure proxy: a keyless account that only its proxies can move.</p>
+        <span class="chip">Proxy.create_pure</span>
+      </article>
+      <article class="cell c2">
+        <span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-glass"/></svg></span>
+        <h3>The hot key waits</h3>
+        <p>It can only announce a call hash, then wait out its delay. A direct spend fails.</p>
+        <span class="chip">Proxy.announce · proxy_announced</span>
+      </article>
+      <article class="cell c2">
+        <span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-stamp"/></svg></span>
+        <h3>The cold key says no</h3>
+        <p>Delay 0, dispatched as the vault: it removes the announcement before the delay ends.</p>
+        <span class="chip">Proxy.reject_announcement</span>
+      </article>
+      <article class="cell c4">
+        <span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-lamp"/></svg></span>
+        <h3>The watcher reads every block</h3>
+        <p>On each announcement against the vault: the amount at risk, the block by which a veto must land, and the exact <code>airlock veto</code> line to paste. It never signs anything.</p>
+        <span class="chip">event Proxy.Announced</span>
+      </article>
+      <article class="cell wide">
+        <div>
+          <span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-tag"/></svg></span>
+          <h3>Your own spends say YOURS</h3>
+          <p>The owner registers an intent before announcing a payment. The watcher calls anything unregistered NOT YOURS, so the owner's own spend and a thief's look different at a glance.</p>
+          <span class="chip">owner intent registry · register before announce</span>
+        </div>
+        <div class="tags" aria-hidden="true"><span class="tagstamp y">YOURS</span><span class="tagstamp n">NOT YOURS</span></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="band honest" id="honest" aria-labelledby="honest-h">
+  <div class="wrap">
+    <span class="holdstamp" aria-hidden="true">KNOWN HOLDS</span>
+    <div class="head">
+      <h2 id="honest-h">What it <em>hasn't</em> done yet.</h2>
+      <p class="lede">Lifted from the README, word for word. A hold desk that hides its own gaps is not one you would trust with the vault.</p>
+    </div>
+    <ol class="memo">
+      <li><span class="no" aria-hidden="true">1</span><div><q>The interim rows keep their labels; the benchmark has not run on V3.</q><cite><a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu#readme">README</a> · Status</cite></div></li>
+      <li><span class="no" aria-hidden="true">2</span><div><q>No alert has reached a phone yet (no Telegram bot token configured).</q><cite><a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu#demo">README</a> · Demo</cite></div></li>
+      <li><span class="no" aria-hidden="true">3</span><div><q>The veto is automated, so these measure the chain and the watcher on one machine, not a person's reaction time or Telegram delivery.</q><cite><a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/BENCH.md">README</a> · Benchmark</cite></div></li>
+    </ol>
+    <p class="bench-note">For scale, the benchmark itself, on local interim chains and <b>not V3</b>: 20 thief drains per chain, every one alerted NOT YOURS and vetoed, then failing Proxy.Unannounced; <b>0 planck</b> moved to the thief.</p>
+  </div>
+</section>
+
+<section class="band" id="faq" aria-labelledby="faq-h">
+  <div class="wrap faq-grid">
+    <div class="head">
+      <h2 id="faq-h">Questions a judge would ask.</h2>
+      <p class="lede">Short answers, each one checkable in the repository.</p>
+    </div>
+    <div>
+      <details>
+        <summary>Is this on a real chain?<svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+        <div class="ans">Yes. The core flow ran on the Portaldot V3 testnet (<code>portaldot-v3/3002</code>) on 2026-10-19 and again on 2026-10-24, and every V3 row in PROOF.md is re-fetched by extrinsic id (44/44). The benchmark ran only on labelled interim chains, not V3.</div>
+      </details>
+      <details>
+        <summary>Did you deploy a contract or change the runtime?<svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+        <div class="ans">No. Everything is enforced by the chain's own Proxy pallet; Airlock adds no custom runtime code. The vault is a pure proxy, the hot key is a proxy with a delay, the cold key a proxy with delay 0.</div>
+      </details>
+      <details>
+        <summary>What can a stolen hot key do on its own?<svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+        <div class="ans">Announce a call hash and wait. In the 2026-10-24 run, executing the sweep after the veto failed with <code>Proxy.Unannounced</code> (166825-1), and so did calling the proxy directly (166831-1).</div>
+      </details>
+      <details>
+        <summary>What if the watcher is offline?<svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+        <div class="ans">The delay is still enforced by the chain; nobody is alerted. After a restart the watcher catches up on the blocks it missed. That was recorded on the interim chains, not V3, after a watcher restart, a node restart and a node freeze (docs/WATCHER.md). The veto still has to land before the deadline block.</div>
+      </details>
+      <details>
+        <summary>What is mocked?<svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+        <div class="ans">The Telegram sender is built and tested against a mock Bot API; no alert has reached a phone yet. The benchmark's vetoes are automated. On the V3 path every step is a real extrinsic, listed by id in PROOF.md.</div>
+      </details>
+      <details>
+        <summary>Why not a multisig?<svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+        <div class="ans">A multisig needs a second signer for every payment, which is heavy for one person. Here a legitimate payment is the same flow with no veto: the cold key only acts when something is wrong.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="band last" aria-labelledby="last-h">
+  <div class="wrap">
+    <h2 id="last-h">Check the veto <em>yourself.</em></h2>
+    <p class="lede">From a clone, after the README's installation steps, this re-reads the cold key's veto from the V3 testnet by its extrinsic id.</p>
+    <div class="cmd-box"><code id="cmd">python scripts/refetch.py --profile v3 --id 166816-1</code><button class="copy" type="button" data-copy="#cmd"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy</span></button></div>
+    <div class="ctas">
+      <a class="btn solid" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu"><svg class="ico" aria-hidden="true"><use href="#i-gh"/></svg>View on GitHub</a>
+      <a class="btn ghost" href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/pitch-deck.pdf"><svg class="ico" aria-hidden="true"><use href="#i-deck"/></svg>Pitch deck</a>
+      <a class="btn violet" href="https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xa8f95309e37549e56809b7af7d53818eb17e66be6044b4dfaed91c129c6468eb">The veto on node-console<svg class="ico" aria-hidden="true"><use href="#i-out"/></svg></a>
+    </div>
+  </div>
+</section>
 </main>
+
+<footer class="foot">
+  <div class="wrap">
+    <a class="mark" href="#main" aria-label="Airlock, top of page"><b>AIRLOCK</b></a>
+    <nav aria-label="Project links">
+      <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu">Source</a>
+      <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/PROOF.md">Proof log</a>
+      <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/CLI.md">CLI reference</a>
+      <a href="https://github.com/edycutjong/portaldot-hackathon-2026-airlock-edycu/blob/main/docs/pitch-deck.pdf">Pitch deck</a>
+      <a href="https://youtu.be/Es1387HDSTw">Film</a>
+    </nav>
+    <p class="fine">No hosted app: Airlock is a command-line tool and a watcher that run against the public V3 endpoint. Portaldot Hacker House 2026 · Ecosystem DApps. MIT licensed. Type: Anton, Libre Franklin, Cutive Mono (SIL Open Font License).</p>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const root = document.documentElement;
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!still) { root.classList.add('play'); setTimeout(() => root.classList.add('settled'), 1700); }
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const watch = (el, onEnter, onPlay) => {           // arm when it enters, play when ~40 % is visible
+    let armed = false, played = false;
+    new IntersectionObserver((es, io) => es.forEach(e => {
+      if (e.isIntersecting && !armed) { armed = true; onEnter(); }
+      if (e.intersectionRatio >= .4 && !played) { played = true; onPlay(); io.disconnect(); }
+    }), { threshold: [0, .4] }).observe(el);
+  };
+
+  // the hold ticket: replays the real run from the watcher's head #166811 (9 blocks to veto) to the veto in #166816
+  const t = document.getElementById('ticket');
+  const left = t.querySelector('[data-left]'), head = t.querySelector('[data-head]'), cells = [...t.querySelectorAll('[data-cells] i')];
+  const setHead = h => { left.textContent = 166820 - h; head.textContent = '#' + h; cells.forEach((c, i) => c.classList.toggle('on', 166812 + i <= h)); };
+  let run = 0;
+  const arm = () => { t.classList.remove('cutting', 'stamped'); t.classList.add('armed'); setHead(166811); };
+  const playTicket = async () => {
+    const me = ++run;
+    arm(); await sleep(650);
+    for (let h = 166812; h <= 166816; h++) { if (me !== run) return; setHead(h); await sleep(430); }
+    t.classList.add('cutting'); await sleep(380);
+    if (me !== run) return;
+    t.classList.remove('armed'); t.classList.add('stamped');
+    await sleep(700); t.classList.remove('cutting', 'stamped');
+  };
+  if (!still) watch(t, arm, playTicket);
+  document.querySelector('[data-replay-ticket]').addEventListener('click', () => { if (!still) playTicket(); });
+
+  // receipts count up toward the value already in the HTML
+  document.querySelectorAll('[data-count]').forEach(el => {
+    if (still) return;
+    const n = +el.dataset.count, dec = +(el.dataset.dec || 0), tail = el.dataset.tail || '';
+    const small = el.querySelector('small'), smallHTML = small ? small.outerHTML : '';
+    const draw = v => { el.innerHTML = v.toFixed(dec) + tail + smallHTML; };
+    watch(el, () => draw(0), () => {
+      const t0 = performance.now();
+      (function f(now) { const k = Math.min(1, (now - t0) / 1100); draw(n * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); else draw(n); })(t0);
+    });
+  });
+
+  // the owner's terminal types its two commands and prints the real output, line by line
+  const term = document.getElementById('owner-term'), pre = term.querySelector('[data-replay]');
+  const lines = [...pre.querySelectorAll('.line')];
+  const full = lines.map(l => l.innerHTML);
+  let trun = 0;
+  const armTerm = () => { term.classList.add('typing'); lines.forEach(l => l.classList.add('wait')); };
+  const playTerm = async () => {
+    const me = ++trun; armTerm(); lines.forEach((l, i) => { l.innerHTML = full[i]; });
+    await sleep(300);
+    for (let i = 0; i < lines.length; i++) {
+      if (me !== trun) return;
+      const l = lines[i];
+      if (l.hasAttribute('data-type')) {
+        const text = l.textContent; l.textContent = ''; l.classList.remove('wait');
+        const caret = document.createElement('span'); caret.className = 'caret';
+        for (let c = 0; c < text.length; c += 2) { if (me !== trun) return; l.textContent = text.slice(0, c + 2); l.appendChild(caret); await sleep(16); }
+        l.innerHTML = full[i]; await sleep(500);
+      } else { l.classList.remove('wait'); await sleep(i === 3 ? 520 : 170); }
+    }
+    term.classList.remove('typing');
+  };
+  if (!still) watch(term, armTerm, playTerm);
+  document.querySelector('[data-replay-term]').addEventListener('click', () => { if (!still) playTerm(); });
+
+  // the film: a poster until clicked, then the YouTube player
+  document.querySelectorAll('[data-yt]').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault();
+    const f = document.createElement('iframe');
+    f.src = 'https://www.youtube-nocookie.com/embed/' + a.dataset.yt + '?autoplay=1&rel=0';
+    f.title = 'Airlock demo film'; f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'; f.allowFullscreen = true;
+    a.replaceWith(Object.assign(document.createElement('div'), { className: 'frame' })); document.querySelector('.film .frame').appendChild(f);
+  }));
+
+  // copy the command
+  document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
+    const s = b.querySelector('span');
+    try { await navigator.clipboard.writeText(document.querySelector(b.dataset.copy).textContent); s.textContent = 'Copied'; }
+    catch { s.textContent = 'Select and copy'; }
+    setTimeout(() => { s.textContent = 'Copy'; }, 1800);
+  }));
+
+  // print and captures: final state, every answer open
+  addEventListener('beforeprint', () => { run++; trun++; t.classList.remove('armed', 'cutting', 'stamped'); setHead(166816);
+    term.classList.remove('typing'); lines.forEach((l, i) => { l.classList.remove('wait'); l.innerHTML = full[i]; });
+    document.querySelectorAll('details').forEach(d => d.open = true); });
+})();
+</script>
 </body>
 </html>

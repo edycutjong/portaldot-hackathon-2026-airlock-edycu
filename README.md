@@ -344,11 +344,16 @@ pip-audit run separately. None of it needs a key or writes to a live chain.
   and a one-shot watcher exits 1 if its catch-up stopped short; key files readable by group or others are refused off
   the interim chains; the finality wait has a timer deadline; the NOT YOURS alert says the call body is off chain.
 
+**Completed (2026-10-24) — demo video on V3**
+
+- The final demo video records one live V3 run of the core flow: announce `166811-1` → veto `166816-1` → execute
+  `166825-1` and direct call `166831-1` both `Proxy.Unannounced`, every id re-fetched on camera
+  ([evidence/final-video-run-v3-2026-10-24.md](evidence/final-video-run-v3-2026-10-24.md)); check-in submitted.
+
 **Next**
 
 - Run the benchmark (`scripts/bench.py`) on V3; it has only run on the interim chains.
 - Telegram alerts on a real phone once a bot token is configured.
-- A demo video with live transactions, and the check-in submission (Oct 24).
 - `Revive.call` as a held call type, only if it can be proven through a vault origin on a chain.
 
 <a id="team"></a>

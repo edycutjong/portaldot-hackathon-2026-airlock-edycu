@@ -14,7 +14,7 @@ dependencies = [
 airlock = "airlock.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=9.1.1"]
+dev = ["pytest>=9.2.0"]
 
 [build-system]
 requires = ["setuptools>=84.2.1"]
